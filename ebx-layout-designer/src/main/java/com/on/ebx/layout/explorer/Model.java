@@ -69,11 +69,22 @@ public final class Model
 		public static final Pred FALSE = new Pred("1 = 0", null);
 		public final String sql;
 		public final String xpath;
+		/**
+		 * The same condition as an XPath on the Match and Merge metadataset's RecordMetadata (one row per record), when it
+		 * only reads the add-on's values: counted there directly for a user who sees every record (editor's advice).
+		 */
+		public final String meta;
 
 		Pred(final String pSql, final String pXPath)
 		{
+			this(pSql, pXPath, null);
+		}
+
+		Pred(final String pSql, final String pXPath, final String pMeta)
+		{
 			this.sql = pSql;
 			this.xpath = pXPath;
+			this.meta = pMeta;
 		}
 
 		boolean isTrue()
@@ -111,7 +122,11 @@ public final class Model
 	Model(final Adaptation pDataset, final AdaptationTable pTable, final JsonNode pRoot, final Locale pLocale)
 	{
 		this(pDataset, pTable, pRoot, pLocale, "t", new AtomicInteger());
+		this.main = true;
 	}
+
+	/** The explorer's own table as {@code t}: the statements the engine writes on it get the metadataset's JOIN. */
+	private boolean main;
 
 	/** The same explorer read on another table or under another alias, sharing the alias counter (one statement, unique aliases). */
 	private Model(final Adaptation pDataset, final AdaptationTable pTable, final JsonNode pRoot, final Locale pLocale, final String pAlias,
@@ -241,22 +256,66 @@ public final class Model
 	private Pred viaMetadata(final Src pSrc, final java.util.function.Function<Src, Pred> pCondition)
 	{
 		final Pred x = pCondition.apply(pSrc);
-		final String a = this.alias("r");
-		final Src inner = new Src(pSrc.source, pSrc.mdsColumn, Model.type(pSrc.mdsColumn), null, a + "." + pSrc.mdsColumn.getPathInAdaptation().getLastStep().format(), null);
-		final Pred y = pCondition.apply(inner);
-		if (y == Pred.FALSE || x == Pred.FALSE)
+		final String column = pSrc.mdsColumn.getPathInAdaptation().getLastStep().format();
+		final String type = Model.type(pSrc.mdsColumn);
+		// the same condition on the metadataset itself (XPath), for a direct count
+		final Pred z = pCondition.apply(new Src(pSrc.source, pSrc.mdsColumn, type, "./" + column, null, null));
+		final String meta = z == null || z == Pred.FALSE || z.isTrue() || z.xpath == null || z.xpath.isEmpty() ? null : z.xpath;
+		final Pred[] y = new Pred[1];
+		final String sql = this.metadataSql(a -> {
+			y[0] = pCondition.apply(new Src(pSrc.source, pSrc.mdsColumn, type, null, a + "." + column, null));
+			return y[0] == null || y[0] == Pred.FALSE || y[0].isTrue() ? null : y[0].sql;
+		});
+		if (y[0] == Pred.FALSE || x == Pred.FALSE)
 		{
 			return Pred.FALSE;
 		}
-		if (y == null || y.isTrue() || y.sql == null)
+		if (sql == null)
 		{
 			return x;
 		}
-		// functionalId is a foreign key to the business table (Linked_Field_FunctionalId): EBX SQL compares it only as a string
+		return new Pred(sql, x == null ? null : x.xpath, meta);
+	}
+
+	/** The alias of the metadataset's RecordMetadata joined to the explorer's table ({@code Engine} adds the join). */
+	static final String META = "rmd";
+
+	/** The metadataset holds RecordMetadata (Match and Merge 6.3), with this column. */
+	boolean hasMetadata(final String pColumn)
+	{
+		try
+		{
+			return this.mds != null && this.mds.getSchemaNode().getNode(Path.parse("/root/RecordMetadata/" + pColumn)) != null;
+		}
+		catch (final RuntimeException ex)
+		{
+			return false;
+		}
+	}
+
+	/** {@code FK_AS_STRING(alias.functionalId)}: functionalId is a foreign key to the business table, compared as a string. */
+	String metadataKey(final String pAlias)
+	{
 		final SchemaNode functionalId = this.mds.getSchemaNode().getNode(Path.parse("/root/RecordMetadata/functionalId"));
-		final String key = functionalId != null && functionalId.getFacetOnTableReference() != null ? "FK_AS_STRING(" + a + ".functionalId)" : a + ".functionalId";
-		final String sql = this.t + ".\"$pk\" IN (SELECT " + key + " FROM mds." + Model.quote("/root/RecordMetadata") + " " + a + " WHERE " + y.sql + ")";
-		return new Pred(sql, x == null ? null : x.xpath);
+		return functionalId != null && functionalId.getFacetOnTableReference() != null ? "FK_AS_STRING(" + pAlias + ".functionalId)" : pAlias + ".functionalId";
+	}
+
+	/**
+	 * A condition on the record's metadataset row in SQL. On the explorer's table ({@code t}) the row is JOINed once
+	 * ({@code LEFT JOIN … rmd}, added by the engine: 1.3 s against 4.5 s for the sub-query on 576,692 records, editor's
+	 * measure); a record without a row does not hold the condition. Elsewhere (a linked table), a set of keys.
+	 */
+	String metadataSql(final java.util.function.Function<String, String> pCondition)
+	{
+		if (this.main)
+		{
+			// a record without a metadata row reads NULL: false in a WHERE; NOT() turns it into true (see not())
+			final String c = pCondition.apply(Model.META);
+			return c == null ? null : "(" + c + ")";
+		}
+		final String a = this.alias("r");
+		final String c = pCondition.apply(a);
+		return c == null ? null : this.t + ".\"$pk\" IN (SELECT " + this.metadataKey(a) + " FROM mds." + Model.quote("/root/RecordMetadata") + " " + a + " WHERE " + c + ")";
 	}
 
 	static String type(final SchemaNode pNode)
@@ -778,14 +837,16 @@ public final class Model
 			final boolean filled = "filled".equals(pOp);
 			String sql;
 			String xpath = null;
+			String meta = null;
 			if (suspects)
 			{
 				if (this.mdsTable == null && this.hasSuspectsXPath == null)
 				{
 					return filled ? Pred.FALSE : Pred.TRUE;
 				}
-				final String one = this.atLeast(pSrc, 1);
-				sql = one == null ? null : filled ? one : "NOT (" + one + ")";
+				final String one = this.hasMetadata("hasSuspects") ? this.metadataSql(a -> a + ".hasSuspects = TRUE") : this.atLeast(pSrc, 1);
+				sql = one == null ? null : filled ? one : one.contains(Model.META + ".") ? "NOT (COALESCE(" + one + ", FALSE))" : "NOT (" + one + ")";
+				meta = this.hasMetadata("hasSuspects") ? (filled ? "./hasSuspects = 'true'" : "not(./hasSuspects = 'true')") : null;
 				if (this.hasSuspectsXPath != null)
 				{
 					// the add-on's own flag: EBX keeps it, XPath reads it
@@ -807,7 +868,7 @@ public final class Model
 						: pSrc.sql + (filled ? " IS NOT NULL" : " IS NULL");
 				xpath = pSrc.xpath == null ? null : (filled ? "osd:is-not-null(" : "osd:is-null(") + pSrc.xpath + ")";
 			}
-			return sql == null && xpath == null ? null : new Pred(sql, xpath);
+			return sql == null && xpath == null ? null : new Pred(sql, xpath, meta);
 		}
 		final String ref = pRef.isTextual() ? pRef.asText() : pRef.toString();
 		final Double number = pRef.isNumber() ? Double.valueOf(pRef.asDouble()) : Cond.number(ref);
@@ -1062,10 +1123,16 @@ public final class Model
 	{
 		final StringBuilder s = new StringBuilder("(");
 		final StringBuilder x = new StringBuilder("(");
-		boolean sqlOk = true, xpathOk = true;
+		final StringBuilder mt = new StringBuilder("(");
+		boolean sqlOk = true, xpathOk = true, metaOk = true;
 		for (int i = 0; i < pParts.size(); i++)
 		{
 			final Pred p = pParts.get(i);
+			metaOk &= p.meta != null;
+			if (metaOk)
+			{
+				mt.append(i == 0 ? "" : pXPath).append(p.meta);
+			}
 			sqlOk &= p.sql != null;
 			xpathOk &= p.xpath != null && !p.xpath.isEmpty();
 			if (sqlOk)
@@ -1077,7 +1144,8 @@ public final class Model
 				x.append(i == 0 ? "" : pXPath).append(p.xpath);
 			}
 		}
-		return !sqlOk && !xpathOk ? null : new Pred(sqlOk ? s.append(')').toString() : null, xpathOk ? x.append(')').toString() : null);
+		return !sqlOk && !xpathOk ? null
+			: new Pred(sqlOk ? s.append(')').toString() : null, xpathOk ? x.append(')').toString() : null, metaOk ? mt.append(')').toString() : null);
 	}
 
 	static Pred not(final Pred pPred)
@@ -1090,7 +1158,10 @@ public final class Model
 		{
 			return Pred.TRUE;
 		}
-		return new Pred(pPred.sql == null ? null : "NOT (" + pPred.sql + ")", pPred.xpath == null ? null : "not(" + pPred.xpath + ")");
+		// over the joined metadataset a missing row is NULL: NOT must still hold for it
+		final String sql = pPred.sql == null ? null : pPred.sql.contains(Model.META + ".") ? "NOT (COALESCE(" + pPred.sql + ", FALSE))" : "NOT (" + pPred.sql + ")";
+		return new Pred(sql, pPred.xpath == null ? null : "not(" + pPred.xpath + ")",
+			pPred.meta == null ? null : "not(" + pPred.meta + ")");
 	}
 
 	private String sqlLiteral(final Src pSrc, final String pKey)

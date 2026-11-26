@@ -707,13 +707,53 @@ public final class Engine
 		{
 			return 0;
 		}
+		if (pPred.meta != null && Engine.metadataCountable(pView))
+		{
+			// only the add-on's values: counted in the metadataset itself (5 ms against 2 s through the linked field)
+			return Engine.cached("meta count", pPred.meta, () -> Integer.valueOf(Engine.metadataCount(pView, pPred.meta))).intValue();
+		}
 		return Engine.cached("count", pPred.xpath + "|" + pPred.sql, () -> Integer.valueOf(Engine.countNow(pView, pPred))).intValue();
+	}
+
+	/**
+	 * A condition on the add-on's values alone may be counted in the metadataset when it says the same as the table: the
+	 * user sees every record (record rules do not apply to the metadataset), and every record has its metadata row.
+	 */
+	private static boolean metadataCountable(final View pView)
+	{
+		final Model m = pView.model;
+		if (!m.hasMetadata("functionalId") || !Engine.scope(pView).startsWith("*all*"))
+		{
+			return false;
+		}
+		return Engine.cached("meta rows", "", () -> {
+			final AdaptationTable rows = m.mds.getTable(com.orchestranetworks.schema.Path.parse("/root/RecordMetadata"));
+			return Boolean.valueOf(rows != null && Engine.size(rows, pView.session) == Engine.size(m.table, pView.session));
+		}).booleanValue();
+	}
+
+	private static int metadataCount(final View pView, final String pXPath)
+	{
+		final long start = System.currentTimeMillis();
+		final Request r = pView.model.mds.getTable(com.orchestranetworks.schema.Path.parse("/root/RecordMetadata")).createRequest();
+		r.setXPathFilter(pXPath);
+		r.setSession(pView.session);
+		final RequestResult rr = r.execute();
+		try
+		{
+			return rr.getSize();
+		}
+		finally
+		{
+			rr.close();
+			Engine.traced("metadataset count", pXPath, start);
+		}
 	}
 
 	private static int countNow(final View pView, final Model.Pred pPred)
 	{
 		final Model m = pView.model;
-		final boolean sqlFirst = Boolean.TRUE.equals(Engine.PREFER_SQL.get()) && pPred.sql != null;
+		final boolean sqlFirst = (Boolean.TRUE.equals(Engine.PREFER_SQL.get()) || Engine.readsMetadata(pPred)) && pPred.sql != null;
 		if (pPred.xpath != null && !sqlFirst)
 		{
 			final long start = System.currentTimeMillis();
@@ -820,7 +860,7 @@ public final class Engine
 		final Model.Src g = pGroup == null ? null : m.src(pGroup.source);
 		final boolean onField = (s == null || s.node != null && !s.node.isLinkedNode() && !"list".equals(s.type))
 			&& (g == null || g.node != null && !g.node.isLinkedNode() && !"list".equals(g.type));
-		final boolean sqlFirst = Boolean.TRUE.equals(Engine.PREFER_SQL.get()) && pWhere.sql != null;
+		final boolean sqlFirst = (Boolean.TRUE.equals(Engine.PREFER_SQL.get()) || Engine.readsMetadata(pWhere)) && pWhere.sql != null;
 		if (pWhere.xpath != null && onField && !sqlFirst || pWhere.sql == null)
 		{
 			final long start = System.currentTimeMillis();
@@ -888,7 +928,28 @@ public final class Engine
 	/** An EBX SQL statement run with the user's session; the metadataset is known as {@code mds}. */
 	static List<Object[]> select(final View pView, final String pSql, final int pMax)
 	{
-		return Engine.cached("sql", pMax + "|" + pSql, () -> Engine.selectNow(pView, pSql, pMax));
+		final String sql = Engine.joinMetadata(pView.model, pSql);
+		return Engine.cached("sql", pMax + "|" + sql, () -> Engine.selectNow(pView, sql, pMax));
+	}
+
+	/** The condition reads the add-on's values: EBX reads them faster through the JOIN than through the linked fields. */
+	static boolean readsMetadata(final Model.Pred pPred)
+	{
+		return pPred != null && pPred.sql != null && pPred.sql.contains(Model.META + ".");
+	}
+
+	/** A statement reading the record's metadataset row ({@code rmd.}) gets its LEFT JOIN, once, after the explorer's table. */
+	static String joinMetadata(final Model pModel, final String pSql)
+	{
+		final String alias = Model.META + ".";
+		final String from = "FROM " + pModel.from + " t ";
+		final int i = pSql.indexOf(from);
+		if (!pSql.contains(alias) || i < 0 || pSql.contains(" " + Model.META + " ON "))
+		{
+			return pSql;
+		}
+		final String join = "LEFT JOIN mds." + Model.quote("/root/RecordMetadata") + " " + Model.META + " ON " + pModel.metadataKey(Model.META) + " = t.\"$pk\" ";
+		return pSql.substring(0, i + from.length()) + join + pSql.substring(i + from.length());
 	}
 
 	private static List<Object[]> selectNow(final View pView, final String pSql, final int pMax)

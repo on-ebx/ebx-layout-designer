@@ -1,5 +1,18 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.21.1 (2026-10-16)
+
+- **Typing no longer queues searches.** EBX answers a page's requests one after the other, so a request replaced by a newer
+  one could not be stopped on the server (measured: the newer one waited 5.6 s behind it). The page now sends nothing while
+  a request runs and keeps only the latest one waiting.
+- List view: a row's buttons stay on one line.
+- **Match and Merge values read in the metadataset (editor's advice).** A count on the add-on's values alone ("Suspect",
+  state, golden…) is made on the metadataset's `RecordMetadata` (`./hasSuspects = 'true'`: 5 ms against 2.0 s through the
+  linked field on 576,692 records) when the user sees every record and every record has its metadata row; otherwise as
+  before. Lists and combined counts JOIN the metadataset once (`LEFT JOIN mds."/root/RecordMetadata" rmd ON
+  FK_AS_STRING(rmd.functionalId) = t."$pk"`: 1.3 s against 4.5 s) instead of a sub-query or the linked field, and the
+  "suspects" computed value reads `hasSuspects` there instead of the `Suspected` table.
+
 ## 1.21.0 (2026-10-15)
 
 - **MCP server** (`/ebx-layout-designer/rest/mcp`, administrators only): an agent reads a table as the designer does,

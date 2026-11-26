@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit 19e021e28e7f0157fb90b5d8d2b71e03f5d46648
-Example: the Companies explorer excludes merged companies (linked field in SQL) and names the group without sector
+Exported from EBX-Layout-Designer commit 1eaf8a9b5b95fc28475871b2b36f049c3a988b30
+1.21.1: no COALESCE on a positive metadataset condition (a NULL from the LEFT JOIN is already false in WHERE); kept under NOT
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

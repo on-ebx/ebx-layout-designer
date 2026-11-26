@@ -58,7 +58,7 @@ Used by flags, tiles, `case` values and actions' `cond`:
 | `{"field": "/p", "gt": 70}`, `lt`, `ge`, `le`, `eq`, `ne` | numeric comparison (`eq`/`ne` compare as text when not numbers) |
 | `{"field": "/d", "days": {"from": 0, "to": 90}}` | (1.20.0) a date from today + `from` days (included) to today + `to` days (excluded); either bound may be left out (`{"to": 0}` = before today) |
 | `{"derived": "name", …}` | same tests on a computed value |
-| a Match and Merge linked field (`/Linked_Field_State`, `GroupId`, `GoldenId`, `AutoCreated`, `HasSuspects`) | read by XPath on the record, and in SQL from the metadataset's `RecordMetadata` (1.20.0), so it combines with computed values |
+| a Match and Merge linked field (`/Linked_Field_State`, `GroupId`, `GoldenId`, `AutoCreated`, `HasSuspects`) | read in SQL through a JOIN of the metadataset's `RecordMetadata` (1.20.0, JOIN since 1.21.1), so it combines with computed values; alone, counted in `RecordMetadata` itself for a user who sees every record (1.21.1) |
 | `{"all": [c, …]}`, `{"any": [c, …]}`, `{"not": c}` | combinations |
 
 ### Computed values (`derived`)
@@ -214,8 +214,9 @@ Every answer is EBX's own: the explorer keeps no copy of the data.
     question at the same moment wait for one computation. Measured on 576,692 records, 200 simultaneous users on the
     same page: median 2.5-4 s with the answers kept, 4.7-11 s right after a change; 47-519 s without sharing.
 - **Two steps** (1.19.0): the page first asks the count, the records and the tiles, then the facets in a second request;
-  facets whose box is collapsed are not counted until opened. A request replaced by a newer one from the same page (the
-  user kept typing) stops between two statements sent to EBX and is answered `{"cancelled": true}`.
+  facets whose box is collapsed are not counted until opened. EBX answers a page's requests one after the other: while one
+  runs, the page sends nothing and keeps only the latest new request waiting (1.21.1); the server still drops a request
+  that a newer one of the same page has overtaken (`{"cancelled": true}`).
 - **Administrators' options** on the page's query: `explain=1` returns every statement sent to EBX and its time;
   with it, `route=sql` asks SQL even where XPath could answer and `parallel=0` sends the statements one after another
   (comparisons). `LDX_RUN.ajax.load` runs a load test: `n` simulated users (1-300) asking the same page at the same time,

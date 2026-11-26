@@ -64,16 +64,27 @@
   };
   /* each request carries its number and the page's id: the server drops the work of a request a newer one replaced */
   var seq = 0, TAB = Math.random().toString(36).slice(2, 10);
+  /* EBX answers a page's requests one after the other: while one runs, only the latest new one waits (the others are
+     dropped), so typing never queues work nobody will read */
+  var busy = false, pending = null;
   var ask = function (u, done) {
-    var mine = ++seq, h = new EBX_AJAXResponseHandler();
+    var mine = ++seq;
+    if (busy) { pending = {u: u, done: done, mine: mine}; return; }
+    send(u, done, mine);
+  };
+  var send = function (u, done, mine) {
+    busy = true;
+    var h = new EBX_AJAXResponseHandler();
+    var next = function () { busy = false; if (pending) { var p = pending; pending = null; send(p.u, p.done, p.mine); } };
     h.handleAjaxResponseSuccess = function (text) {
+      next();
       if (mine !== seq) return;
       var d; try { d = JSON.parse(text); } catch (x) { d = null; }
       if (d && d.cancelled) return;
       if (!d || d.error) { R = R || {}; R.error = d && d.error ? d.error : S_('error'); draw(); return; }
       done(d);
     };
-    h.handleAjaxResponseFailed = function () {};
+    h.handleAjaxResponseFailed = function () { next(); };
     h.sendRequest(u + (u.indexOf('?') < 0 ? '?' : '&') + 'gen=' + mine + '&tab=' + TAB);
   };
   /* collapsed facets are not counted: they are asked when opened */
