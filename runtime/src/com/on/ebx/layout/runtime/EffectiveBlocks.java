@@ -17,6 +17,8 @@ import com.onwbp.adaptation.XPathExpressionHelper;
 import com.orchestranetworks.schema.Path;
 import com.orchestranetworks.schema.SchemaNode;
 import com.orchestranetworks.service.LoggingCategory;
+import com.orchestranetworks.ui.UIHttpManagerComponent;
+import com.orchestranetworks.ui.form.UIFormPaneWriter;
 
 /**
  * Blocks for effective-dated models (1.24.0), where an entity (a fund, a contract, an organisation) is a stable identity
@@ -46,6 +48,32 @@ final class EffectiveBlocks
 	private static String note(final String pText)
 	{
 		return "<div class=\"ldf-more\">" + EffectiveBlocks.esc(pText) + "</div>";
+	}
+
+	/**
+	 * 1.26.0: the attributes of a link that opens a record in EBX's own modal pop-up (a sub-session of this form, the
+	 * same mechanism as the table views' preview button): the user stays on the form and comes back to it on close.
+	 * Without a writer, or when the pop-up cannot be built, a plain link in a new tab.
+	 */
+	private static String open(final RenderContext rc, final UIFormPaneWriter w, final Adaptation r)
+	{
+		final String url = MoreBlocks.recordUrl(rc, r);
+		String js = null;
+		if (w != null)
+		{
+			try
+			{
+				final UIHttpManagerComponent wc = rc.context.createWebComponentForSubSession();
+				wc.selectInstanceOrOccurrence(r);
+				js = w.buildButtonPreview(wc).getJavaScriptCommand();
+			}
+			catch (final RuntimeException ex)
+			{
+				js = null;
+			}
+		}
+		return js == null ? "href=\"" + EffectiveBlocks.esc(url) + "\" target=\"_blank\" rel=\"noopener\""
+			: "href=\"" + EffectiveBlocks.esc(url) + "\" onclick=\"" + EffectiveBlocks.esc(js) + ";return false;\"";
 	}
 
 	private static String iso(final LocalDate d)
@@ -135,15 +163,16 @@ final class EffectiveBlocks
 		final LocalDate to;
 		final String label;
 		final String chip;
-		final String url;
+		/** The attributes of the link that opens the state. */
+		final String link;
 
-		State(final LocalDate pFrom, final LocalDate pTo, final String pLabel, final String pChip, final String pUrl)
+		State(final LocalDate pFrom, final LocalDate pTo, final String pLabel, final String pChip, final String pLink)
 		{
 			this.from = pFrom;
 			this.to = pTo;
 			this.label = pLabel;
 			this.chip = pChip;
-			this.url = pUrl;
+			this.link = pLink;
 		}
 	}
 
@@ -152,26 +181,27 @@ final class EffectiveBlocks
 	{
 		final Adaptation identity;
 		final String label;
-		final String url;
+		/** The attributes of the link that opens the entity. */
+		final String link;
 		final List<State> states = new ArrayList<State>();
 		final List<Node> children = new ArrayList<Node>();
 
-		Node(final Adaptation pIdentity, final String pLabel, final String pUrl)
+		Node(final Adaptation pIdentity, final String pLabel, final String pLink)
 		{
 			this.identity = pIdentity;
 			this.label = pLabel;
-			this.url = pUrl;
+			this.link = pLink;
 		}
 	}
 
-	private static State state(final RenderContext rc, final Adaptation r, final JsonNode cfg)
+	private static State state(final RenderContext rc, final UIFormPaneWriter w, final Adaptation r, final JsonNode cfg)
 	{
 		final String label = cfg.path("label").asText("");
 		final String chip = cfg.path("chip").asText("");
 		final String end = cfg.path("endDate").asText("");
 		final String shown = label.isEmpty() ? "" : Values.display(r, label, rc.locale);
 		return new State(Values.date(Values.raw(r, cfg.path("effectiveDate").asText(""))), end.isEmpty() ? null : Values.date(Values.raw(r, end)),
-			shown.isEmpty() ? EffectiveBlocks.safeLabel(r, rc.locale) : shown, chip.isEmpty() ? "" : Values.display(r, chip, rc.locale), MoreBlocks.recordUrl(rc, r));
+			shown.isEmpty() ? EffectiveBlocks.safeLabel(r, rc.locale) : shown, chip.isEmpty() ? "" : Values.display(r, chip, rc.locale), EffectiveBlocks.open(rc, w, r));
 	}
 
 	/**
@@ -182,6 +212,11 @@ final class EffectiveBlocks
 	 * {@code date}: a date field of the record giving the default date (empty: today).
 	 */
 	static String asOfTree(final RenderContext rc, final JsonNode b)
+	{
+		return EffectiveBlocks.asOfTree(rc, b, null);
+	}
+
+	static String asOfTree(final RenderContext rc, final JsonNode b, final UIFormPaneWriter w)
 	{
 		final JsonNode levels = b.path("levels");
 		if (!levels.isArray() || levels.size() == 0)
@@ -213,7 +248,7 @@ final class EffectiveBlocks
 		{
 			def = LocalDate.now();
 		}
-		final Node top = new Node(root, EffectiveBlocks.safeLabel(root, rc.locale), MoreBlocks.recordUrl(rc, root));
+		final Node top = new Node(root, EffectiveBlocks.safeLabel(root, rc.locale), EffectiveBlocks.open(rc, w, root));
 		// the root's own states, when configured
 		final String selfStates = b.path("selfStates").asText("");
 		if (!selfStates.isEmpty() && !b.path("selfIdentity").asText("").isEmpty() && !b.path("selfEffectiveDate").asText("").isEmpty())
@@ -229,7 +264,7 @@ final class EffectiveBlocks
 				{
 					if (selfFk != null && selfDate != null && Access.canRead(selfFk, r) && Access.canRead(selfDate, r))
 					{
-						top.states.add(EffectiveBlocks.state(rc, r, cfg));
+						top.states.add(EffectiveBlocks.state(rc, w, r, cfg));
 					}
 				}
 			}
@@ -304,12 +339,12 @@ final class EffectiveBlocks
 						{
 							continue;
 						}
-						n = new Node(identity, EffectiveBlocks.safeLabel(identity, rc.locale), MoreBlocks.recordUrl(rc, identity));
+						n = new Node(identity, EffectiveBlocks.safeLabel(identity, rc.locale), EffectiveBlocks.open(rc, w, identity));
 						byIdentity.put(p.identity.getOccurrencePrimaryKey().format() + "\u0001" + ik, n);
 						p.children.add(n);
 						next.add(n);
 					}
-					final State s = EffectiveBlocks.state(rc, r, l);
+					final State s = EffectiveBlocks.state(rc, w, r, l);
 					n.states.add(s);
 					EffectiveBlocks.bound(bounds, s);
 				}
@@ -407,13 +442,13 @@ final class EffectiveBlocks
 
 	private static void node(final StringBuilder h, final Node n, final int pLevel, final RenderContext rc)
 	{
-		h.append("<li class=\"ldf-aot-i\" data-lv=\"").append(pLevel).append("\"><div class=\"ldf-aot-h\"><a class=\"ldf-aot-id\" href=\"").append(EffectiveBlocks.esc(n.url))
-			.append("\" target=\"_blank\" rel=\"noopener\">").append(EffectiveBlocks.esc(n.label)).append("</a>");
+		h.append("<li class=\"ldf-aot-i\" data-lv=\"").append(pLevel).append("\"><div class=\"ldf-aot-h\"><a class=\"ldf-aot-id\" ").append(n.link).append(">")
+			.append(EffectiveBlocks.esc(n.label)).append("</a>");
 		n.states.sort((p, q) -> EffectiveBlocks.iso(p.from).compareTo(EffectiveBlocks.iso(q.from)));
 		for (final State s : n.states)
 		{
-			h.append("<a class=\"ldf-aot-s\" data-f=\"").append(EffectiveBlocks.iso(s.from)).append("\" data-t=\"").append(EffectiveBlocks.iso(s.to)).append("\" href=\"")
-				.append(EffectiveBlocks.esc(s.url)).append("\" target=\"_blank\" rel=\"noopener\" title=\"").append(EffectiveBlocks.esc(EffectiveBlocks.range(s.from, s.to, rc)))
+			h.append("<a class=\"ldf-aot-s\" data-f=\"").append(EffectiveBlocks.iso(s.from)).append("\" data-t=\"").append(EffectiveBlocks.iso(s.to)).append("\" ")
+				.append(s.link).append(" title=\"").append(EffectiveBlocks.esc(EffectiveBlocks.range(s.from, s.to, rc)))
 				.append("\"><b>").append(EffectiveBlocks.esc(s.label)).append("</b>");
 			if (!s.chip.isEmpty())
 			{
@@ -448,6 +483,11 @@ final class EffectiveBlocks
 	 * of the record drawn as a marker; empty: today only).
 	 */
 	static String stateTimeline(final RenderContext rc, final JsonNode b)
+	{
+		return EffectiveBlocks.stateTimeline(rc, b, null);
+	}
+
+	static String stateTimeline(final RenderContext rc, final JsonNode b, final UIFormPaneWriter w)
 	{
 		final String a = b.path("a").asText("");
 		final String via = b.path("via").asText("");
@@ -557,7 +597,7 @@ final class EffectiveBlocks
 			}
 			final boolean current = a.isEmpty() && r.getOccurrencePrimaryKey().equals(rc.record.getOccurrencePrimaryKey());
 			final String shown = label.isEmpty() ? "" : Values.display(r, label, rc.locale);
-			h.append("<a class=\"ldf-gt-l").append(current ? " ldf-st-cur" : "").append("\" href=\"").append(EffectiveBlocks.esc(MoreBlocks.recordUrl(rc, r))).append("\">")
+			h.append("<a class=\"ldf-gt-l").append(current ? " ldf-st-cur" : "").append("\" ").append(EffectiveBlocks.open(rc, w, r)).append(">")
 				.append(EffectiveBlocks.esc(shown.isEmpty() ? EffectiveBlocks.safeLabel(r, rc.locale) : shown)).append("<small>").append(EffectiveBlocks.esc(EffectiveBlocks.range(s, e, rc)))
 				.append("</small></a><div class=\"ldf-gt-tr\" title=\"").append(EffectiveBlocks.esc(EffectiveBlocks.range(s, e, rc))).append("\">").append(lines);
 			final LocalDate en = e == null ? to : e.plusDays(1);
@@ -606,6 +646,11 @@ final class EffectiveBlocks
 	 */
 	static String delta(final RenderContext rc, final JsonNode b)
 	{
+		return EffectiveBlocks.delta(rc, b, null);
+	}
+
+	static String delta(final RenderContext rc, final JsonNode b, final UIFormPaneWriter w)
+	{
 		final String field = b.path("field").asText("");
 		if (field.isEmpty())
 		{
@@ -648,7 +693,7 @@ final class EffectiveBlocks
 				continue;
 			}
 			final String rl = b.path("label").asText("").isEmpty() ? "" : Values.display(r, b.path("label").asText(""), rc.locale);
-			h.append("<div class=\"ldf-dl-h\"><a href=\"").append(EffectiveBlocks.esc(MoreBlocks.recordUrl(rc, r))).append("\" target=\"_blank\" rel=\"noopener\">")
+			h.append("<div class=\"ldf-dl-h\"><a ").append(EffectiveBlocks.open(rc, w, r)).append(">")
 				.append(EffectiveBlocks.esc(rl.isEmpty() ? EffectiveBlocks.safeLabel(r, rc.locale) : rl)).append("</a><span class=\"ldf-badge ldf-t-warn\">")
 				.append(EffectiveBlocks.esc(RuntimeText.get("chCount", rc.locale, Integer.valueOf(ch.size())))).append("</span></div>").append(EffectiveBlocks.table(rc, ch, labels, max));
 			sections++;

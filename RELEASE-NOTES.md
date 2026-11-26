@@ -1,5 +1,12 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.26.0 (2026-10-26)
+
+- `asOfTree`, `stateTimeline`, `delta`: a click on an entity, a state or a row of a report opens the record in EBX's own modal
+  pop-up (a sub-session of the form, as the table views' preview button does) instead of a new browser tab; the form and its
+  chosen date stay underneath. Planned next: an inline summary of a state under its line in the tree (fields per level) before
+  opening the full record.
+
 ## 1.25.1 (2026-10-24)
 
 - `asOfTree`: the count of a level names its entities ("3 sub-funds"), from the level's `name` text or the entity table's label,

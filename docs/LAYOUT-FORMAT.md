@@ -204,6 +204,8 @@ For models where an entity (a fund, a contract, an organisation) is a stable ide
 states, each from an effective date to an end date (inclusive; empty = open-ended), with the link to the parent carried
 by the state. Worked example: the ROSA fund repository (`Fund` → `FundState`, `SubFundState.fund`, `ShareState.subFund`).
 
+Since 1.26.0 every link of these three blocks (an entity, a state, a row of a delta report) opens the record in EBX's own modal pop-up, a sub-session of the form (the table views' preview mechanism): the user stays on the form, on the chosen date, and comes back to it on close; a middle click still opens a new tab. Planned: an inline summary of the state under its line (fields configured per level), before opening the full record.
+
 Permissions, as for every block: a state the user may not see (record permission) is left out, and so is a state whose
 key to the parent, key to the entity or effective date the user may not read (field permission); every value shown goes
 through the field permission. A `delta` report is one text field: whoever may read it reads the values it holds, whatever

@@ -244,7 +244,9 @@ final class LayoutPane implements UIFormPane
 		final String inner = "orgChart".equals(type) ? OrgChart.render(this.rc, b, bid, w)
 			: "valueHistory".equals(type) ? ValueHistory.render(this.rc, b, bid) : "sitesMap".equals(type) ? SitesMap.render(this.rc, b, bid)
 			: "workflowTasks".equals(type) ? MdmBlocks.workflowTasks(this.rc, b, w) : "actions".equals(type) ? ActionsBlock.render(this.rc, b, w) : "sourceValues".equals(type) ? MdmBlocks.sourceValues(this.rc, b)
-			: "translations".equals(type) ? MdmBlocks.translations(this.rc, b) : "inheritance".equals(type) ? MdmBlocks.inheritance(this.rc, b) : this.more(type, b);
+			: "translations".equals(type) ? MdmBlocks.translations(this.rc, b) : "inheritance".equals(type) ? MdmBlocks.inheritance(this.rc, b)
+			: "asOfTree".equals(type) ? EffectiveBlocks.asOfTree(this.rc, b, w) : "stateTimeline".equals(type) ? EffectiveBlocks.stateTimeline(this.rc, b, w)
+			: "delta".equals(type) ? EffectiveBlocks.delta(this.rc, b, w) : this.more(type, b);
 		if (inner != null)
 		{
 			this.startPanel(w, b, id, this.rc.blockTitle(b), null, null);
@@ -349,12 +351,6 @@ final class LayoutPane implements UIFormPane
 			return ChartBlocks.compare(this.rc, b);
 		case "coverage":
 			return ChartBlocks.coverage(this.rc, b);
-		case "asOfTree":
-			return EffectiveBlocks.asOfTree(this.rc, b);
-		case "stateTimeline":
-			return EffectiveBlocks.stateTimeline(this.rc, b);
-		case "delta":
-			return EffectiveBlocks.delta(this.rc, b);
 		default:
 			return null;
 		}

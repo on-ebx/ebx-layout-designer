@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit 9adc6f9e8c6aa8ce308a265f0660b8cee84ffbfd
-1.25.1: asOfTree counts name the level's entities (name text or the entity table's label), not the states table
+Exported from EBX-Layout-Designer commit 164e8505adf54023279db50da8ffa9865960102d
+1.26.0: asOfTree, stateTimeline and delta open records in EBX's modal pop-up (sub-session) instead of a new tab
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.
