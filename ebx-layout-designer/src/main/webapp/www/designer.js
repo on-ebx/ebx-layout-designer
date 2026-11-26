@@ -20,13 +20,13 @@ function L(fr, en, it){ const o = {}; LOCALES.forEach(l => { const k = l.slice(0
 const C = {
  title:['Designer de fiche','Form designer'], help:['Aide','Help'],
  useActive:['Déclarée dans le modèle','Declared in the model'], useRestart:['Déclarée · redémarrage requis','Declared · restart needed'],
- useOff:['Non utilisée par la table','Not used by the table'], useUnknown:['Modèle DMA : déclaration à vérifier','DMA model: check the declaration'],
+ useOff:['Non utilisée par la table','Not used by the table'], useUnknown:['Modèle DMA : déclaration à vérifier','DMA model: check the declaration'], useNofile:['Déclaration à faire à la main','Declare it by hand'],
  useOther:['La table utilise une autre fiche','The table uses another form'],
  activation:['Activation','Activation'], code:['</> Code','</> Code'], deployTitle:['Activation de la fiche','Activating the form'],
  deployActive:['Le modèle déclare cette fiche. Elle s’applique dès que le serveur a redémarré après la déclaration ; ensuite, chaque enregistrement s’affiche à la prochaine ouverture d’une fiche.','The model declares this form. It applies once the server has restarted after the declaration; from then on, every save shows at the next opening of a record.'],
  deployRestart:['La déclaration est écrite dans le modèle, mais EBX ne l’a pas encore relue : redémarrez le serveur une fois.','The declaration is written in the model, but EBX has not read it yet: restart the server once.'],
  deployOff:['La table n’utilise pas encore cette mise en page : les enregistrements ne changent rien à la fiche tant qu’elle n’est pas déclarée.','The table does not use this layout yet: saving changes nothing on the form until it is declared.'],
- deployUnknown:['Pour un modèle DMA, la déclaration se fait et se vérifie dans l’écran du modèle (ou avec set_form_layout) : ouvrez ensuite un enregistrement pour voir la fiche.','For a DMA model, the declaration is made and checked in the model screen (or with set_form_layout): then open a record to see the form.'],
+ deployNofile:['Le designer ne peut pas écrire la déclaration dans le fichier du modèle : faites-la à la main (voir ci-dessous), puis redémarrez.','The designer cannot write the declaration into the model file: make it by hand (see below), then restart.'], deployUnknown:['Pour un modèle DMA, la déclaration se fait et se vérifie dans l’écran du modèle (ou avec set_form_layout) : ouvrez ensuite un enregistrement pour voir la fiche.','For a DMA model, the declaration is made and checked in the model screen (or with set_form_layout): then open a record to see the form.'],
  closeDlg:['Fermer','Close'], codeTitle:['Ce que le designer produit','What the designer produces'], closeInsp:['Fermer','Close'], preview:['Aperçu avec','Preview with'], language:['Langue','Language'], texts:['Textes','Texts'],
  translations:['Traductions','Translations'], todo:['{0} à faire','{0} to do'], complete:['complètes','complete'], mode:['Mode','Mode'], design:['Concevoir','Design'],
  previewMode:['Aperçu','Preview'], width:['Largeur','Width'], undo:['Annuler','Undo'], save:['Enregistrer','Save'], saved:['Enregistré','Saved'],
@@ -80,7 +80,7 @@ const C = {
  activate:['Déclarer la fiche conçue sur cette table','Declare the designed form on this table'], deactivate:['Remettre la fiche précédente','Put the previous form back'],
  restart:['Un redémarrage du serveur est nécessaire une fois, après la déclaration.','A server restart is needed once, after the declaration.'],
  dma:['Modèle DMA : déclarez la classe {0} comme formulaire de la table dans l’écran du modèle, puis republiez.','DMA model: declare class {0} as the table’s form in the model screen, then republish.'],
- noFile:['Le fichier XSD de ce modèle n’a pas été trouvé sur ce serveur ({0}) : déclarez la classe {1} à la main dans l’osd:table.','The XSD file of this model was not found on this server ({0}): declare class {1} by hand in the osd:table.'],
+ noTable:['La table n’a pas été trouvée dans le fichier XSD du modèle (type nommé ou modèle inclus ?) : déclarez la classe {0} à la main dans son osd:table.','The table was not found in the model’s XSD file (named type or included model?): declare class {0} by hand in its osd:table.'], noFile:['Le fichier XSD de ce modèle n’a pas été trouvé sur ce serveur ({0}) : déclarez la classe {1} à la main dans l’osd:table.','The XSD file of this model was not found on this server ({0}): declare class {1} by hand in the osd:table.'],
  previousForm:['Fiche précédente','Previous form'],
  stored:['Version enregistrée','Stored version'], by:['par','by'], notStored:['Pas encore enregistrée','Not saved yet'],
  mustSave:['Enregistrez d’abord : la déclaration enregistre aussi la mise en page.','Save first: declaring also saves the layout.'],
@@ -885,14 +885,14 @@ function javaExport(){
    declared, another class declared, nothing declared; unknown for a DMA model */
 function useState(){
   const ac = B.activation;
-  if (!ac.file) return 'unknown';
+  if (!ac.file) return ac.reason === 'dma' ? 'unknown' : 'nofile';
   if (ac.declared) return 'active';
   return ac.currentForm ? 'other' : 'off';
 }
 function renderUse(){
   const u = useState(), el = $('#ld-use');
   el.className = 'status use-' + u;
-  el.textContent = c({active:'useActive', restart:'useRestart', off:'useOff', other:'useOther', unknown:'useUnknown'}[u]);
+  el.textContent = c({active:'useActive', restart:'useRestart', off:'useOff', other:'useOther', unknown:'useUnknown', nofile:'useNofile'}[u]);
   $('#ld-deploy').classList.toggle('primary', u === 'off' || u === 'other');
   $('#ld-deploy').classList.toggle('ghost', !(u === 'off' || u === 'other'));
   $('#ld-deploy').setAttribute('aria-pressed', !!(sel && sel.k === 'deploy'));
@@ -901,11 +901,12 @@ function deployHtml(){
   const ac = B.activation, st = B.stored, u = useState();
   const storedLine = st.exists ? `${esc(c('stored'))} ${st.version} · ${esc(st.updatedOn || '')} ${st.updatedBy ? esc(c('by')) + ' ' + esc(st.updatedBy) : ''}` : esc(c('notStored'));
   let h = `<div class="insp act"><span class="kind">${esc(c('activation'))}</span><h3>${esc(c('deployTitle'))}</h3>
-    <div class="${u === 'active' ? 'notice' : 'explain'}">${esc(c(u === 'active' ? 'deployActive' : u === 'restart' ? 'deployRestart' : u === 'unknown' ? 'deployUnknown' : 'deployOff'))}</div>
+    <div class="${u === 'active' ? 'notice' : 'explain'}">${esc(c(u === 'active' ? 'deployActive' : u === 'restart' ? 'deployRestart' : u === 'unknown' ? 'deployUnknown' : u === 'nofile' ? 'deployNofile' : 'deployOff'))}</div>
     <div class="kv"><span>${esc(c('currentForm'))}</span><code>${esc(ac.currentForm || (ac.file ? c('none2') : '—'))}</code><span>${esc(c('file'))}</span><code>${esc(ac.file || '—')}</code>${st.previousForm ? `<span>${esc(c('previousForm'))}</span><code>${esc(st.previousForm)}</code>` : ''}<span>FormLayout</span><span>${storedLine}</span></div>`;
   if (ac.file){
     h += `<div class="row-btns">${!ac.declared ? `<button type="button" class="btn primary small" data-submit="activate">${esc(c('activate'))}</button>` : `<button type="button" class="btn small ghost" data-submit="deactivate">${esc(c('deactivate'))}</button>`}</div><p class="hint">${esc(c('restart'))}</p>`;
   } else if (ac.reason === 'dma'){ if (u !== 'active') h += `<p class="hint">${esc(c('dma', ac.formClass))}</p>`; }
+  else if (ac.reason === 'table') h += `<p class="hint">${esc(c('noTable', ac.formClass))}</p>`;
   else h += `<p class="hint">${esc(c('noFile', ac.reason, ac.formClass))}</p>`;
   return h + `<p class="hint">${esc(c('jsonHow'))}</p></div>`;
 }

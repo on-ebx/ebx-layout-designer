@@ -329,7 +329,7 @@
 .ld-app .mono{font-family:var(--mono)}
 /* where the form stands, next to Save: active, declared but not reloaded, not used */
 .ld-app .status.use-active{background:var(--ok-soft);color:var(--ok-ink)}
-.ld-app .status.use-restart,.ld-app .status.use-off,.ld-app .status.use-other{background:var(--note-soft);color:var(--note-ink)}
+.ld-app .status.use-restart,.ld-app .status.use-off,.ld-app .status.use-other,.ld-app .status.use-nofile{background:var(--note-soft);color:var(--note-ink)}
 .ld-app .status.use-unknown{background:var(--line-2);color:var(--muted)}
 /* "</> Code": the saved JSON and the frozen Java class, in a dialog instead of a block at the bottom of the page */
 .ld-app .ld-dlg{width:min(980px,calc(100vw - 32px));max-height:calc(100vh - 48px);border:1px solid var(--line);border-radius:12px;padding:0;background:var(--surface);color:inherit;box-shadow:0 20px 60px rgba(23,32,51,.3)}

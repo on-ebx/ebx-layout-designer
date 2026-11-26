@@ -166,8 +166,8 @@ final class XsdActivator
 	}
 
 	/**
-	 * The {@code <osd:table>…</osd:table>} span of the table: the element names of the path are looked for in order
-	 * ({@code root}, then {@code Companies}…), then the first {@code osd:table} after the last one.
+	 * The {@code <osd:table>…</osd:table>} span of the table: the element at the path, found by its real nesting
+	 * ({@code root}, then {@code Companies}…), then the first {@code osd:table} after it.
 	 */
 	static int[] osdTable(final String pXsd, final Path pTable)
 	{
@@ -179,15 +179,10 @@ final class XsdActivator
 				steps.add(step);
 			}
 		}
-		int at = 0;
-		for (final String step : steps)
+		final int at = XsdActivator.elementStart(pXsd, steps);
+		if (at < 0)
 		{
-			final int found = pXsd.indexOf("<xs:element name=\"" + step + "\"", at);
-			if (found < 0)
-			{
-				return null;
-			}
-			at = found;
+			return null;
 		}
 		// the table's own osd:table sits in its annotation, before its complexType
 		final int start = pXsd.indexOf("<osd:table>", at);
@@ -198,6 +193,42 @@ final class XsdActivator
 		}
 		final int end = pXsd.indexOf("</osd:table>", start);
 		return end < 0 ? null : new int[] { start, end + "</osd:table>".length() };
+	}
+
+	private static final Pattern ELEMENT_TAG = Pattern.compile("<xs:element\\b[^>]*?(/?)>|</xs:element>");
+	private static final Pattern NAME_ATTR = Pattern.compile("\\bname=\"([^\"]*)\"");
+
+	/**
+	 * Where the element at this path of nested xs:element names opens, or -1. Follows the real nesting: a group
+	 * further up that happens to carry the same name as the table (a "Contact" group inside another table) is skipped.
+	 */
+	static int elementStart(final String pXsd, final List<String> pSteps)
+	{
+		final List<String> stack = new ArrayList<String>();
+		final Matcher m = XsdActivator.ELEMENT_TAG.matcher(pXsd);
+		while (m.find())
+		{
+			if (m.group().startsWith("</"))
+			{
+				if (!stack.isEmpty())
+				{
+					stack.remove(stack.size() - 1);
+				}
+				continue;
+			}
+			final Matcher n = XsdActivator.NAME_ATTR.matcher(m.group());
+			final String name = n.find() ? n.group(1) : "";
+			stack.add(name);
+			if (stack.equals(pSteps))
+			{
+				return m.start();
+			}
+			if ("/".equals(m.group(1)))
+			{
+				stack.remove(stack.size() - 1);
+			}
+		}
+		return -1;
 	}
 
 	/** The folder of the web application whose WEB-INF/ebx/module.xml declares this module name. */

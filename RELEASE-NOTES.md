@@ -1,5 +1,13 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.4.3 (2026-10-09)
+
+- **Activation**: the table is found in the model's XSD by its real nesting. A table whose name is also the name of a
+  group in an earlier table (`/root/Contact` next to a "Contact" group of `/root/Companies`) used to be reported as not
+  found, so the form could not be declared.
+- The activation screen no longer says "DMA model" for a module model whose file or table it cannot reach: it says the
+  declaration must be made by hand, and why.
+
 ## 1.4.2 (2026-10-08)
 
 - **Fields driven by a configuration table, families in a tree**: `attributesBy.familyParent` names the field holding a
