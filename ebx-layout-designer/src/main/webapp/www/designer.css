@@ -355,6 +355,7 @@
 .ld-app .pitem .ty.new{border-color:transparent;background:var(--accent-soft);color:var(--accent-ink)}
 /* previews of the new blocks and widgets */
 .ld-app .t-ok{--tone:var(--p-ok-ink);--tone-bg:var(--p-ok-bg)}.ld-app .t-warn{--tone:var(--p-warn-ink);--tone-bg:var(--p-warn-bg)}.ld-app .t-bad{--tone:#C73200;--tone-bg:#FDEDE7}
+.ld-app .panel.tone{background:var(--tone-bg);border-color:var(--tone);border-left:4px solid var(--tone)}.ld-app .panel.tone h3,.ld-app .panel.tone .ph{color:var(--tone)}
 .ld-app .t-accent{--tone:var(--p-purple-ink);--tone-bg:var(--p-soft)}.ld-app .t-info{--tone:#3931EC;--tone-bg:#ECEBFD}.ld-app .t-muted{--tone:var(--p-muted);--tone-bg:var(--p-chip)}
 .ld-app .w-badge[class*=" t-"]{background:var(--tone-bg);color:var(--tone)}
 .ld-app .barx{display:inline-block;position:relative;height:7px;border-radius:4px;background:var(--p-line-2);overflow:hidden;min-width:70px;flex:1}

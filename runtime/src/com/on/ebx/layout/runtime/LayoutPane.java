@@ -325,7 +325,7 @@ final class LayoutPane implements UIFormPane
 
 	private void startPanel(final UIFormPaneWriter w, final JsonNode b, final String pId, final String pTitle, final String pCount, final String pExtra)
 	{
-		w.add("<section class=\"ldf-panel\" id=\"").add(RenderContext.blockAnchor(pId)).add("\">");
+		w.add("<section class=\"ldf-panel").add(Values.toneClass(b.path("tone").asText(""))).add("\" id=\"").add(RenderContext.blockAnchor(pId)).add("\">");
 		final String note = this.rc.text(b.get("note"));
 		if (!pTitle.isEmpty() || !note.isEmpty() || pExtra != null)
 		{

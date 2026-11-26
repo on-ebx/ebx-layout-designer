@@ -63,7 +63,9 @@ Since 1.10.0 the document may also hold `personal`, `adminSeesAll` and `variants
 
 ## Block types
 
-**`panel`**: `fields` (array of fields), `ro` (whole panel read only). A field:
+**`panel`**: `fields` (array of fields), `ro` (whole panel read only), since 1.13.0 `tone` (`ok`, `warn`, `bad`, `info`,
+`accent`, `muted`: the panel takes that colour as background and border, to stand out, e.g. a warning shown under a
+`cond`). A field:
 
 | Key | Meaning |
 |---|---|

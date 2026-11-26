@@ -1332,7 +1332,7 @@ final class MoreBlocks
 			{
 				final com.orchestranetworks.schema.Path dp = d.getRightValuePath() != null ? d.getRightValuePath() : d.getLeftValuePath();
 				final SchemaNode dn = MoreBlocks.diffNode(r, dp);
-				if (dn != null && Access.canRead(dn, r))
+				if (dn != null && Access.canRead(dn, r) && !MoreBlocks.sameSecond(d.getLeftValue(), d.getRightValue()))
 				{
 					diffs.add(d);
 				}
@@ -1370,6 +1370,20 @@ final class MoreBlocks
 			h.append(MoreBlocks.empty(RuntimeText.get("chMore", rc.locale, Integer.valueOf(diffs.size() - max))));
 		}
 		return h.toString();
+	}
+
+	/**
+	 * Two dates in the same second: the form shows a date and time to the second, so a difference of milliseconds alone
+	 * (a value written with them, then saved again through a form, which drops them) would read as an unchanged value.
+	 * Any difference of a second or more is a change, as in EBX's own comparison.
+	 */
+	static boolean sameSecond(final Object pLeft, final Object pRight)
+	{
+		if (!(pLeft instanceof java.util.Date) || !(pRight instanceof java.util.Date))
+		{
+			return false;
+		}
+		return Math.floorDiv(((java.util.Date) pLeft).getTime(), 1000L) == Math.floorDiv(((java.util.Date) pRight).getTime(), 1000L);
 	}
 
 	private static SchemaNode diffNode(final Adaptation pRecord, final com.orchestranetworks.schema.Path pPath)

@@ -1,5 +1,15 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.13.0 (2026-10-13)
+
+- **A panel can take a colour** (inspector of a panel, *Panel colour*; layout key `"tone"`: `ok`, `warn`, `bad`, `info`,
+  `accent`, `muted`, the tones of the badges). The panel gets the tone's background, a border of its colour (thicker on
+  the left) and a title in that colour, so that a panel shown only when something is wrong (a `cond`) stands out from
+  the others. *None* keeps the white panel.
+- **The *changes* block no longer lists a date and time that only differs by milliseconds**: shown to the second, both
+  sides read the same (a value written with milliseconds, then saved again through a form, which drops them). A
+  difference of a second or more is still a change, as in EBX's own comparison.
+
 ## 1.12.0 (2026-10-13)
 
 - **Del removes the selected block or field** in the designer, like the inspector's *Remove* button and the bin: select it

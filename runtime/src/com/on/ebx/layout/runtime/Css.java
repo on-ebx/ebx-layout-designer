@@ -10,6 +10,9 @@ final class Css
 		+ ".ldf-col{display:flex;flex-direction:column;gap:14px;min-width:0}"
 		+ ".ldf-panel{background:#fff;border:1px solid #E2DEE6;border-radius:13px;padding:0 16px 14px;box-shadow:0 3px 12px rgba(46,35,64,.05);min-width:0;overflow-x:auto}"
 		+ ".ldf-panel>header{padding:12px 0 9px;border-bottom:1px solid #EFECF3;margin-bottom:8px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}"
+		// 1.13.0: a panel with a tone ("tone": "warn"…) takes the tone's background and border, to stand out
+		+ ".ldf-panel[class*=ldf-t-]{background:var(--ldf-tone-bg);border-color:var(--ldf-tone);border-left-width:4px}"
+		+ ".ldf-panel[class*=ldf-t-]>header{border-bottom-color:var(--ldf-tone)}.ldf-panel[class*=ldf-t-] h3{color:var(--ldf-tone)}"
 		+ ".ldf-panel h3{margin:0;font-size:14px;color:#07073C}.ldf-panel h3 .ldf-n{font-weight:500;color:#6B6575}"
 		+ ".ldf-panel header p{margin:2px 0 0;font-size:11.5px;color:#6B6575}"
 		+ ".ldf-ro{display:grid;grid-template-columns:minmax(120px,38%) minmax(0,1fr);gap:4px 12px;padding:5px 0;align-items:baseline}"

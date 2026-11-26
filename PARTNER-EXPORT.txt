@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit c2b33ada066b20cd9279206b10243b9f7d325383
-1.12.0: Del removes the selected block or field in the designer
+Exported from EBX-Layout-Designer commit 8e462f3bb24ec4919264d4668134b0c191b8c8f1
+1.13.0: the changes block ignores a date and time that differs by milliseconds only
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

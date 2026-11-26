@@ -467,6 +467,7 @@ function specBase(){
 function behaviourBlockHtml(b){
   let h = `<h3 class="sub">${esc(c('behaviours'))}</h3>` + condHtml('showIf', b.showIf, ['Afficher seulement si (en direct)','Show only if (live)']);
   if (b.showIf && b.type === 'panel') h += ctlHtml({k:'choice', key:'onHide', def:'keep', l:['Valeurs des champs cachés','Values of hidden fields'], opts:[['keep',['Gardées','Kept']],['clear',['Vidées','Cleared']]]}, b, '');
+  if (b.type === 'panel') h += ctlHtml({k:'choice', key:'tone', def:'', l:['Couleur du panneau','Panel colour'], opts:[['',['Aucune','None']],['ok',['Vert (ok)','Green (ok)']],['warn',['Orange (attention)','Orange (warning)']],['bad',['Rouge (anomalie)','Red (problem)']],['info',['Bleu (info)','Blue (info)']],['accent',['Violet','Purple']],['muted',['Gris','Grey']]]}, b, '');
   if (b.type === 'panel'){
     const by = b.attributesBy || {};
     h += `<div class="fld"><span class="l">${esc(c('famTitle'))}</span><div class="rule">` + specHtml([{k:'table', key:'attributesBy.table', l:['Table de configuration','Configuration table']}, {k:'field', key:'attributesBy.key', l:['Champ de la fiche qui pilote (la famille)','Field of the record that drives (the family)']}], b)
@@ -810,7 +811,7 @@ function renderBlock(b){
         const label = hasText(f.label) ? tx(f.label) : esc(lab(f.p));
         return `<div class="fr${f.wide ? ' wide' : ''}${s}${fHid ? ' ashid' : ''}" data-item="field" data-b="${b.id}" data-i="${i}"><div class="fl" draggable="true" data-drag="field" data-b="${b.id}" data-i="${i}">${label}${fd.req ? ' <i>*</i>' : ''}${mode === 'design' ? audTags(f0, true) : ''}</div><div class="fv" draggable="true" data-drag="field" data-b="${b.id}" data-i="${i}">${renderWidget(f, b)}</div></div>`;
       }).join('');
-      inner = `<div class="panel">${head(b)}<div class="pf" data-drop="fields" data-b="${b.id}">${rows || (mode === 'design' ? `<div class="pf-empty">${esc(c('dropFields'))}</div>` : '')}</div></div>`; break; }
+      inner = `<div class="panel${b.tone ? ' tone t-' + esc(b.tone) : ''}">${head(b)}<div class="pf" data-drop="fields" data-b="${b.id}">${rows || (mode === 'design' ? `<div class="pf-empty">${esc(c('dropFields'))}</div>` : '')}</div></div>`; break; }
     case 'hero': {
       const t = creating ? u('newRecord') : val(b.title);
       const sub = creating ? '' : (b.sub || []).map(val).filter(Boolean).join(' · ');
