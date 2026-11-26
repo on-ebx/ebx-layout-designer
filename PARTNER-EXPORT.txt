@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit 9e3bb82fc9b51fdac2f7482938f42ac762e0ca2c
-1.17.1: report references a layout names that no longer exist
+Exported from EBX-Layout-Designer commit 98da7340cd9c51527011897b423e20dc767b3b27
+Docs: explorers on EBX's engine (parallel statements, shared answers, text filters, admin options, measurements)
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

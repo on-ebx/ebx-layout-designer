@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.on.ebx.layout.explorer.Cond;
+import com.on.ebx.layout.explorer.Engine;
 import com.on.ebx.layout.explorer.ExplorerStore;
 import com.on.ebx.layout.explorer.Query;
 import com.on.ebx.layout.explorer.Spec;
@@ -206,6 +207,10 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 		final ObjectNode ajax = boot.putObject("ajax");
 		ajax.put("query", pWriter.getURLForAjaxRequest(this.query));
 		ajax.put("values", pWriter.getURLForAjaxRequest(this.values));
+		if (pSession.isUserInRole(com.orchestranetworks.service.Profile.ADMINISTRATOR))
+		{
+			ajax.put("load", pWriter.getURLForAjaxRequest(this.load));
+		}
 		if (ExplorerStore.favoritesAvailable(repository))
 		{
 			ajax.put("fav", pWriter.getURLForAjaxRequest(this.favorite));
@@ -531,24 +536,44 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 				}
 				request.facetSearch.putAll(ExplorerUserService.pairs(pContext.getParameter("fq")));
 				request.favorites = ExplorerStore.favorites(this.dataset.getHome().getRepository(), session.getUserReference().getUserId(), this.explorerId, this.dataset);
-				final Query.Result result = Query.run(view, request, session.getLocale());
 				final int off = ExplorerUserService.integer(pContext.getParameter("off"), 0, 0, Integer.MAX_VALUE);
 				final int lim = ExplorerUserService.integer(pContext.getParameter("lim"), view.spec.pageSize, 1, 96);
+				// an administrator may ask what EBX was asked, with each statement's time
+				final boolean explain = "1".equals(pContext.getParameter("explain")) && session.isUserInRole(com.orchestranetworks.service.Profile.ADMINISTRATOR);
+				final long start = System.currentTimeMillis();
+				// set (or cleared) at every call: a thread of the pool never keeps an earlier experiment
+				Engine.preferSql(explain && "sql".equals(pContext.getParameter("route")));
+				Engine.sequential(explain && "0".equals(pContext.getParameter("parallel")));
+				if (explain)
+				{
+					Engine.startTrace();
+				}
+				final Query.Result result = Query.run(view, request, off, lim);
 				out.put("all", result.all);
-				out.put("total", result.rows.size());
+				out.put("total", result.total);
 				out.put("off", off);
 				final ObjectNode tiles = out.putObject("tiles");
 				result.tiles.forEach((k, v) -> tiles.put(k, v.intValue()));
 				final ObjectNode facets = out.putObject("facets");
 				result.facets.forEach((k, page) -> facets.set(k, ExplorerUserService.page(page)));
 				final ArrayNode cards = out.putArray("cards");
-				final List<Integer> rows = result.rows.subList(Math.min(off, result.rows.size()), Math.min(off + lim, result.rows.size()));
-				for (final Integer r : rows)
+				final Engine.Cards extra = ExplorerUserService.cardExtras(view, result.keys);
+				for (final String k : result.keys)
 				{
-					final ObjectNode c = this.card(view, r.intValue(), session, request.favorites);
+					final ObjectNode c = this.card(view, k, session, request.favorites, extra);
 					if (c != null)
 					{
 						cards.add(c);
+					}
+				}
+				if (explain)
+				{
+					Engine.preferSql(false);
+					out.put("ms", System.currentTimeMillis() - start);
+					final ArrayNode trace = out.putArray("trace");
+					for (final String[] t : Engine.trace())
+					{
+						trace.addObject().put("kind", t[0]).put("ms", Long.parseLong(t[2])).put("text", t[1]);
 					}
 				}
 			}
@@ -561,6 +586,119 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 		pResponse.getWriter().add(out.toString());
 	};
 
+	/**
+	 * Administrators only: a load test. {@code n} threads (1-300) each play a user asking the same page at the same time
+	 * (parameters of the query: q, f, tile, sort), cards included, nothing answered from the minute's cache; {@code rounds}
+	 * times each. Answers the response times (ms) and the errors. The threads share the administrator's session.
+	 */
+	private final UserServiceAjaxRequest load = (pContext, pResponse) -> {
+		final Session session = pContext.getSession();
+		final ObjectNode out = LayoutStore.json().createObjectNode();
+		if (!session.isUserInRole(com.orchestranetworks.service.Profile.ADMINISTRATOR))
+		{
+			out.put("error", "administrators only");
+			pResponse.getWriter().add(out.toString());
+			return;
+		}
+		final View view = this.view(pContext);
+		if (view == null)
+		{
+			out.put("error", Messages.get(session.getLocale(), "explorer.denied"));
+			pResponse.getWriter().add(out.toString());
+			return;
+		}
+		final int n = ExplorerUserService.integer(pContext.getParameter("n"), 10, 1, 300);
+		final int rounds = ExplorerUserService.integer(pContext.getParameter("rounds"), 1, 1, 10);
+		final String q = pContext.getParameter("q"), f = pContext.getParameter("f"), tile = pContext.getParameter("tile");
+		final int sort = ExplorerUserService.integer(pContext.getParameter("sort"), 0, 0, 100);
+		// cache=1: the simulated users share answers like real users who see the whole table
+		final boolean keep = "1".equals(pContext.getParameter("cache"));
+		final java.util.List<Long> times = java.util.Collections.synchronizedList(new java.util.ArrayList<Long>());
+		final java.util.List<String> errors = java.util.Collections.synchronizedList(new java.util.ArrayList<String>());
+		final java.util.concurrent.ExecutorService users = java.util.concurrent.Executors.newFixedThreadPool(n, r -> {
+			final Thread t = new Thread(r, "layout-designer-load-test");
+			t.setDaemon(true);
+			t.setContextClassLoader(ExplorerUserService.class.getClassLoader());
+			return t;
+		});
+		final java.util.concurrent.CountDownLatch go = new java.util.concurrent.CountDownLatch(1);
+		final long wall = System.currentTimeMillis();
+		try
+		{
+			for (int i = 0; i < n; i++)
+			{
+				users.execute(() -> {
+					try
+					{
+						go.await();
+					}
+					catch (final InterruptedException ex)
+					{
+						return;
+					}
+					Engine.noCache(!keep);
+					try
+					{
+						for (int r = 0; r < rounds; r++)
+						{
+							final long t0 = System.currentTimeMillis();
+							try
+							{
+								final Query.Request request = new Query.Request();
+								request.text = q;
+								request.selected.putAll(Query.parseSelection(f));
+								request.tile = tile;
+								request.sort = sort;
+								final Query.Result result = Query.run(view, request, 0, view.spec.pageSize);
+								ExplorerUserService.cardExtras(view, result.keys);
+								times.add(Long.valueOf(System.currentTimeMillis() - t0));
+							}
+							catch (final RuntimeException ex)
+							{
+								errors.add(String.valueOf(ex.getMessage()));
+							}
+						}
+					}
+					finally
+					{
+						Engine.noCache(false);
+					}
+				});
+			}
+			go.countDown();
+			users.shutdown();
+			users.awaitTermination(30, java.util.concurrent.TimeUnit.MINUTES);
+		}
+		catch (final InterruptedException ex)
+		{
+			errors.add("interrupted");
+		}
+		finally
+		{
+			users.shutdownNow();
+		}
+		final java.util.List<Long> sorted = new java.util.ArrayList<Long>(times);
+		java.util.Collections.sort(sorted);
+		out.put("users", n);
+		out.put("rounds", rounds);
+		out.put("answers", sorted.size());
+		out.put("wallMs", System.currentTimeMillis() - wall);
+		if (!sorted.isEmpty())
+		{
+			out.put("minMs", sorted.get(0).longValue());
+			out.put("medianMs", sorted.get(sorted.size() / 2).longValue());
+			out.put("p90Ms", sorted.get(Math.min(sorted.size() - 1, (int) Math.ceil(sorted.size() * 0.9) - 1)).longValue());
+			out.put("maxMs", sorted.get(sorted.size() - 1).longValue());
+		}
+		out.put("errors", errors.size());
+		if (!errors.isEmpty())
+		{
+			out.put("firstError", errors.get(0));
+		}
+		LoggingCategory.getKernel().info("[layout-designer] explorer load test: " + out);
+		pResponse.getWriter().add(out.toString());
+	};
+
 	/** Values of one source, for a long facet list: f source, q text, off, n. */
 	private final UserServiceAjaxRequest values = (pContext, pResponse) -> {
 		final ObjectNode out = LayoutStore.json().createObjectNode();
@@ -568,7 +706,7 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 		{
 			final View view = this.view(pContext);
 			final String source = pContext.getParameter("f");
-			if (view == null || source == null || view.hidden.contains(source) || !view.ix.slots.containsKey(source))
+			if (view == null || source == null || view.hidden.contains(source) || view.model.src(source) == null)
 			{
 				out.put("total", 0);
 				out.putArray("items");
@@ -594,8 +732,7 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 		{
 			final View view = this.view(pContext);
 			final String key = pContext.getParameter("k");
-			final Integer row = view == null || key == null ? null : view.ix.pos.get(key);
-			if (row == null || !view.visible.get(row.intValue()))
+			if (view == null || key == null || ExplorerUserService.visibleRecord(this.table, key, pContext.getSession()) == null)
 			{
 				out.put("error", Messages.get(pContext.getSession().getLocale(), "explorer.unknownRecord"));
 			}
@@ -615,6 +752,10 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 	{
 		final ObjectNode o = LayoutStore.json().createObjectNode();
 		o.put("total", pPage.total);
+		if (pPage.more)
+		{
+			o.put("more", true);
+		}
 		final ArrayNode items = o.putArray("items");
 		for (final Query.Item it : pPage.items)
 		{
@@ -635,18 +776,10 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 	}
 
 	/** One card: the record's key values, label, favorite flag and the values its card shows, as this user may read them. */
-	private ObjectNode card(final View pView, final int pRow, final Session pSession, final Set<String> pFavorites)
+	private ObjectNode card(final View pView, final String pKey, final Session pSession, final Set<String> pFavorites, final Engine.Cards pExtra)
 	{
-		final String key = pView.ix.keys[pRow];
-		final Adaptation record;
-		try
-		{
-			record = this.table.lookupAdaptationByPrimaryKey(PrimaryKey.parseString(key));
-		}
-		catch (final RuntimeException ex)
-		{
-			return null;
-		}
+		final String key = pKey;
+		final Adaptation record = ExplorerUserService.visibleRecord(this.table, key, pSession);
 		if (record == null)
 		{
 			return null;
@@ -675,11 +808,13 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 			}
 			if (src.startsWith(Spec.DERIVED))
 			{
-				if (pView.hiddenOn(pRow, src))
+				final Map<String, Object> d = pExtra.derived.get(key);
+				Object value = d == null ? null : d.get(src);
+				if (value == null)
 				{
-					continue;
+					value = ExplorerUserService.provided(pView, src, record);
 				}
-				final ObjectNode x = ExplorerUserService.derivedValue(pView, pView.value(pRow, src));
+				final ObjectNode x = ExplorerUserService.derivedValue(this.table, pSession, value);
 				if (x != null)
 				{
 					v.set(src, x);
@@ -710,7 +845,9 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 				if (p.hasNonNull("flags"))
 				{
 					final ArrayNode f = c.with("flags").putArray(p.get("flags").asText());
-					for (final String id : pView.values(p.get("flags").asText(), pRow))
+					final Map<String, List<String>> raised = pExtra.flags.get(key);
+					for (final String id : raised == null ? java.util.Collections.<String> emptyList()
+						: raised.getOrDefault(p.get("flags").asText(), java.util.Collections.<String> emptyList()))
 					{
 						f.add(id);
 					}
@@ -795,8 +932,67 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 		}
 	}
 
+	/** A record of the table the user may see, by its formatted key; null otherwise (gone since, or hidden by a rule). */
+	static Adaptation visibleRecord(final AdaptationTable pTable, final String pKey, final Session pSession)
+	{
+		try
+		{
+			final Adaptation r = pTable.lookupAdaptationByPrimaryKey(PrimaryKey.parseString(pKey));
+			return r == null || pSession.getPermissions().getAdaptationAccessPermission(r).isHidden() ? null : r;
+		}
+		catch (final RuntimeException ex)
+		{
+			return null;
+		}
+	}
+
+	/** The computed values and flags the cards of a page show, asked to EBX once for the page. */
+	private static Engine.Cards cardExtras(final View pView, final List<String> pKeys)
+	{
+		final JsonNode card = pView.spec.layout.path("card");
+		final Set<String> derived = new LinkedHashSet<String>();
+		for (final String src : ExplorerUserService.cardSources(card))
+		{
+			if (src.startsWith(Spec.DERIVED) && !pView.hidden.contains(src))
+			{
+				derived.add(src);
+			}
+		}
+		final Set<String> flags = new LinkedHashSet<String>();
+		for (final String list : new String[] { "overline", "subtitle", "lines", "tags", "kpis" })
+		{
+			for (final JsonNode p : card.path(list))
+			{
+				if (p.hasNonNull("flags"))
+				{
+					flags.add(p.get("flags").asText());
+				}
+			}
+		}
+		return Engine.cards(pView, pKeys, derived, flags);
+	}
+
+	/** A value computed in Java ({@code provided}): asked to its provider for the record shown. */
+	private static Object provided(final View pView, final String pSource, final Adaptation pRecord)
+	{
+		final JsonNode def = pView.spec.derived.get(pSource.substring(Spec.DERIVED.length()));
+		if (def == null || !"provided".equals(def.path("type").asText()))
+		{
+			return null;
+		}
+		final com.on.ebx.layout.runtime.ExplorerValues.Provider p = com.on.ebx.layout.runtime.ExplorerValues.get(def.path("name").asText(""));
+		try
+		{
+			return p == null ? null : p.value(pRecord);
+		}
+		catch (final RuntimeException ex)
+		{
+			return null;
+		}
+	}
+
 	/** A computed value: a number, a text, true/false, or the records it names (suspects) with their labels and keys. */
-	private static ObjectNode derivedValue(final View pView, final Object pValue)
+	private static ObjectNode derivedValue(final AdaptationTable pTable, final Session pSession, final Object pValue)
 	{
 		if (pValue == null)
 		{
@@ -810,16 +1006,16 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 			for (final Object o : (Collection<?>) pValue)
 			{
 				final String k = Cond.key(o);
-				final Integer r = pView.ix.pos.get(k);
-				if (r != null && !pView.visible.get(r.intValue()))
+				final Adaptation r = ExplorerUserService.visibleRecord(pTable, k, pSession);
+				if (r == null)
 				{
 					// a record the user may not see is not named
 					continue;
 				}
 				ks.add(k);
-				ls.add(r == null ? k : pView.ix.labels[r.intValue()]);
+				ls.add(r.getLabel(pSession.getLocale()));
 			}
-			return x;
+			return ks.size() == 0 ? null : x;
 		}
 		x.put("k", Cond.key(pValue));
 		x.put("l", Cond.key(pValue));

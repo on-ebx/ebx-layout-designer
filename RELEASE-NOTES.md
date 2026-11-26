@@ -1,5 +1,25 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.18.0 (2026-10-15)
+
+- **Explorers ask EBX for every answer.** The explorer no longer reads the whole table into memory: each search,
+  facet, tile, sort and page becomes an EBX XPath predicate run by a `Request` with the user's session (EBX's own
+  index), or an EBX SQL statement when a computed value is involved (a count or a value read through a linked table,
+  Match and Merge suspects through the add-on's metadataset). Nothing to build at the first opening, a change made in
+  EBX shows in the next answer, and the explorer gets faster whenever EBX's engine does. Measured on 576,692 persons
+  before the change: 15 s for the first opening, 2 to 15 s per action.
+- Text search compares like EBX (case-insensitive substring; accents count). A `lookup` with `prefer` now takes the
+  smallest value among the preferred linked records. A `provided` (Java) value shows on cards only.
+- The statements of one page are sent to EBX at the same time (the explorer's own pool, the user's session shared as
+  Insight's profiling does), and EBX's answers are kept a minute: shared between users who see every record (EBX checks
+  it), per user otherwise, one computation when several users ask the same thing at once. 200 simultaneous users on
+  576,692 records: median 2.5-4 s once answers are kept, against 47-519 s without.
+- Text filters in SQL without `CAST`/`ESCAPE` so EBX's index serves them (editor's advice: 4 s to 0.1-0.4 s); suspects
+  in SQL as one `IN` over a `UNION`. Under a filter, a long list of values says "more than N" instead of counting them.
+- Rights checked with test accounts on a copy: records hidden by a record rule, hidden fields and a hidden linked table
+  never show in counts, facets, searches or cards; users with restricted rights never share answers.
+- Administrators: `explain=1` (each statement sent to EBX and its time), `route=sql`, `parallel=0`, and a load test.
+
 ## 1.17.1 (2026-10-14)
 
 - **A layout that names something gone is reported.** A field removed from the model, a table or association that no

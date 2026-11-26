@@ -140,16 +140,53 @@ An **action**: `{"action": "open"}`, `{"action": "favorite"}`, `{"workflow": "<p
 "label", "cond", "roles"}` (asks for confirmation, launches as the user with the record's XPath in `var`, opens the first
 task; same rules as the form's Actions block), `{"service": "<module>@<Service>", "label"}`.
 
+## How the answers are computed (1.18.0)
+
+Every answer is EBX's own: the explorer keeps no copy of the data.
+
+- **Search, facets, tiles, page, counts**: each choice of the page becomes an EBX XPath predicate (on the table's own
+  index: `osd:contains-case-insensitive`, `=`, `osd:is-null`, comparisons, the Match and Merge `Linked_Field_HasSuspects`
+  field) run by a `Request` with the user's session, sorted by EBX (`RequestSortCriteria`) — or, when a condition reads a
+  computed value, an EBX SQL statement (`Adaptation.createQueryBuilder`, also with the user's session).
+- **Computed values in SQL**: `count` and `lookup` are correlated sub-queries on the linked table's foreign key
+  (`FK_AS_STRING(c.fk) = t."$pk"`); `suspects` reads the add-on's metadataset (`Suspected`, or `MatchingResult` with
+  `lastResult = 1` before 6.3), registered in the statement as `mds`; `sameValue`, `test`, `case`, `firstOf` are SQL
+  expressions. A `lookup` with `prefer` takes the smallest value among the preferred linked records, else among all.
+  A `provided` value (Java) is shown on cards only: a facet, flag, tile or sort reading it is left out (logged).
+- **Facet counts**: a short list of values (static enumeration, boolean, referenced table of 30 records or less) is
+  counted one value at a time (one XPath count each when possible); a longer one by one SQL `GROUP BY … ORDER BY
+  COUNT(*) DESC` for the values shown, plus `COUNT(DISTINCT …)` without filter only (under a filter the list says "more
+  than N", since that count takes seconds on a large table); up to 5,000 matching records, the records are read
+  through EBX's index (`Request`) and their values counted; flags and ranges by one statement summing `CASE`s when
+  SQL is needed.
+- **Search text**: case-insensitive substring, as EBX compares (`osd:contains-case-insensitive`, `LOWER(…) LIKE`):
+  accents count. A static enumeration and a small referenced table are also found by their labels.
+- **Text filters in SQL** are written `LOWER(t.field) LIKE '%text%'` on text fields, with no `CAST` and an `ESCAPE` clause
+  only when the text holds `%`, `_` or `\`: EBX's index then serves them (4 s against 0.1-0.4 s on 576,692 records).
+- **At the same time**: the statements of one page (count, page of records, each facet, each value of a short list) are
+  sent to EBX in parallel on the explorer's own pool (as many threads as cores, 8 at most, for the whole server), the
+  user's session shared by the threads as Insight's profiling does. Answers are identical to one-after-another.
+- **Kept answers**: EBX's answers are kept one minute, invalidated as soon as a table they read changes. A user who sees
+  every record of every table the explorer reads (EBX counts them with the user's session and without) shares them with
+  every other such user; anyone else keeps answers of their own. Users asking the same question at the same moment wait
+  for one computation. Measured on 576,692 records, 200 simultaneous users on the same page: median 2.5-4 s with the
+  answers kept, 4.7-11 s right after a change; 47-519 s without sharing.
+- **Freshness**: nothing to build; a change made in EBX shows in the next answer.
+- **Administrators' options** on the page's query: `explain=1` returns every statement sent to EBX and its time;
+  with it, `route=sql` asks SQL even where XPath could answer and `parallel=0` sends the statements one after another
+  (comparisons). `LDX_RUN.ajax.load` runs a load test: `n` simulated users (1-300) asking the same page at the same time,
+  `rounds`, `cache=1` to let them share answers; it answers the response times.
+
 ## EBX permissions
 
-The index is built once per dataset and explorer; every answer is then filtered for the user:
-
-- **records**: the user's visible records come from a request run with the user's session (`Request.setSession`:
-  record access rules, model permissions, scripted record rules); counts, tiles, facet values and pages only cover them;
-- **fields**: a field the user may not read (`SessionPermissions.getNodeAccessPermission`, tested per record since
-  `setSession` does not apply record-dependent rules on fields) is neither shown, searched, sorted on nor counted; a
-  facet, flag, tile, computed value or card part that reads it is removed for that user;
+- **records**: every request and query runs with the user's session (`Request.setSession`, `Query.setSession`):
+  record access rules, model permissions, scripted record rules; counts, tiles, facet values and pages only cover them;
+  a linked table's records are counted under the same rules;
+- **fields**: a field the user may not read (`SessionPermissions.getNodeAccessPermission` on the dataset) is neither
+  shown, searched, sorted on nor counted; a facet, flag, tile, computed value or card part that reads it is removed for
+  that user; a computed value reading a linked table (or the metadataset) the user may not read is removed too;
+- **record-dependent rules on a field** are not applied by EBX's `Request` and SQL filters (their Javadoc says so):
+  the explorer follows EBX here. A card still reads each field with `getNodeAccessPermission(node, record)` and leaves
+  out a value hidden on that record;
 - **actions**: a workflow button shows only to who may launch the publication, a service button only to who may run it;
-- every AJAX call re-checks the record a page names (favorite, action).
-
-The visible records of a user are kept 60 s (and until the table changes).
+- every AJAX call re-checks the records a page names (cards, favorite, suspects named on a card, action).

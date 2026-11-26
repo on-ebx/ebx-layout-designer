@@ -25,7 +25,9 @@
     hideF: ['Masquer les filtres', 'Hide filters'], showF: ['Afficher les filtres', 'Show filters'], open: ['Ouvrir la fiche', 'Open'],
     fav: ['Favori', 'Favorite'], addFav: ['Ajouter aux favoris', 'Add to favorites'], rmFav: ['Retirer des favoris', 'Remove from favorites'],
     myFav: ['Mes favoris', 'My favorites'], moreV: ['Afficher 10 de plus', 'Show 10 more'], less: ['Réduire', 'Show less'],
-    findV: ['Chercher parmi {n} valeurs', 'Search {n} values'], found: ['{n} trouvée(s)', '{n} found'], ofTotal: ['{a} sur {b}, les plus fréquentes', '{a} of {b}, most frequent first'],
+    findV: ['Chercher parmi {n} valeurs', 'Search {n} values'], findMany: ['Chercher une valeur', 'Search a value'],
+    ofMany: ['{a} les plus fréquentes, d\'autres existent', '{a} most frequent, more exist'], foundMany: ['Plus de {n} trouvées', 'More than {n} found'],
+    narrowMany: ['Pour les autres, cherchez.', 'For the others, search.'], found: ['{n} trouvée(s)', '{n} found'], ofTotal: ['{a} sur {b}, les plus fréquentes', '{a} of {b}, most frequent first'],
     narrow: ['Pour les {n} autres, cherchez.', 'For the other {n}, search.'], all: ['Toutes', 'All'], yes: ['Oui', 'Yes'], no: ['Non', 'No'],
     copy: ['Copier', 'Copy'], copied: ['Copié', 'Copied'], compliant: ['Rien à signaler', 'Nothing to report'], error: ['Le serveur n’a pas répondu correctement.', 'The server answer could not be read.'],
     sort: ['Trier', 'Sort'], ago: ['il y a {n}', '{n} ago'], inT: ['dans {n}', 'in {n}'], today: ['aujourd’hui', 'today'], d: ['j', 'd'], mo: ['mois', 'mo'], y: ['an(s)', 'y']
@@ -209,10 +211,10 @@
   var facetBox = function (f) {
     var page = R && R.facets ? R.facets[f.id] : null;
     if (!page) return '';
-    var sel = S.sel[f.id] || {}, items = page.items || [], total = page.total || 0, h = '';
+    var sel = S.sel[f.id] || {}, items = page.items || [], total = page.total || 0, many = !!page.more, h = '';
     var title = f.kind === 'favorites' ? (T(f.title) || S_('myFav')) : T(f.title);
     var long = f.kind !== 'flags' && f.kind !== 'ranges' && f.kind !== 'favorites' && (total > (f.top || 10) || S.fq[f.id]);
-    if (long) h += '<input class="ldx-fsearch" type="search" id="ldx-fq-' + esc(f.id) + '" data-fq="' + esc(f.id) + '" value="' + esc(S.fq[f.id] || '') + '" placeholder="' + esc(S_('findV', {n: nf(total)})) + '">';
+    if (long) h += '<input class="ldx-fsearch" type="search" id="ldx-fq-' + esc(f.id) + '" data-fq="' + esc(f.id) + '" value="' + esc(S.fq[f.id] || '') + '" placeholder="' + esc(many ? S_('findMany') : S_('findV', {n: nf(total)})) + '">';
     if (f.kind === 'favorites') {
       var it = items[0] || {n: 0};
       h += '<label class="ldx-opt"><input type="checkbox" data-f="' + esc(f.id) + '" data-v="1"' + (sel['1'] ? ' checked' : '') + '><span class="l">' + esc(S_('myFav')) + '</span><span class="n">' + nf(it.n) + '</span></label>';
@@ -229,9 +231,11 @@
     }
     if (long) {
       var shown = S.more[f.id] || f.top || 10, notSel = items.filter(function (x) { return !x.sel; }).length;
-      h += '<div class="ldx-fnote">' + esc(S.fq[f.id] ? S_('found', {n: nf(total)}) : S_('ofTotal', {a: nf(Math.min(notSel, total)), b: nf(total)})) + '</div>';
+      /* a long list under a filter comes without its exact total ("more"): EBX would take seconds to count it */
+      h += '<div class="ldx-fnote">' + esc(S.fq[f.id] ? (many ? S_('foundMany', {n: nf(total - 1)}) : S_('found', {n: nf(total)}))
+        : many ? S_('ofMany', {a: nf(notSel)}) : S_('ofTotal', {a: nf(Math.min(notSel, total)), b: nf(total)})) + '</div>';
       if (total > shown && shown < 50) h += '<button type="button" class="ldx-fmore" data-fmore="' + esc(f.id) + '">' + esc(S_('moreV')) + '</button>';
-      else if (total > shown) h += '<div class="ldx-fnote">' + esc(S_('narrow', {n: nf(total - shown)})) + '</div>';
+      else if (total > shown) h += '<div class="ldx-fnote">' + esc(many ? S_('narrowMany') : S_('narrow', {n: nf(total - shown)})) + '</div>';
       if (S.more[f.id] && S.more[f.id] > (f.top || 10)) h += ' <button type="button" class="ldx-fmore" data-fless="' + esc(f.id) + '">' + esc(S_('less')) + '</button>';
     }
     return '<div class="ldx-facet' + (S.collapsed[f.id] ? ' collapsed' : '') + '"><h4 data-fold="' + esc(f.id) + '"><span>' + esc(title) + '</span><span aria-hidden="true">' + (S.collapsed[f.id] ? '▸' : '▾') + '</span></h4><div class="ldx-fb">' + h + '</div></div>';
