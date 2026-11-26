@@ -58,6 +58,10 @@
 .ldx-card .cin{padding:14px;display:flex;flex-direction:column;gap:7px;min-width:0;flex:1}
 .ldx-card.horizontal{flex-direction:row}
 .ldx-card.compact{flex-direction:row;align-items:center}
+/* a banner image (cover) is as wide as its card: in the two row layouts it would take the whole row and leave the text
+   one character per line, so it becomes a side image (wide cards) or a thumbnail (list) */
+.ldx-card.horizontal>.ldx-img-cover{width:96px;height:auto;min-height:96px;flex:none;align-self:stretch}
+.ldx-card.compact>.ldx-img-cover,.ldx-card.compact>.ldx-img-side{width:44px;height:44px;min-height:0;flex:none;align-self:center;margin-left:10px;border-radius:8px;padding:2px}
 .ldx-card.compact .cin{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:8px 12px}
 .ldx-card.fav{border-color:color-mix(in srgb,var(--ldx-warn) 45%,var(--ldx-line))}
 .ldx-top{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:11px;color:var(--ldx-mute);text-transform:uppercase;letter-spacing:.03em}
@@ -118,6 +122,13 @@
 .ldx-views button{border:0;background:var(--ldx-surface);padding:4px 10px;cursor:pointer;color:inherit;font-size:14px}
 .ldx-views button[aria-pressed=true]{background:var(--ldx-main,#5B3FD3);color:#fff}
 .ldx-create{white-space:nowrap}
+/* the Actions menu of the bar (services of the table) */
+.ldx-menu{position:relative}
+.ldx-menu>summary{list-style:none;cursor:pointer;white-space:nowrap}
+.ldx-menu>summary::-webkit-details-marker{display:none}
+.ldx-menu-list{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:200px;max-width:340px;padding:4px;background:var(--ldx-surface);border:1px solid var(--ldx-line);border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.14);display:flex;flex-direction:column}
+.ldx-menu-list button{border:0;background:transparent;text-align:left;padding:7px 10px;border-radius:6px;cursor:pointer;font:inherit;color:inherit}
+.ldx-menu-list button:hover,.ldx-menu-list button:focus-visible{background:var(--ldx-soft)}
 .ldx-links{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:flex-end;margin:-2px 0 10px;font-size:13px}
 .ldx-links a{color:var(--ldx-main,#5B3FD3);font-weight:600;text-decoration:none;cursor:pointer}
 .ldx-links a:hover{text-decoration:underline}

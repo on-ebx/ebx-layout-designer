@@ -1,5 +1,23 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.29.0 (2026-11-16)
+
+Explorers ([EXPLORER-FORMAT.md](docs/EXPLORER-FORMAT.md)). Module classes and static files only: no runtime jar change,
+no restart (reload the module's context).
+
+- **Fix: a card with a banner image broke the list and wide-card views.** With `image.shape: "cover"` and several
+  `layouts`, switching from cards to *List* or *Wide cards* gave the image the whole row and left the text one character
+  per line (a card over 2,000 px high). The banner becomes a side image in wide cards and a thumbnail in the list; wide
+  cards are at least 420 px wide.
+- **Previous / next record from an explorer.** A record opened from a card now opens inside the table as the page filters
+  it (`UIHttpManagerComponent.setFirstCallDisplayRecord`), so EBX draws the same previous / next arrows as from a table
+  view. They follow the page's filter, in the table view's order (not the explorer's sort). Closing the record leaves the
+  filtered table in the pop-up. `card.recordNavigation: false` (designer: explorer settings) opens the record alone as
+  before.
+- **Actions menu.** `header.actions` lists services of the table (a module's, or EBX's own such as `@exportToCSV`); the
+  page shows them in an *Actions* menu, each only to the users EBX lets run it on the table, on the records the page
+  filters. Set in the designer (explorer settings, *Actions menu*), checked by `explorer_validate`.
+
 ## 1.28.0 (2026-11-02)
 
 - **Changes in this request follows linked objects** ([LAYOUT-FORMAT.md](docs/LAYOUT-FORMAT.md)): the block compared the
@@ -24,6 +42,10 @@
   designer's inspector, same controls as the built-in blocks; carried by `layout_describe_table` and the model export)
   and `LayoutComponent.title()` (a default panel title). A component that does not use them works as before.
 - Runtime jar changed: installing 1.27.0 needs a Tomcat restart, like every runtime change.
+- **MCP Apps form preview** (prototype, merged into main on 2026-11-04) ([MCP.md](docs/MCP.md#form-preview-mcp-apps-1270-prototype)): `layout_get`, `layout_starter` and
+  `layout_validate` point at the UI resource `ui://ebx-layout-designer/form-preview`, which a host supporting MCP Apps (the
+  Claude desktop chat) draws as a mock-up of the record form, check findings placed on their blocks. Read-only; the labels
+  come from `layout_describe_table` through the host. The answers carry `designerLink`, the designer's absolute address.
 
 ## 1.26.0 (2026-10-26)
 

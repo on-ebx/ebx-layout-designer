@@ -12,6 +12,9 @@ import com.orchestranetworks.service.OperationException;
 @WebListener
 public final class LayoutDesignerRegistration extends ModuleRegistrationListener
 {
+	/** The Actions submenu that holds this module's services. */
+	public static final com.orchestranetworks.service.ServiceGroupKey SERVICE_GROUP = com.orchestranetworks.service.ServiceGroupKey.forServiceGroupInModule("ebx-layout-designer", "LayoutDesigner");
+
 	@Override
 	public void handleRepositoryStartup(final ModuleContextOnRepositoryStartup pContext) throws OperationException
 	{
@@ -43,6 +46,14 @@ public final class LayoutDesignerRegistration extends ModuleRegistrationListener
 	public void handleServiceRegistration(final ModuleServiceRegistrationContext pContext)
 	{
 		super.handleServiceRegistration(pContext);
+		// one submenu per module in the Actions menus of business tables, registered before the services that use it
+		final com.onwbp.base.text.UserMessageString groupLabel = new com.onwbp.base.text.UserMessageString();
+		groupLabel.setString(java.util.Locale.FRENCH, "Layout Designer");
+		groupLabel.setStringForDefault("Layout Designer");
+		final com.onwbp.base.text.UserMessageString groupDescription = new com.onwbp.base.text.UserMessageString();
+		groupDescription.setString(java.util.Locale.FRENCH, "Fiches, explorateurs et leur conception.");
+		groupDescription.setStringForDefault("Record forms, explorers and their design.");
+		pContext.registerServiceGroup(SERVICE_GROUP, groupLabel, groupDescription);
 		pContext.registerUserService(new DesignerServiceDeclaration(pContext.getModuleName()));
 		pContext.registerUserService(new LayoutsHomeServiceDeclaration(pContext.getModuleName()));
 		pContext.registerUserService(new AboutServiceDeclaration(pContext.getModuleName()));

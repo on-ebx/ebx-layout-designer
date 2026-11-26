@@ -56,6 +56,7 @@ public final class ActionServiceDeclaration implements UserServiceDeclaration.On
 	@Override
 	public void defineProperties(final UserServicePropertiesDefinitionContext pContext)
 	{
+		pContext.setGroup(com.on.ebx.layout.designer.LayoutDesignerRegistration.SERVICE_GROUP);
 		pContext.setLabel(Messages.info("action.label"));
 	}
 

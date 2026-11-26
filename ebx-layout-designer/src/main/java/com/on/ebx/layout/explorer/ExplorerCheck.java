@@ -295,6 +295,24 @@ public final class ExplorerCheck
 
 	private void header(final String pWhere, final JsonNode pHeader)
 	{
+		int n = 0;
+		for (final JsonNode a : pHeader.path("actions"))
+		{
+			final String where = pWhere + ".actions[" + n++ + "]";
+			final String service = a.path("service").asText("").trim();
+			if (service.isEmpty())
+			{
+				this.error(where, "An entry of the Actions menu needs \"service\": a service of the table (module@Service, or a built-in one such as @exportToCSV).");
+			}
+			else if (service.indexOf('@') < 0)
+			{
+				this.warning(where, "\"" + service + "\" does not look like a service key (module@Service, @exportToCSV): the entry shows only when EBX knows the service.");
+			}
+			if (!a.hasNonNull("label"))
+			{
+				this.warning(where, "No \"label\": the menu will show the service key.");
+			}
+		}
 		int i = 0;
 		for (final JsonNode l : pHeader.path("links"))
 		{

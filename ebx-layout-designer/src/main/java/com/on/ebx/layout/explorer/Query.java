@@ -60,6 +60,12 @@ public final class Query
 		public long computedAt;
 		public boolean changed;
 		public String mode;
+		/**
+		 * 1.29.0: the request's filter (text, tile, facets, date) as one XPath predicate on the table: empty when nothing is
+		 * filtered, null when XPath cannot say it (a condition on a computed value, the "in force on" date). The page hands
+		 * it to EBX's own table view (previous / next record, table services).
+		 */
+		public String xpath;
 	}
 
 	/** What the page asks: per facet, how many values to show and the text typed in the facet's own search. */

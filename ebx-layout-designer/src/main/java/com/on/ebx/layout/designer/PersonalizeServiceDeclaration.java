@@ -72,6 +72,7 @@ public final class PersonalizeServiceDeclaration implements UserServiceDeclarati
 	@Override
 	public void defineProperties(final UserServicePropertiesDefinitionContext pContext)
 	{
+		pContext.setGroup(com.on.ebx.layout.designer.LayoutDesignerRegistration.SERVICE_GROUP);
 		pContext.setLabel(Messages.info("personal.label"));
 		pContext.setDescription(Messages.info("personal.description"));
 	}

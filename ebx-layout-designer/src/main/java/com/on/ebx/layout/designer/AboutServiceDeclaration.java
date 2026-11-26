@@ -53,6 +53,7 @@ public final class AboutServiceDeclaration implements UserServiceDeclaration.OnT
 	@Override
 	public void defineProperties(final UserServicePropertiesDefinitionContext pContext)
 	{
+		pContext.setGroup(com.on.ebx.layout.designer.LayoutDesignerRegistration.SERVICE_GROUP);
 		pContext.setLabel(Messages.info("about.label"));
 		pContext.setDescription(Messages.info("about.description"));
 	}

@@ -1,4 +1,4 @@
-# Explorer format (1.16.0)
+# Explorer format (1.16.0, last changed in 1.29.0)
 
 An **explorer** is a search page over one table: a search box, facets, tiles, a sort, and one card per record. It is
 drawn in the Layout Designer (*Design the explorer*) and stored as JSON in the table `ExplorerLayout` of the dataset
@@ -133,6 +133,8 @@ Set in the designer: explorer settings, *“In force on” date*.
 
 ```json
 "header": {"create": true,
+  "actions": [{"label": {"en-US": "Export (CSV)"}, "service": "@exportToCSV"},
+              {"label": {"en-US": "New supplier from the register"}, "service": "my-module@NewSupplier", "roles": ["Buyer"], "filtered": false}],
   "links": [{"label": {"en-US": "All contacts"}, "table": "/root/Contact"},
             {"label": "Location map", "service": "my-module@Map"},
             {"label": "E-invoicing", "table": "/root/EInvoicingAddress", "predicate": "./active = true", "roles": ["Finance"]},
@@ -143,6 +145,14 @@ Set in the designer: explorer settings, *“In force on” date*.
 (`true`, or `{"label": …}`). `links`: another table of the dataset (`table`, empty = this one; optional XPath `predicate`
 and `service`), opened in the current perspective when there is one, shown only when the user may read that table; or an
 address (`url`: this server's `/…` in the same tab, `https://…` in a new one, `newTab` to choose).
+
+`actions` (1.29.0): the **Actions** menu of the page, the counterpart of a table view's Actions menu. Each entry is a
+service of the table: a module's (`module@Service`) or one of EBX's own (`@exportToCSV`, `@importFromCSV`, `@exportToXML`,
+`@importFromXML`, `@validation`, `@compare`, `@massUpdate`, `@massdelete`, `@viewHistory`). An entry shows only to the
+users EBX lets run that service on the table (`SessionPermissions.getTableActionPermissionForService`), and to its `roles`
+when it names some. The service opens in EBX's pop-up, on the table **as the page filters it** (search, tile, facets) when
+that filter can be written as an XPath predicate, as from a filtered table view; on the whole table when it cannot (a
+condition on a computed value, the "in force on" date) or when the entry says `"filtered": false`.
 
 ### Card
 
@@ -156,7 +166,15 @@ address (`url`: this server's `/…` in the same tab, `https://…` in a new one
  "actions": [action]}
 ```
 
-`layout`: `vertical`, `horizontal` (image on the left), `compact` (one line per record). `layouts` (1.20.0): the layouts
+`recordNavigation` (1.29.0, `true` unless set to `false`): a record opened from a card (its title, the *Open* action) opens
+inside the table as the page filters it, so that EBX draws its own **previous / next** arrows on the record, as it does
+from a table view. The arrows walk the records of the page's filter (when XPath can write it; else the records shown on
+the page) **in the table view's order**, not in the explorer's sort; closing the record leaves that filtered table in the
+pop-up, closing the pop-up returns to the explorer. With `false`, or when the address would be too long (about 6,000
+characters), the record opens alone, as before.
+
+`layout`: `vertical`, `horizontal` (image on the left), `compact` (one line per record). A banner image (`shape: "cover"`)
+becomes a side image in `horizontal` and a thumbnail in `compact` (1.29.0). `layouts` (1.20.0): the layouts
 the user may switch between (`["vertical", "compact"]`); with two or more the page shows a switch and remembers the choice
 per user in the browser. `edge: "pill"` colours the top
 edge like the pill. `image.shape`: `cover`, `side`, `logo`, `avatar`; `whenMissing`: `initials` or `hide`. `title` is a

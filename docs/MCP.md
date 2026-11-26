@@ -58,6 +58,46 @@ model: the designer's *Activation*, then one restart).
 Worked example: [examples/companies-explorer.json](examples/companies-explorer.json), the FastTrack Companies explorer
 (632 companies, six tiles, eleven facets, groups by sector) rebuilt from the Java `CompanyExplorer` service.
 
+## Form preview (MCP Apps, 1.27.0, prototype)
+
+A host that supports MCP Apps (extension `io.modelcontextprotocol/ui`, spec 2026-01-26) draws the record form a layout
+describes next to the answer of `layout_get`, `layout_starter` and `layout_validate`. The page is a mock-up: tabs, rows of
+one or two columns, panels with their fields (label, required mark, widget, read-only), hero, facts, association grids and
+the validation block drawn for what they are, other blocks as a card naming what they refer to. No value is read.
+
+- **Resource:** `ui://ebx-layout-designer/form-preview`, mime type `text/html;profile=mcp-app`, embedded in the module
+  (`mcp/form-preview.html`, no external script, style or font: the host's default CSP applies). Listed and read for
+  administrators only, like the tools.
+- **Declaration:** `initialize` declares `resources` and `extensions.io.modelcontextprotocol/ui`. The three read-only tools
+  carry `_meta.ui.resourceUri` (and the flat pre-GA key `_meta["ui/resourceUri"]`) with `visibility: ["model","app"]`.
+  `layout_put` and the explorer tools carry nothing.
+- **Labels:** the page calls `layout_describe_table` through the host (`tools/call`), so the read runs under the caller's
+  session and rights. The page itself holds no EBX session.
+- **Check findings:** for `layout_validate`, the layout is the tool's input; each error or warning is placed on the block or
+  field it names (tab label, block id or type, model path in the text). What cannot be placed stays in the list on top.
+- **Designer link:** the answers now carry `designerLink`, the absolute address of the designer on the table (built from the
+  address the caller reached the server with). The button opens it through the host (`ui/open-link`).
+- **Interaction:** a click on a field or block shows its model facts (type, group, required, enumeration, foreign key
+  target) and its JSON in a side panel. A locale switcher follows `layout.locales`. Light and dark themes follow the host.
+
+Where it renders: the Claude desktop **chat**, for servers of its own configuration file (stdio). Claude Code and the
+desktop Code tab show the text answer only. A stdio bridge to this endpoint is the catalog's `tools/mcp_stdio_bridge.py`
+(standard library only, the `Authorization` header taken from the environment):
+
+```json
+"ebx-layout-designer": {
+  "command": "/usr/bin/python3",
+  "args": ["<path>/mcp_stdio_bridge.py", "http://localhost:8080/ebx-layout-designer/rest/mcp"],
+  "env": {"EBX_MCP_AUTHORIZATION": "Basic <base64 of login:password>"}
+}
+```
+
+Edit `claude_desktop_config.json` with the app quit: the app rewrites it from memory.
+
+![Check findings on their blocks](img/mcp-apps-form-preview-check.jpg)
+![A field's model facts](img/mcp-apps-form-preview-field.jpg)
+![Dark theme, association grids](img/mcp-apps-form-preview-dark.jpg)
+
 ## Limits
 
 Only administrators are served: anyone else gets 403 before the request body is read. The body is limited to 2 MB (413;

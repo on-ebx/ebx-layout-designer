@@ -551,6 +551,7 @@ public final class Engine
 		if (main)
 		{
 			out.total = ((Integer) done.get(0)).intValue();
+			out.xpath = where == Model.Pred.FALSE ? null : where.xpath;
 			@SuppressWarnings("unchecked")
 			final List<String> keys = (List<String>) done.get(1);
 			out.keys.addAll(keys);

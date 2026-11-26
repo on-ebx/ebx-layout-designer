@@ -175,6 +175,15 @@ final class LayoutMcpTools
 	private final Repository repository;
 	private final Locale locale;
 
+	/** Scheme and authority the caller reached the server with ({@code http://host:8080}); empty when unknown (1.27.0). */
+	private String serverBase = "";
+
+	/** MCP Apps (1.27.0): the answers also carry absolute links, for a page drawn outside EBX. */
+	void setServerBase(final String pBase)
+	{
+		this.serverBase = pBase == null ? "" : pBase.trim();
+	}
+
 	LayoutMcpTools(final Session pSession, final Repository pRepository, final Locale pLocale)
 	{
 		this.session = pSession;
@@ -765,6 +774,11 @@ final class LayoutMcpTools
 		out.put("table", pTarget.table.getTablePath().format());
 		out.put("tableLabel", pTarget.table.getTableNode().getLabel(this.locale));
 		out.put("model", pTarget.model().format());
+		// 1.27.0: the designer of the table as an absolute link (the form preview opens it from outside EBX)
+		if (!this.serverBase.isEmpty())
+		{
+			out.put("designerLink", this.serverBase + this.url(pTarget, LayoutPaths.MODULE_NAME + "@LayoutDesigner", null));
+		}
 		return out;
 	}
 

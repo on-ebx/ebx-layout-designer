@@ -45,6 +45,7 @@ public final class ExplorerServiceDeclaration implements UserServiceDeclaration.
 	@Override
 	public void defineProperties(final UserServicePropertiesDefinitionContext pContext)
 	{
+		pContext.setGroup(com.on.ebx.layout.designer.LayoutDesignerRegistration.SERVICE_GROUP);
 		pContext.setLabel(Messages.info("explorer.label"));
 		pContext.setDescription(Messages.info("explorer.description"));
 	}

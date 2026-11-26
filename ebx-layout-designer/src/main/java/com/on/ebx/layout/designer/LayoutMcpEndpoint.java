@@ -18,6 +18,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -32,13 +33,31 @@ import com.orchestranetworks.service.Session;
  * (JSON-RPC 2.0, one JSON answer per request, no server-sent events), authenticated like any EBX REST call (Basic, token,
  * session), serving {@link LayoutMcpTools}. A custom module cannot register a native EBX MCP server (only core and add-on
  * modules may), hence this endpoint, modelled on the data catalog's one. Disabled with {@code -Debx.layoutDesigner.mcp=false}.
+ * <p>
+ * MCP Apps (1.27.0, extension {@code io.modelcontextprotocol/ui}, spec 2026-01-26): the server lists one UI resource,
+ * {@value #PREVIEW_UI_URI} (an HTML page embedded in the module, {@code mcp/form-preview.html}), and the read-only tools
+ * {@code layout_get}, {@code layout_starter} and {@code layout_validate} point at it through {@code _meta.ui.resourceUri}. A host
+ * that supports the extension (the Claude desktop chat) draws the record form the layout describes, as a mock-up, next to
+ * the answer; the page reads the table's labels with {@code layout_describe_table} through the host, under the caller's
+ * session. Nothing is written from the page. A host without the extension reads the text as before.
  */
 @Path("/mcp")
 @Produces(MediaType.APPLICATION_JSON)
 public final class LayoutMcpEndpoint
 {
 	public static final String PROTOCOL_VERSION = "2025-06-18";
+	/** The MCP Apps extension (SEP-1865), its identifier and the only content type of its first version. */
+	public static final String UI_EXTENSION = "io.modelcontextprotocol/ui";
+	public static final String UI_MIME_TYPE = "text/html;profile=mcp-app";
+	/** The form preview: the UI resource of the read-only layout tools. */
+	public static final String PREVIEW_UI_URI = "ui://ebx-layout-designer/form-preview";
+	static final String PREVIEW_UI_FILE = "/com/on/ebx/layout/designer/mcp/form-preview.html";
+	/** The tools the preview draws: they answer, or are given, a layout of one table. */
+	static final java.util.Set<String> PREVIEW_TOOLS = new java.util.HashSet<String>(java.util.Arrays.asList("layout_get", "layout_starter", "layout_validate"));
+	private static volatile String previewHtml;
 	private final SessionContext sessionContext;
+	@Context
+	UriInfo uriInfo;
 
 	public LayoutMcpEndpoint(@Context final SessionContext pSessionContext)
 	{
@@ -120,6 +139,7 @@ public final class LayoutMcpEndpoint
 		}
 		final Locale locale = this.sessionContext.getLocale() == null ? Locale.ENGLISH : this.sessionContext.getLocale();
 		final LayoutMcpTools tools = new LayoutMcpTools(session, this.sessionContext.getRepository(), locale);
+		tools.setServerBase(LayoutMcpEndpoint.serverBase(this.uriInfo));
 		final boolean allowed = LayoutMcpTools.allowed(session);
 		if (request.isArray() && request.size() > LayoutMcpEndpoint.MAX_BATCH)
 		{
@@ -306,7 +326,13 @@ public final class LayoutMcpEndpoint
 			final ObjectNode result = LayoutStore.json().createObjectNode();
 			final JsonNode wanted = params.get("protocolVersion");
 			result.put("protocolVersion", wanted == null || wanted.isNull() ? LayoutMcpEndpoint.PROTOCOL_VERSION : wanted.asText());
-			result.putObject("capabilities").putObject("tools").put("listChanged", false);
+			final ObjectNode capabilities = result.putObject("capabilities");
+			capabilities.putObject("tools").put("listChanged", false);
+			// MCP Apps: the preview is a resource; the extension is declared back to the host (SEP-1724 extension capabilities)
+			final ObjectNode resources = capabilities.putObject("resources");
+			resources.put("listChanged", false);
+			resources.put("subscribe", false);
+			capabilities.putObject("extensions").putObject(LayoutMcpEndpoint.UI_EXTENSION).putArray("mimeTypes").add(LayoutMcpEndpoint.UI_MIME_TYPE);
 			final ObjectNode info = result.putObject("serverInfo");
 			info.put("name", LayoutMcpTools.SERVER_NAME);
 			info.put("title", "ON EBX Layout Designer");
@@ -347,10 +373,39 @@ public final class LayoutMcpEndpoint
 			result.put("isError", data.has("error"));
 			return LayoutMcpEndpoint.result(id, result);
 		}
-		if ("resources/list".equals(method) || "prompts/list".equals(method))
+		if ("resources/list".equals(method))
 		{
 			final ObjectNode result = LayoutStore.json().createObjectNode();
-			result.putArray("resources/list".equals(method) ? "resources" : "prompts");
+			final ArrayNode resources = result.putArray("resources");
+			// listed to whoever may call the tools it draws (administrators); the HTML itself holds no data
+			if (pAllowed && !LayoutMcpEndpoint.previewHtml().isEmpty())
+			{
+				resources.add(LayoutMcpEndpoint.previewResource());
+			}
+			return LayoutMcpEndpoint.result(id, result);
+		}
+		if ("resources/read".equals(method))
+		{
+			final String uri = params.path("uri").asText("");
+			final String html = LayoutMcpEndpoint.previewHtml();
+			if (!pAllowed || !LayoutMcpEndpoint.PREVIEW_UI_URI.equals(uri) || html.isEmpty())
+			{
+				final ObjectNode error = LayoutMcpEndpoint.error(id, -32002, "Resource not found: " + uri);
+				((ObjectNode) error.get("error")).putObject("data").put("uri", uri);
+				return error;
+			}
+			final ObjectNode result = LayoutStore.json().createObjectNode();
+			final ObjectNode content = result.putArray("contents").addObject();
+			content.put("uri", LayoutMcpEndpoint.PREVIEW_UI_URI);
+			content.put("mimeType", LayoutMcpEndpoint.UI_MIME_TYPE);
+			content.put("text", html);
+			content.putObject("_meta").putObject("ui").put("prefersBorder", true);
+			return LayoutMcpEndpoint.result(id, result);
+		}
+		if ("prompts/list".equals(method) || "resources/templates/list".equals(method))
+		{
+			final ObjectNode result = LayoutStore.json().createObjectNode();
+			result.putArray("prompts/list".equals(method) ? "prompts" : "resourceTemplates");
 			return LayoutMcpEndpoint.result(id, result);
 		}
 		return LayoutMcpEndpoint.error(id, -32601, "Method not found: " + method);
@@ -393,7 +448,73 @@ public final class LayoutMcpEndpoint
 		annotations.put("destructiveHint", false);
 		annotations.put("idempotentHint", pTool.readOnly);
 		annotations.put("openWorldHint", false);
+		// MCP Apps: the layout is drawn by the preview; the flat key is the pre-GA spelling some hosts still read
+		if (LayoutMcpEndpoint.PREVIEW_TOOLS.contains(pTool.name) && !LayoutMcpEndpoint.previewHtml().isEmpty())
+		{
+			final ObjectNode meta = t.putObject("_meta");
+			final ObjectNode ui = meta.putObject("ui");
+			ui.put("resourceUri", LayoutMcpEndpoint.PREVIEW_UI_URI);
+			ui.putArray("visibility").add("model").add("app");
+			meta.put("ui/resourceUri", LayoutMcpEndpoint.PREVIEW_UI_URI);
+		}
 		return t;
+	}
+
+	/** {@code http://host:8080}, as the caller reached the server (behind a proxy, the proxy's address): the base of the links the tools answer. */
+	static String serverBase(final UriInfo pUriInfo)
+	{
+		if (pUriInfo == null) return "";
+		try
+		{
+			final java.net.URI base = pUriInfo.getBaseUri();
+			if (base == null || base.getScheme() == null || base.getRawAuthority() == null) return "";
+			return base.getScheme() + "://" + base.getRawAuthority();
+		}
+		catch (final RuntimeException ex)
+		{
+			return "";
+		}
+	}
+
+	/** The HTML of the form preview, read once from the module's classes; empty when the file is missing. */
+	static String previewHtml()
+	{
+		String html = LayoutMcpEndpoint.previewHtml;
+		if (html == null)
+		{
+			html = "";
+			try (InputStream in = LayoutMcpEndpoint.class.getResourceAsStream(LayoutMcpEndpoint.PREVIEW_UI_FILE))
+			{
+				if (in != null)
+				{
+					final java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+					final byte[] buffer = new byte[8192];
+					for (int n = in.read(buffer); n >= 0; n = in.read(buffer)) bytes.write(buffer, 0, n);
+					html = new String(bytes.toByteArray(), java.nio.charset.StandardCharsets.UTF_8);
+				}
+			}
+			catch (final java.io.IOException ex)
+			{
+				html = "";
+			}
+			LayoutMcpEndpoint.previewHtml = html;
+		}
+		return html;
+	}
+
+	/** The UI resource as listed: uri, name, description, mime type and its rendering preference (no external domain: the default CSP). */
+	static ObjectNode previewResource()
+	{
+		final ObjectNode r = LayoutStore.json().createObjectNode();
+		r.put("uri", LayoutMcpEndpoint.PREVIEW_UI_URI);
+		r.put("name", "form_preview");
+		r.put("title", "Record form preview");
+		r.put("description", "Mock-up of the record form a layout describes (tabs, rows, panels with their fields, blocks), drawn from the answer "
+			+ "of layout_get, layout_starter or layout_validate with the table's labels (layout_describe_table); check findings shown on the "
+			+ "blocks they concern; a link opens the table in the designer.");
+		r.put("mimeType", LayoutMcpEndpoint.UI_MIME_TYPE);
+		r.putObject("_meta").putObject("ui").put("prefersBorder", true);
+		return r;
 	}
 
 	static ObjectNode result(final JsonNode pId, final JsonNode pResult)

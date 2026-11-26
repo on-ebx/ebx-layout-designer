@@ -74,6 +74,9 @@ const C = {
  aLinked:['Fiches liées','Linked records'], linkedD:['Ouvre la table liée d’EBX filtrée sur cette fiche. Le nombre s’affiche sur le bouton ; sans fiche liée, le bouton est masqué.','Opens EBX’s linked table filtered on this record. The count shows on the button; with no linked record, the button is hidden.'], hideNone:['Masquer quand il n’y en a aucune','Hide when there is none'],
  groupBy:['Grouper par','Group by'], groupEmpty:['Titre du groupe sans valeur','Heading of the group without a value'], noGroupVal:['(vide)','(empty)'], noGroupBy:['(pas de groupes)','(no groups)'], groupHint:['Chaque groupe a son titre et son nombre de fiches ; le tri choisi s’applique dans chaque groupe.','Each group has a heading and its record count; the chosen sort applies inside each group.'],
  header:['En-tête de la page','Page header'], hCreate:['Bouton de création (formulaire EBX, si l’utilisateur peut créer)','Create button (EBX form, when the user may create)'], hLinks:['Liens','Links'], hAddLink:['+ Lien','+ Link'],
+ hActs:['Menu Actions (services de la table)','Actions menu (services of the table)'], hAddAct:['+ Action','+ Action'], haSvc:['Service (module@Service, @exportToCSV…)','Service (module@Service, @exportToCSV…)'],
+ haFiltered:['Sur les fiches filtrées par la page','On the records the page filters'], haHint:['Chaque entrée n’est montrée qu’aux utilisateurs qu’EBX autorise à lancer le service sur cette table. Le service s’ouvre dans une fenêtre ; il reçoit la table filtrée comme la page quand le filtre peut s’écrire en XPath, sinon la table entière.','Each entry shows only to users EBX lets run the service on this table. The service opens in a pop-up; it receives the table filtered like the page when the filter can be written in XPath, else the whole table.'],
+ hNav:['Flèches précédent / suivant sur la fiche ouverte (ordre de la vue table)','Previous / next arrows on the opened record (table view order)'],
  hlTable:['Table du dataset (vide : celle-ci)','Table of the dataset (empty: this one)'], hlPred:['Filtre XPath (facultatif)','XPath filter (optional)'], hlSvc:['Service (facultatif, module@Service)','Service (optional, module@Service)'], hlUrl:['ou adresse (/… ou https://…)','or address (/… or https://…)'],
  colours:['Couleur par valeur','Colour per value'], coloursLong:['{0} valeurs : seules celles que vous choisissez ont une couleur, toutes les autres prennent la couleur par défaut. La liste n’est jamais chargée en entier.','{0} values: only those you pick get a colour, every other one takes the default colour. The list is never loaded whole.'],
  otherVals:['Toutes les autres valeurs','Every other value'], giveColour:['Donner une couleur à une valeur','Give a value a colour'], colourBtn:['+ Couleur','+ Colour'], foundN:['{0} trouvée(s)','{0} found'], mostFirst:['Les plus fréquentes d’abord.','Most frequent first.'],
@@ -979,6 +982,13 @@ function renderInspector(){
     if (X.group) h += `<div class="fld"><span class="l">${esc(c('groupEmpty'))}</span>${locIn(X.group, 'emptyLabel', c('noGroupVal'))}</div>`;
     const hd = X.header || {};
     h += `<div class="sechd">${esc(c('header'))}</div><label class="chk"><input type="checkbox" data-hcreate="1"${hd.create ? ' checked' : ''}>${esc(c('hCreate'))}</label>`;
+    h += `<label class="chk"><input type="checkbox" data-hnav="1"${X.card && X.card.recordNavigation === false ? '' : ' checked'}>${esc(c('hNav'))}</label>`;
+    h += `<div class="sechd">${esc(c('hActs'))}</div>` + (hd.actions || []).map((a, i) => `<div class="rule">${locIn(a, 'label', a.service || '')}`
+      + `<input type="text" list="ldx-svc-keys" data-ha="${i}|service" value="${esc(a.service || '')}" placeholder="${esc(c('haSvc'))}" aria-label="${esc(c('haSvc'))}">`
+      + `<label class="chk"><input type="checkbox" data-hafilt="${i}"${a.filtered === false ? '' : ' checked'}>${esc(c('haFiltered'))}</label>`
+      + `${rolesEd(a)}<button type="button" class="btn tiny ghost danger" data-harm="${i}">${esc(c('remove'))}</button></div>`).join('');
+    h += `<datalist id="ldx-svc-keys">${['@exportToCSV', '@importFromCSV', '@exportToXML', '@importFromXML', '@validation', '@compare', '@massUpdate', '@massdelete', '@viewHistory'].map(k => `<option value="${k}"></option>`).join('')}</datalist>`;
+    h += `<button type="button" class="btn tiny ghost" data-haadd="1">${esc(c('hAddAct'))}</button><div class="hint">${esc(c('haHint'))}</div>`;
     h += `<div class="sechd">${esc(c('hLinks'))}</div>` + (hd.links || []).map((l, i) => `<div class="rule">${locIn(l, 'label', l.table || l.url || '')}`
       + `<input type="text" data-hl="${i}|table" value="${esc(l.table || '')}" placeholder="/root/…" aria-label="${esc(c('hlTable'))}" title="${esc(c('hlTable'))}">`
       + `<input type="text" data-hl="${i}|predicate" value="${esc(l.predicate || '')}" placeholder="${esc(c('hlPred'))}" aria-label="${esc(c('hlPred'))}">`
@@ -1239,6 +1249,8 @@ root.addEventListener('click', e => {
     if (k === 'minWidth') cd.minWidth = +v;
     else { cd.layout = v; const m = cd.image; if (m){ if (v === 'horizontal') m.shape = 'side'; else if (v === 'compact') m.shape = 'avatar'; else if (m.shape === 'side' || m.shape === 'avatar') m.shape = 'logo'; } }
     return commit(''); }
+  if (t.closest('[data-haadd]')){ snap(); X.header = Object.assign({}, X.header || {}); X.header.actions = (X.header.actions || []).concat([{label:{}, service:''}]); return commit(''); }
+  if ((el = t.closest('[data-harm]'))){ snap(); X.header.actions.splice(+el.dataset.harm, 1); if (!X.header.actions.length) delete X.header.actions; return commit(''); }
   if (t.closest('[data-hladd]')){ snap(); X.header = Object.assign({}, X.header || {}); X.header.links = (X.header.links || []).concat([{label:{}}]); return commit(''); }
   if ((el = t.closest('[data-hlrm]'))){ snap(); X.header.links.splice(+el.dataset.hlrm, 1); if (!X.header.links.length) delete X.header.links; return commit(''); }
   if (t.closest('[data-rmimage]')){ snap(); delete X.card.image; S.pick = {k:'card'}; return commit(''); }
@@ -1316,6 +1328,9 @@ root.addEventListener('change', e => {
   if (t.matches('[data-ahide]')){ snap(); X.card.actions[S.pick.i].hideWhenNone = t.checked; return commit(''); }
   if (t.matches('[data-groupby]')){ snap(); if (t.value){ useRef(t.value); X.group = Object.assign({}, X.group || {}); setRef(X.group, t.value); } else delete X.group; return commit(''); }
   if (t.matches('[data-hcreate]')){ snap(); X.header = Object.assign({}, X.header || {}); if (t.checked) X.header.create = true; else delete X.header.create; return commit(''); }
+  if (t.matches('[data-ha]')){ snap(); const [i, k] = t.dataset.ha.split('|'); X.header.actions[+i][k] = t.value.trim(); return commit(''); }
+  if (t.matches('[data-hafilt]')){ snap(); const a = X.header.actions[+t.dataset.hafilt]; if (t.checked) delete a.filtered; else a.filtered = false; return commit(''); }
+  if (t.matches('[data-hnav]')){ snap(); X.card = X.card || {}; if (t.checked) delete X.card.recordNavigation; else X.card.recordNavigation = false; return commit(''); }
   if (t.matches('[data-hl]')){ snap(); const [i, k] = t.dataset.hl.split('|'), l = X.header.links[+i], v = t.value.trim(); if (v) l[k] = v; else delete l[k]; return commit(''); }
   if (t.matches('[data-aval]')){ snap(); X.card.actions[S.pick.i][t.dataset.aval] = t.value; return commit(''); }
   if (t.matches('[data-asingle]')){ snap(); X.card.actions[S.pick.i].single = t.checked; return commit(''); }

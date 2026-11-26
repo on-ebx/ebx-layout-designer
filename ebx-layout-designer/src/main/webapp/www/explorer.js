@@ -34,7 +34,7 @@
     copy: ['Copier', 'Copy', 'Copia'], copied: ['Copié', 'Copied', 'Copiato'], compliant: ['Rien à signaler', 'Nothing to report', 'Nulla da segnalare'], error: ['Le serveur n’a pas répondu correctement.', 'The server answer could not be read.', 'Il server non ha risposto correttamente.'],
     sort: ['Trier', 'Sort', 'Ordina'], computed: ['Calculé à {t}', 'Computed at {t}', 'Calcolato alle {t}'], agoMin: ['il y a {n} min', '{n} min ago', '{n} min fa'], now: ['à l’instant', 'just now', 'proprio ora'],
     refresh: ['Actualiser', 'Refresh', 'Aggiorna'], asView: ['Affichage', 'View', 'Visualizzazione'], v_vertical: ['Cartes', 'Cards', 'Schede'], v_horizontal: ['Cartes larges', 'Wide cards', 'Schede larghe'], v_compact: ['Liste', 'List', 'Elenco'],
-    asc: ['Croissant', 'Ascending', 'Crescente'], desc: ['Décroissant', 'Descending', 'Decrescente'], create: ['Créer', 'Create', 'Crea'], inGroup: ['{n} fiche(s)', '{n} record(s)', '{n} scheda/e'], noGroup: ['(vide)', '(empty)', '(vuoto)'], changed: ['Des données ont changé depuis.', 'Data changed since.', 'Da allora i dati sono cambiati.'], auto: ['Mis à jour automatiquement', 'Updated automatically', 'Aggiornato automaticamente'], ago: ['il y a {n}', '{n} ago', '{n} fa'], inT: ['dans {n}', 'in {n}', 'tra {n}'], today: ['aujourd’hui', 'today', 'oggi'], d: ['j', 'd', 'g'], mo: ['mois', 'mo', 'mesi'], y: ['an(s)', 'y', 'anno/i']
+    actions: ['Actions', 'Actions', 'Azioni'], asc: ['Croissant', 'Ascending', 'Crescente'], desc: ['Décroissant', 'Descending', 'Decrescente'], create: ['Créer', 'Create', 'Crea'], inGroup: ['{n} fiche(s)', '{n} record(s)', '{n} scheda/e'], noGroup: ['(vide)', '(empty)', '(vuoto)'], changed: ['Des données ont changé depuis.', 'Data changed since.', 'Da allora i dati sono cambiati.'], auto: ['Mis à jour automatiquement', 'Updated automatically', 'Aggiornato automaticamente'], ago: ['il y a {n}', '{n} ago', '{n} fa'], inT: ['dans {n}', 'in {n}', 'tra {n}'], today: ['aujourd’hui', 'today', 'oggi'], d: ['j', 'd', 'g'], mo: ['mois', 'mo', 'mesi'], y: ['an(s)', 'y', 'anno/i']
   };
   var S_ = function (k, args) { var s = STR[k] || [k, k, k], v = s[LANG === 'fr' ? 0 : LANG === 'it' ? 2 : 1] || s[1]; for (var a in args || {}) v = v.split('{' + a + '}').join(args[a]); return v; };
   var nf = function (n, opts) { try { return new Intl.NumberFormat(LOC, opts || {}).format(n); } catch (x) { return String(n); } };
@@ -223,7 +223,7 @@
     if (over || pv) h += '<div class="ldx-top"><span class="ov">' + over + '</span>' + (pv ? '<span class="ldx-pill t-' + pTone + '">' + esc(pv.l) + '</span>' : '') + '</div>';
     var titleSrc = CARD.title ? (typeof CARD.title === 'string' ? CARD.title : src(CARD.title)) : null;
     var titleV = titleSrc ? (c.v || {})[titleSrc] : null;
-    var title = '<h3><a href="#" data-open="' + esc(JSON.stringify(c.pk)) + '">' + esc(titleV ? titleV.l : c.l) + '</a></h3>';
+    var title = '<h3><a href="#" data-nav="1" data-open="' + esc(JSON.stringify(c.pk)) + '">' + esc(titleV ? titleV.l : c.l) + '</a></h3>';
     var sub = (CARD.subtitle || []).map(function (p) { return part(p, c); }).filter(Boolean).map(function (x) { return '<span>' + x + '</span>'; }).join('');
     var tb = title + (sub ? '<div class="ldx-sub">' + sub + '</div>' : '');
     var inl = image(c, 'inline');
@@ -246,7 +246,7 @@
     var acts = (CARD.actions || []).map(function (a, i) {
       if ((c.off || []).indexOf(i) >= 0) return '';
       var lb = T(a.label);
-      if (a.action === 'open') return '<button type="button" class="ldx-btn ' + (a.style || 'primary') + '" data-open="' + esc(JSON.stringify(c.pk)) + '">' + esc(lb || S_('open')) + '</button>';
+      if (a.action === 'open') return '<button type="button" class="ldx-btn ' + (a.style || 'primary') + '" data-nav="1" data-open="' + esc(JSON.stringify(c.pk)) + '">' + esc(lb || S_('open')) + '</button>';
       if (a.action === 'favorite') return B.ajax.fav ? '<button type="button" class="ldx-btn star' + (c.fav ? ' on' : '') + '" data-star="' + esc(c.k) + '" aria-pressed="' + !!c.fav + '" title="' + esc(c.fav ? S_('rmFav') : S_('addFav')) + '">' + (c.fav ? '★' : '☆') + (lb ? ' ' + esc(lb) : '') + '</button>' : '';
       if (!B.actions || !B.actions[i]) return '';
       /* a linked-records button may show its count, and is left out when there is none */
@@ -337,13 +337,16 @@
       + ((C.sorts || []).length > 1 ? '<select id="ldx-sort" aria-label="' + esc(S_('sort')) + '">' + C.sorts.map(function (s) { return '<option value="' + s.i + '"' + (+S.sort === s.i ? ' selected' : '') + '>' + esc(T(s.label)) + '</option>'; }).join('') + '</select>' : '')
       + ((C.sorts || []).length ? '<button type="button" class="ldx-dir" data-dir="1" title="' + esc(isDesc() ? S_('desc') : S_('asc')) + '" aria-label="' + esc(isDesc() ? S_('desc') : S_('asc')) + '">' + (isDesc() ? '↓' : '↑') + '</button>' : '')
       + (LAYS.length > 1 ? '<span class="ldx-views" role="group" aria-label="' + esc(S_('asView')) + '">' + LAYS.map(function (l) { return '<button type="button" data-lay="' + l + '" aria-pressed="' + (lay() === l) + '" title="' + esc(S_('v_' + l)) + '" aria-label="' + esc(S_('v_' + l)) + '">' + (l === 'compact' ? '☰' : l === 'horizontal' ? '▤' : '▦') + '</button>'; }).join('') + '</span>' : '')
+      + (B.header && (B.header.actions || []).length ? '<details class="ldx-menu"><summary class="ldx-btn ghost">' + esc(S_('actions')) + ' ▾</summary><div class="ldx-menu-list" role="menu">'
+        + B.header.actions.map(function (a, i) { return '<button type="button" role="menuitem" data-hact="' + i + '">' + esc(T(a.label)) + '</button>'; }).join('') + '</div></details>' : '')
       + (B.header && B.header.create ? '<button type="button" class="ldx-btn primary ldx-create" data-create="1">+ ' + esc(T(B.header.create.label) || S_('create')) + '</button>' : '')
       + '</div>'
       + (B.header && (B.header.links || []).length ? '<div class="ldx-links">' + B.header.links.map(function (l, i) { return '<a href="#" data-hlink="' + i + '">' + esc(T(l.label)) + '</a>'; }).join('') + '</div>' : '')
       + chips();
     main += fresh();
     if (R && R.error) main += '<div class="ldx-error">' + esc(R.error) + '</div>';
-    var ly = lay(), minW = +CARD.minWidth || 260, prevG = null;
+    /* wide cards hold the image beside the text: they need more room than the configured width of a vertical card */
+    var ly = lay(), minW = Math.max(+CARD.minWidth || 260, ly === 'horizontal' ? 420 : 0), prevG = null;
     /* in groups: a heading before the first record of each group, with the group's count */
     var withGroups = function (c) {
       var h = '';
@@ -357,8 +360,11 @@
       + (total > CARDS.length ? '<button type="button" class="ldx-more">' + esc(S_('more')) + ' (' + nf(total - CARDS.length) + ')</button>' : '')
       : R ? '<div class="ldx-empty">' + esc(S_('none')) + '</div>' : '<p class="ldx-loading">…</p>';
     var oldSide = root.querySelector('.ldx-side'), scroll = oldSide ? oldSide.scrollTop : 0;
+    /* an answer arriving while the Actions menu is open must not close it */
+    var menuOpen = !!root.querySelector('details.ldx-menu[open]');
     root.innerHTML = tiles + '<div class="ldx-body' + (S.noSide || !side ? ' noside' : '') + '">' + (side ? '<aside class="ldx-side' + (R && R.waiting ? ' waiting' : '') + '">' + side + '</aside>' : '') + '<section class="ldx-main">' + main + '</section></div>';
     var ns = root.querySelector('.ldx-side'); if (ns) ns.scrollTop = scroll;
+    if (menuOpen) { var nm = root.querySelector('details.ldx-menu'); if (nm) nm.setAttribute('open', ''); }
     if (keepFocus && fid) { var el = document.getElementById(fid); if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch (x) {} } }
     save();
   };
@@ -366,9 +372,36 @@
   // --- record pop-ups ------------------------------------------------------------------------------------------------
   var enc = function (v) { return encodeURIComponent(String(v == null ? '' : v).replace(/'/g, "''")).replace(/'/g, '%27'); };
   var fill = function (cmd, pk, k) { return cmd.replace(/LDXMARK(\d+)/g, function (m, i) { return enc(pk[+i]); }).replace(/LDXKEY/g, function () { return enc(k); }); };
-  var run = function (cmd, pk, k) {
-    if (!cmd) return;
-    try { new Function(fill(cmd, pk || [], k))(); watchPopup(); } catch (x) { if (window.console) console.warn('[explorer] pop-up not opened', x); }
+  var exec = function (js) { try { new Function(js)(); watchPopup(); } catch (x) { if (window.console) console.warn('[explorer] pop-up not opened', x); } };
+  var run = function (cmd, pk, k) { if (cmd) exec(fill(cmd, pk || [], k)); };
+  /* 1.29.0: EBX's table view behind a pop-up. The page's filter as an XPath predicate: the server's (the whole answer),
+     else (a filter only SQL can say) the records shown, by their keys; null when neither can be written. */
+  var MAX_URL = 6000;
+  var lit = function (v) { return "'" + String(v == null ? '' : v).replace(/'/g, "''") + "'"; };
+  var shownOnly = function () {
+    var key = (B.open && B.open.key) || [];
+    if (!key.length || !CARDS.length) return null;
+    return CARDS.map(function (c) { return '(' + key.map(function (p, i) { return p + '=' + lit((c.pk || [])[i]); }).join(' and ') + ')'; }).join(' or ');
+  };
+  var pageFilter = function (exact) { return R && typeof R.xpath === 'string' ? R.xpath : exact ? null : shownOnly(); };
+  /* the command with the predicate added to the table's address (the xpath parameter of the web component) */
+  var onTable = function (js, pred) {
+    if (!pred) return js;
+    var done = false, out = js.replace(/([?&]xpath=[^&"'\\]*)/, function (m) { done = true; return m + encodeURIComponent('[' + pred + ']').replace(/'/g, '%27'); });
+    return done && out.length <= MAX_URL ? out : null;
+  };
+  /* a card's record: inside the table as the page filters it, so that EBX draws its previous / next arrows (they follow
+     the table view's order); alone when that cannot be written */
+  var openCard = function (pk) {
+    var nav = B.open && B.open.nav, f = nav ? pageFilter(false) : null;
+    var js = nav && f != null ? onTable(fill(nav, pk || []), f) : null;
+    if (js) exec(js); else run(B.open && B.open.cmd, pk);
+  };
+  /* an entry of the Actions menu: the service on the table, filtered as the page when XPath can say the filter */
+  var tableAction = function (a) {
+    if (!a || !a.cmd) return;
+    var f = a.filtered ? pageFilter(true) : null;
+    exec((f && onTable(a.cmd, f)) || a.cmd);
   };
   /* EBX's record pop-up is an iframe whose address carries closeUniqueModal: once it is gone, the cards are read again */
   var watchPopup = function () {
@@ -427,7 +460,9 @@
   });
   root.addEventListener('click', function (e) {
     var t = e.target, el;
-    if ((el = t.closest('[data-open]'))) { e.preventDefault(); run(B.open && B.open.cmd, JSON.parse(el.dataset.open)); return; }
+    var menu = root.querySelector('details.ldx-menu[open]'); if (menu && !t.closest('details.ldx-menu')) menu.removeAttribute('open');
+    if ((el = t.closest('[data-hact]'))) { if (menu) menu.removeAttribute('open'); tableAction((B.header.actions || [])[+el.dataset.hact]); return; }
+    if ((el = t.closest('[data-open]'))) { e.preventDefault(); if (el.dataset.nav) openCard(JSON.parse(el.dataset.open)); else run(B.open && B.open.cmd, JSON.parse(el.dataset.open)); return; }
     if ((el = t.closest('[data-link]'))) { e.preventDefault(); run(B.links[el.dataset.link], JSON.parse(el.dataset.pk)); return; }
     if ((el = t.closest('[data-act]'))) { run(B.actions[+el.dataset.act], JSON.parse(el.dataset.pk), el.dataset.k); return; }
     if (t.closest('[data-create]')) { run(B.header.create.cmd, []); return; }

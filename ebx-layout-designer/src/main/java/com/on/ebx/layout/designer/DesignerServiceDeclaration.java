@@ -58,6 +58,7 @@ public final class DesignerServiceDeclaration implements UserServiceDeclaration.
 	@Override
 	public void defineProperties(final UserServicePropertiesDefinitionContext pContext)
 	{
+		pContext.setGroup(com.on.ebx.layout.designer.LayoutDesignerRegistration.SERVICE_GROUP);
 		pContext.setLabel(Messages.info("service.label"));
 		pContext.setDescription(Messages.info("service.description"));
 	}

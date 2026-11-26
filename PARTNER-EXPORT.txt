@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit dd660a2ebce1adbee0c1d42312ef0d6f5b18f285
-Merge feature/changes-follow: 1.28.0, the changes block follows linked objects (associations, business object)
+Exported from EBX-Layout-Designer commit 9b3b47283446ac889eb0c53765b4f10c98c54924
+Merge fix/explorer-row-layouts-and-navigation: 1.29.0, explorers get EBX's previous/next record arrows and an Actions menu; banner image fixed in the list and wide-card views
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

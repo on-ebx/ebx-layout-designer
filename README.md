@@ -88,6 +88,8 @@ lets them read. Format: [docs/EXPLORER-FORMAT.md](docs/EXPLORER-FORMAT.md); a co
 
 `POST /ebx-layout-designer/rest/mcp` lets an agent describe a table, start, check and save its record form layout and its
 explorers, with the designer's own storage and checks (administrators only). Tools and configuration: [docs/MCP.md](docs/MCP.md).
+Since 1.27.0 (prototype), a host supporting MCP Apps draws a preview of the form next to the layout tools' answers
+([docs/MCP.md](docs/MCP.md#form-preview-mcp-apps-1270-prototype)).
 
 ## Documentation
 

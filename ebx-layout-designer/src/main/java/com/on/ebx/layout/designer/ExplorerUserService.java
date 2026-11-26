@@ -221,6 +221,20 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 		// pop-up commands: the record, the records a foreign key points to, the actions
 		final ObjectNode open = boot.putObject("open");
 		open.put("cmd", this.popup(pWriter, this.table.getTablePath(), this.table.getPrimaryKeySpec(), null));
+		// 1.29.0: the same record opened inside the table (EBX's previous / next arrows), unless the explorer says no
+		if (!pView.spec.layout.path("card").path("recordNavigation").isBoolean() || pView.spec.layout.path("card").path("recordNavigation").asBoolean())
+		{
+			final String nav = this.navPopup(pWriter);
+			if (nav != null)
+			{
+				open.put("nav", nav);
+				final ArrayNode key = open.putArray("key");
+				for (final Path p : this.table.getPrimaryKeySpec())
+				{
+					key.add(ExplorerUserService.step(p));
+				}
+			}
+		}
 		final ObjectNode links = boot.putObject("links");
 		for (final String src : ExplorerUserService.cardSources(pView.spec.layout.path("card")))
 		{
@@ -314,7 +328,8 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 	}
 
 	/**
-	 * The page's header: the creation button (EBX's own creation form, when the user may create) and the links
+	 * The page's header: the creation button (EBX's own creation form, when the user may create), the Actions menu
+	 * (services of the table) and the links
 	 * (another table of the dataset, possibly filtered and with a service; or an address).
 	 */
 	private ObjectNode header(final UserServicePaneWriter pWriter, final Session pSession, final View pView)
@@ -342,6 +357,50 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 			catch (final RuntimeException ex)
 			{
 				LoggingCategory.getKernel().warn("[layout-designer] explorer: no creation button: " + ex.getMessage());
+			}
+		}
+		// 1.29.0: the Actions menu: services of the table, each shown only to who EBX lets run it on this table
+		final ArrayNode menu = out.putArray("actions");
+		for (final JsonNode a : h.path("actions"))
+		{
+			final JsonNode roles = a.get("roles");
+			final String service = a.path("service").asText("").trim();
+			if (service.isEmpty() || roles != null && roles.isArray() && roles.size() > 0 && !com.on.ebx.layout.explorer.Views.inAnyRole(pSession, roles))
+			{
+				continue;
+			}
+			try
+			{
+				final ServiceKey key = ServiceKey.parse(service);
+				if (!perms.getTableActionPermissionForService(key, this.table).isEnabled())
+				{
+					continue;
+				}
+				final UIHttpManagerComponent wc = pWriter.createWebComponentForSubSession();
+				wc.select(this.dataset.getHome().getKey(), this.dataset.getAdaptationName(), this.table.getTablePath().format());
+				wc.setService(key);
+				final String cmd = pWriter.buildButtonPreview(wc).getJavaScriptCommand();
+				if (cmd == null || cmd.isEmpty())
+				{
+					continue;
+				}
+				final ObjectNode o = menu.addObject();
+				if (a.has("label"))
+				{
+					o.set("label", a.get("label"));
+				}
+				else
+				{
+					o.put("label", service);
+				}
+				o.put("cmd", cmd);
+				// the service gets the table as the page filters it, like the Actions menu of a filtered table view
+				o.put("filtered", !a.path("filtered").isBoolean() || a.path("filtered").asBoolean());
+			}
+			catch (final RuntimeException ex)
+			{
+				// a service absent on this instance: no entry
+				LoggingCategory.getKernel().warn("[layout-designer] explorer: action " + service + " not drawn: " + ex.getMessage());
 			}
 		}
 		final ArrayNode links = out.putArray("links");
@@ -424,6 +483,42 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 		return pWriter.buildButtonPreview(wc).getJavaScriptCommand();
 	}
 
+	/** A key field as a step of an XPath predicate: {@code ./id}. */
+	static String step(final Path pField)
+	{
+		final String p = pField.format();
+		return p.startsWith(".") ? p : "." + (p.startsWith("/") ? p : "/" + p);
+	}
+
+	/**
+	 * 1.29.0: a pop-up command on the TABLE that shows one record first (key values left as LDXMARK0, LDXMARK1, …): EBX
+	 * then draws its previous / next arrows on the record, as it does from a table view. The page adds the filter of its
+	 * current answer to the table's address. Null when EBX refuses to build it: the page then opens the record alone.
+	 */
+	private String navPopup(final UserServicePaneWriter pWriter)
+	{
+		try
+		{
+			final Path[] key = this.table.getPrimaryKeySpec();
+			final StringBuilder record = new StringBuilder();
+			for (int i = 0; i < key.length; i++)
+			{
+				record.append(i == 0 ? "" : " and ").append(ExplorerUserService.step(key[i])).append("='").append(ExplorerUserService.MARK).append(i).append('\'');
+			}
+			final UIHttpManagerComponent wc = pWriter.createWebComponentForSubSession();
+			wc.select(this.dataset.getHome().getKey(), this.dataset.getAdaptationName(), this.table.getTablePath().format());
+			wc.setFirstCallDisplayRecord(record.toString());
+			final String cmd = pWriter.buildButtonPreview(wc).getJavaScriptCommand();
+			// the page finds the table's address by this parameter: without it, no navigation
+			return cmd != null && cmd.contains("xpath=") && cmd.contains("firstCallDisplay=") ? cmd : null;
+		}
+		catch (final RuntimeException ex)
+		{
+			LoggingCategory.getKernel().warn("[layout-designer] explorer: no record navigation on " + this.table.getTablePath().format() + ": " + ex.getMessage());
+			return null;
+		}
+	}
+
 	private interface Setup
 	{
 		void apply(UIHttpManagerComponent pComponent);
@@ -437,8 +532,7 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 			final StringBuilder xpath = new StringBuilder(pTable.format()).append('[');
 			for (int i = 0; i < pKey.length; i++)
 			{
-				final String p = pKey[i].format();
-				xpath.append(i == 0 ? "" : " and ").append(p.startsWith(".") ? p : "." + (p.startsWith("/") ? p : "/" + p)).append("='").append(ExplorerUserService.MARK)
+				xpath.append(i == 0 ? "" : " and ").append(ExplorerUserService.step(pKey[i])).append("='").append(ExplorerUserService.MARK)
 					.append(i).append('\'');
 			}
 			xpath.append(']');
@@ -723,6 +817,10 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 				{
 					out.put("all", result.all);
 					out.put("total", result.total);
+					if (result.xpath != null)
+					{
+						out.put("xpath", result.xpath);
+					}
 				}
 				out.put("off", off);
 				out.put("computedAt", result.computedAt);

@@ -20,6 +20,7 @@ public final class LayoutMcpTest
 		LayoutMcpTest.protocol();
 		LayoutMcpTest.limits();
 		LayoutMcpTest.failureText();
+		LayoutMcpTest.apps();
 		if (LayoutMcpTest.failures > 0)
 		{
 			System.out.println(LayoutMcpTest.failures + " MCP check(s) failed");
@@ -203,5 +204,46 @@ public final class LayoutMcpTest
 			LayoutMcpTest.failures++;
 			System.out.println("FAILED: " + pWhat);
 		}
+	}
+
+	/** MCP Apps (1.27.0): the form preview resource, its declaration, and the tools that point at it. */
+	private static void apps() throws Exception
+	{
+		final LayoutMcpTools tools = new LayoutMcpTools(null, null, Locale.ENGLISH);
+		final JsonNode init = LayoutMcpEndpoint.dispatch(LayoutMcpTest.JSON.readTree(
+			"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-06-18\"}}"), tools, true);
+		final JsonNode caps = init.path("result").path("capabilities");
+		LayoutMcpTest.check("apps: extension declared", LayoutMcpEndpoint.UI_MIME_TYPE.equals(
+			caps.path("extensions").path(LayoutMcpEndpoint.UI_EXTENSION).path("mimeTypes").path(0).asText()));
+		LayoutMcpTest.check("apps: resources capability", caps.has("resources") && caps.has("tools"));
+		final String html = LayoutMcpEndpoint.previewHtml();
+		LayoutMcpTest.check("apps: preview embedded", html.contains("ui/initialize") && html.contains("layout_describe_table"));
+		LayoutMcpTest.check("apps: nothing loaded from outside", !html.matches("(?s).*<script[^>]+src=.*") && !html.contains("<link ") && !html.contains("@import"));
+		final JsonNode list = LayoutMcpEndpoint.dispatch(LayoutMcpTest.JSON.readTree("{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}"), tools, true);
+		int withUi = 0;
+		boolean right = true;
+		for (final JsonNode t : list.path("result").path("tools"))
+		{
+			final String uri = t.path("_meta").path("ui").path("resourceUri").asText("");
+			final boolean preview = LayoutMcpEndpoint.PREVIEW_TOOLS.contains(t.path("name").asText());
+			if (!uri.isEmpty()) withUi++;
+			right &= preview == LayoutMcpEndpoint.PREVIEW_UI_URI.equals(uri);
+			right &= preview == LayoutMcpEndpoint.PREVIEW_UI_URI.equals(t.path("_meta").path("ui/resourceUri").asText(""));
+		}
+		LayoutMcpTest.check("apps: three read-only tools carry the preview", withUi == 3 && right);
+		final JsonNode res = LayoutMcpEndpoint.dispatch(LayoutMcpTest.JSON.readTree("{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"resources/list\"}"), tools, true);
+		LayoutMcpTest.check("apps: resource listed", res.path("result").path("resources").size() == 1
+			&& LayoutMcpEndpoint.PREVIEW_UI_URI.equals(res.path("result").path("resources").path(0).path("uri").asText()));
+		final JsonNode none = LayoutMcpEndpoint.dispatch(LayoutMcpTest.JSON.readTree("{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"resources/list\"}"), tools, false);
+		LayoutMcpTest.check("apps: no resource for anyone else", none.path("result").path("resources").size() == 0);
+		final String read = "{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"resources/read\",\"params\":{\"uri\":\"" + LayoutMcpEndpoint.PREVIEW_UI_URI + "\"}}";
+		final JsonNode content = LayoutMcpEndpoint.dispatch(LayoutMcpTest.JSON.readTree(read), tools, true).path("result").path("contents").path(0);
+		LayoutMcpTest.check("apps: resource read", LayoutMcpEndpoint.UI_MIME_TYPE.equals(content.path("mimeType").asText()) && html.equals(content.path("text").asText()));
+		LayoutMcpTest.check("apps: read refused to anyone else", LayoutMcpEndpoint.dispatch(LayoutMcpTest.JSON.readTree(read), tools, false).path("error").path("code").asInt() == -32002);
+		LayoutMcpTest.check("apps: unknown resource", LayoutMcpEndpoint.dispatch(LayoutMcpTest.JSON.readTree(
+			"{\"jsonrpc\":\"2.0\",\"id\":6,\"method\":\"resources/read\",\"params\":{\"uri\":\"ui://other\"}}"), tools, true).path("error").path("code").asInt() == -32002);
+		LayoutMcpTest.check("apps: no templates", LayoutMcpEndpoint.dispatch(LayoutMcpTest.JSON.readTree(
+			"{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"resources/templates/list\"}"), tools, true).path("result").path("resourceTemplates").size() == 0);
+		LayoutMcpTest.check("apps: no base without a request", "".equals(LayoutMcpEndpoint.serverBase(null)));
 	}
 }
