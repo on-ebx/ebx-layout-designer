@@ -1,5 +1,10 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.25.1 (2026-10-24)
+
+- `asOfTree`: the count of a level names its entities ("3 sub-funds"), from the level's `name` text or the entity table's label,
+  no longer the states table's label ("3 sub-fund states").
+
 ## 1.25.0 (2026-10-24)
 
 - **Explorers: an "in force on" date** ([EXPLORER-FORMAT.md](docs/EXPLORER-FORMAT.md#in-force-on-date-1250)): `asOf`

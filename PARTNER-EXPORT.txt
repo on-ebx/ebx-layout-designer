@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit 738f743658cdb69ff544f19b1c94c272d4985c3b
-Merge feature/rosa-blocks: 1.25.0, effective-dated models (asOfTree, stateTimeline, delta blocks; explorers in force on a date; stateAt computed value)
+Exported from EBX-Layout-Designer commit 9adc6f9e8c6aa8ce308a265f0660b8cee84ffbfd
+1.25.1: asOfTree counts name the level's entities (name text or the entity table's label), not the states table
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

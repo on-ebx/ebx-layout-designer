@@ -261,14 +261,7 @@ final class EffectiveBlocks
 			{
 				return EffectiveBlocks.note(EffectiveBlocks.t("setupBlock", rc));
 			}
-			try
-			{
-				levelLabels.add(table.getTableNode().getLabel(rc.locale));
-			}
-			catch (final RuntimeException ex)
-			{
-				levelLabels.add(l.path("states").asText(""));
-			}
+			levelLabels.add(EffectiveBlocks.levelName(rc, l, identityFk, dataset));
 			final SchemaNode parentFk = EffectiveBlocks.fkNode(tRoot, l.path("parent").asText(""));
 			final SchemaNode dateNode = tRoot.getNode(LayoutPaths.relative(l.path("effectiveDate").asText("")));
 			final List<Node> next = new ArrayList<Node>();
@@ -363,6 +356,29 @@ final class EffectiveBlocks
 		}
 		h.append(cfg.toString().replace("</", "<\\/")).append("</script></div>");
 		return h.toString();
+	}
+
+	/**
+	 * What the count of a level calls its entities: the level's {@code name} text, else the label of the table the
+	 * identity key points to, without a trailing parenthesis ("Sub-funds (identity)" reads "Sub-funds").
+	 */
+	private static String levelName(final RenderContext rc, final JsonNode l, final SchemaNode pIdentityFk, final Adaptation pDataset)
+	{
+		final String own = rc.text(l.get("name"));
+		if (!own.isEmpty())
+		{
+			return own;
+		}
+		try
+		{
+			final AdaptationTable target = pDataset.getTable(pIdentityFk.getFacetOnTableReference().getTablePath());
+			final String label = target.getTableNode().getLabel(rc.locale).trim();
+			return label.endsWith(")") && label.lastIndexOf('(') > 0 ? label.substring(0, label.lastIndexOf('(')).trim() : label;
+		}
+		catch (final RuntimeException ex)
+		{
+			return l.path("states").asText("");
+		}
 	}
 
 	private static void bound(final TreeSet<String> pBounds, final State s)
