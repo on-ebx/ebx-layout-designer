@@ -1,5 +1,11 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.12.0 (2026-10-13)
+
+- **Del removes the selected block or field** in the designer, like the inspector's *Remove* button and the bin: select it
+  and press Del (Backspace on a Mac keyboard). *Undo* puts it back. The key does nothing while typing in a field of the
+  inspector, in Preview mode, or when a tab or a row is selected.
+
 ## 1.11.1 (2026-10-13)
 
 - **The creation form of a loaded-on-opening grid is no longer cut.** In 1.11.0 the frame measured the position of what

@@ -1421,6 +1421,12 @@ function goTo(node){
   if (el) el.scrollIntoView({block:'center'});
   setTimeout(() => { flash = null; root.querySelectorAll('#ld-canvas .flash').forEach(e => e.classList.remove('flash')); }, 1800);
 }
+/* Del (Backspace on a Mac keyboard) removes the selected block or field, as the inspector's "Remove" does; Undo puts it back */
+document.addEventListener('keydown', e => {
+  if ((e.key !== 'Delete' && e.key !== 'Backspace') || e.ctrlKey || e.metaKey || e.altKey || mode !== 'design' || !sel || (sel.k !== 'block' && sel.k !== 'field')) return;
+  const t = e.target; if (t && t.closest && (t.closest('input,textarea,select,[contenteditable]') || t.isContentEditable)) return;
+  e.preventDefault(); act('del');
+});
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && sel && window.matchMedia('(max-width:1280px)').matches && !e.target.closest('input,textarea,select')){ sel = null; explain = ''; renderAll(); } });
 root.addEventListener('click', e => {
   if (e.target.closest('#ld-insp-close')){ sel = null; explain = ''; return renderAll(); }

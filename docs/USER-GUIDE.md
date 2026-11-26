@@ -38,7 +38,8 @@ you save it.
   width. A mandatory field left off the form is flagged: creating a record without it would fail.
 - **Associations**: drag one to place its grid.
 - **Blocks**: drag from the palette; drop between two rows to open a new row. A block dropped on a tab goes to its end.
-- **Removing**: drop a block or a field on the bin at the bottom right of the window.
+- **Removing**: select a block or a field and press Del (the delete key, Backspace on a Mac keyboard), or drop it on the bin at
+  the bottom right of the window. Undo puts it back.
 - Every change says what it did ("panel X was created around Y") and *Undo* takes it back.
 
 ### Widgets of a field
