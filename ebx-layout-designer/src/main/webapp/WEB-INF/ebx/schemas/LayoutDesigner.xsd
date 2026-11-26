@@ -1,0 +1,130 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--LayoutDesigner: data model of the ebx-layout-designer module. One row of FormLayout per (data model, table):
+    the layout drawn in the designer, as JSON, read at each display by com.on.ebx.layout.runtime.ConfigurableForm.-->
+<xs:schema xmlns:osd="urn:ebx-schemas:common_1.0" xmlns:fmt="urn:ebx-schemas:format_1.0" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:import namespace="urn:ebx-schemas:common_1.0" schemaLocation="http://schema.orchestranetworks.com/common_1.0.xsd"/>
+    <xs:annotation>
+        <xs:appinfo>
+            <osd:inheritance>
+                <dataSetInheritance>none</dataSetInheritance>
+            </osd:inheritance>
+        </xs:appinfo>
+    </xs:annotation>
+    <xs:element name="root" osd:access="--">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="FormLayout" minOccurs="0" maxOccurs="unbounded">
+                    <xs:annotation>
+                        <xs:documentation xml:lang="en-US">
+                            <osd:label>Form layouts</osd:label>
+                            <osd:description>One record form layout per table of a data model, drawn in the Layout Designer and read at each display of a record.</osd:description>
+                        </xs:documentation>
+                        <xs:documentation xml:lang="fr-FR">
+                            <osd:label>Mises en page de fiches</osd:label>
+                            <osd:description>Une mise en page de fiche par table d'un modèle de données, dessinée dans le Layout Designer et lue à chaque affichage d'un enregistrement.</osd:description>
+                        </xs:documentation>
+                        <xs:documentation xml:lang="it-IT">
+                            <osd:label>Layout delle schede</osd:label>
+                            <osd:description>Un layout di scheda per tabella di un modello di dati, disegnato nel Layout Designer e letto a ogni visualizzazione di un record.</osd:description>
+                        </xs:documentation>
+                        <xs:appinfo>
+                            <osd:table>
+                                <primaryKeys>/id </primaryKeys>
+                                <defaultLabel>${./label}</defaultLabel>
+                            </osd:table>
+                        </xs:appinfo>
+                    </xs:annotation>
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="id" minOccurs="1" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Id</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Identifiant</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Identificativo</osd:label></xs:documentation>
+                                    <xs:appinfo>
+                                        <osd:autoIncrement/>
+                                    </xs:appinfo>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:int"/>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="label" type="xs:string" minOccurs="0" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Label</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Libellé</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Etichetta</osd:label></xs:documentation>
+                                </xs:annotation>
+                            </xs:element>
+                            <xs:element name="model" minOccurs="1" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Data model</osd:label><osd:description>Schema location, as SchemaLocation.format() writes it (urn:ebx:module:… or urn:ebx:publication:…).</osd:description></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Modèle de données</osd:label><osd:description>Emplacement du modèle, tel que l'écrit SchemaLocation.format() (urn:ebx:module:… ou urn:ebx:publication:…).</osd:description></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Modello di dati</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:string"><xs:maxLength value="1000"/></xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="table" minOccurs="1" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Table</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Table</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Tabella</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:string"><xs:maxLength value="500"/></xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="active" type="xs:boolean" minOccurs="1" maxOccurs="1" default="true">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Active</osd:label><osd:description>When false, the standard EBX form is shown.</osd:description></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Active</osd:label><osd:description>Quand faux, la fiche standard d'EBX s'affiche.</osd:description></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Attivo</osd:label></xs:documentation>
+                                </xs:annotation>
+                            </xs:element>
+                            <xs:element name="layout" minOccurs="0" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Layout (JSON)</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Mise en page (JSON)</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Layout (JSON)</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="osd:text"/>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="version" type="xs:int" minOccurs="0" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Version</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Version</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Versione</osd:label></xs:documentation>
+                                </xs:annotation>
+                            </xs:element>
+                            <xs:element name="previousForm" type="xs:string" minOccurs="0" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Previous record form</osd:label><osd:description>The recordForm class the model declared before the designer's one; put back on deactivation.</osd:description></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Fiche précédente</osd:label><osd:description>La classe recordForm que le modèle déclarait avant celle du designer ; remise en place à la désactivation.</osd:description></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Scheda precedente</osd:label></xs:documentation>
+                                </xs:annotation>
+                            </xs:element>
+                            <xs:element name="updatedBy" type="xs:string" minOccurs="0" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Updated by</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Modifié par</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Modificato da</osd:label></xs:documentation>
+                                </xs:annotation>
+                            </xs:element>
+                            <xs:element name="updatedOn" type="xs:dateTime" minOccurs="0" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Updated on</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Modifié le</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Modificato il</osd:label></xs:documentation>
+                                </xs:annotation>
+                            </xs:element>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

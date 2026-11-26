@@ -1,0 +1,100 @@
+# Layout Designer for ON EBX
+
+> This repository is published from ON EBX's development repository. A change made here is overwritten by the next
+> publication: report issues and propose changes to ON EBX.
+
+Lay out the record form of any EBX table by drag and drop: tabs, one- or two-column rows, panels of native field
+rows, association grids, a readable validation report, an identity band, key figures, a map, the group structure, the
+Match and Merge state. Every text you type is stored in each locale of the instance. A saved layout shows at the next
+opening of a record: no restart, no compilation.
+
+## How it works
+
+| Piece | Where | What it does |
+|---|---|---|
+| `ebx-layout-designer-runtime.jar` | `<server>/lib` (shared by every module) | `ConfigurableForm`, a `UIForm` that reads the table's layout at each display and draws it with EBX's own form rows and widgets |
+| `ebx-layout-designer` module | its own web application | the dataset `LayoutDesigner/LayoutDesigner` (table `FormLayout`, one row per model and table), and the service **Design the record form** on every table, for administrators |
+
+A data model uses a designed form once its table declares the runtime class:
+
+```xml
+<osd:table>
+    ...
+    <recordForm osd:class="com.on.ebx.layout.runtime.ConfigurableForm"/>
+</osd:table>
+```
+
+The designer writes that line itself for a model packaged in a module (tab *Declaration in the model*, with a copy of
+the XSD next to it and the previous class kept to put it back). EBX reads it at the next start: **one restart, once**.
+For a DMA model, declare the class in the model screen and republish. Without an active layout the standard EBX form
+is shown.
+
+The model is read through the EBX Java API only (`SchemaNode`, `Repository.getLocales()`, `getValidationReport()`):
+no MCP server is needed, so the module is not tied to 6.3.
+
+## The designer
+
+Open a table, then **Actions › Design the record form** (or the web component
+`/ebx/?branch=<dataspace>&instance=<dataset>&xpath=/root/<Table>&service=ebx-layout-designer@LayoutDesigner`).
+
+- palette: the table's fields (by group), its associations, the blocks, the registered components;
+- the form itself, with a record of the table as preview, in any locale of the instance;
+- an inspector for the selected tab, row, block or field; every text has one input per locale;
+- *Translations*: every text of the form, with what is missing per locale;
+- what is saved (JSON), the declaration in the model, and an optional frozen Java export.
+
+## Blocks
+
+| Block | Settings |
+|---|---|
+| Panel | title, note, fields (widget, label override, read only, full width), whole panel read only |
+| Identity band | title field, subtitle fields, chips, gauge (0–100 field), status field |
+| Key figures | fields, plus a row count of an association |
+| Validation report | the record's validation report: severities, grouping (severity, tab, none), number shown, "Go to field" links that open the right tab, action buttons tied to a field, a group or an association |
+| Association | EBX's native grid (toolbar, filter, paging) or cards with chosen fields |
+| Map | latitude and longitude fields; OpenStreetMap in a fixed-height box |
+| Group structure | parent foreign key and the association of children |
+| Duplicates | Match and Merge state and group (read by reflection: works without the add-on) |
+| Help text | a localized paragraph |
+| Registered component | a Java `LayoutComponent` registered by name with `LayoutComponents.register` |
+
+Every block can be shown only when an XPath predicate is true on the record, and hidden when a record is created.
+
+## Documentation
+
+| Document | For |
+|---|---|
+| [docs/INSTALL.md](docs/INSTALL.md) | installing, declaring a table's form, upgrading, uninstalling |
+| [docs/USER-GUIDE.md](docs/USER-GUIDE.md) | administrators who design forms; limitations |
+| [docs/LAYOUT-FORMAT.md](docs/LAYOUT-FORMAT.md) | the JSON a layout is saved as |
+| [RELEASE-NOTES.md](RELEASE-NOTES.md) | what each version brings |
+
+## Build and release
+
+```bash
+EBX_LIB_DIR=<server>/lib ./build.sh            # compile: dist/ebx-layout-designer-runtime.jar + target/classes
+EBX_LIB_DIR=<server>/lib tools/package.sh      # release: dist/ebx-layout-designer-<version>.zip (+ .sha256)
+```
+
+The version is in `VERSION`; a release is tagged `v<version>`. The zip holds the war, the runtime jar, Jackson for a
+server without it, the documentation and `SHA256SUMS`. Java 11 bytecode (`JAVA_RELEASE` to change it); the war uses
+the Jakarta servlet API.
+
+Runtime dependencies: the EBX jars and Jackson 2.x (`jackson-annotations`, `jackson-core`, `jackson-databind`) on the
+server classpath. A FastTrack server has Jackson in its `lib`; a plain EBX distribution does not, hence the copy in the
+release. No FastTrack or toolbox class is used.
+
+## Status (1.0.0, 2026-10-07)
+
+Seen running on FT 6.3 RC (EBX 6.3.0-rc2):
+
+- **Companies** (module model, 73 fields, 11 associations): designed, declared in `Companies.xsd` by the designer,
+  drawn by `ConfigurableForm` after one restart: tabs with counts, band, key figures, native widgets and grids, map,
+  Match and Merge state; validation messages located and "Go to field" opening another tab.
+- **B2C customers** (DMA model `B2CCustomers`: Customer, Order, Interaction; declared with `set_form_layout`): layout
+  composed by drag and drop, three tabs with counts ("Orders (5)"), native order grid, interaction cards, an error, a
+  warning and an information shown in the validation block, the information located on *Points* with "Go to field".
+- The *Record form layouts* page in the MultiDomain perspective (*Configuration*): EBX's dataspace and dataset
+  selectors, table list following the dataset, the designer opened inside the perspective.
+
+Limitations: [docs/USER-GUIDE.md](docs/USER-GUIDE.md#9-limitations-100).
