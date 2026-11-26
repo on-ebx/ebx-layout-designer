@@ -1,0 +1,2 @@
+# layouts loaded at the first start, only for a (model, table) with no layout yet
+companies.json

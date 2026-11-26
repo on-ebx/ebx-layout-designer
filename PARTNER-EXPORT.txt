@@ -1,0 +1,3 @@
+Exported from EBX-Layout-Designer commit a7e1c45c7e43415842716414355fedc4e50e0d95
+Merge feature/xsd-activation-property: 1.30.0, the designer describes the declaration of a module model instead of writing its XSD (ebx.layoutDesigner.xsdActivation, off by default)
+This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

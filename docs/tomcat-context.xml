@@ -1,0 +1,8 @@
+<!-- Optional: deploy the module from a folder instead of the war (conf/Catalina/localhost/ebx-layout-designer.xml).
+     The war needs nothing of the kind: drop ebx-layout-designer.war into <tomcat>/webapps. -->
+<Context path="/ebx-layout-designer" docBase="/path/to/ebx-layout-designer/src/main/webapp" reloadable="false">
+    <Resources>
+        <PostResources className="org.apache.catalina.webresources.DirResourceSet" webAppMount="/WEB-INF/classes"
+            base="/path/to/ebx-layout-designer/target/classes"/>
+    </Resources>
+</Context>

@@ -1,0 +1,717 @@
+{
+ "format": "ebx-layout-designer/explorer",
+ "version": 1,
+ "title": {
+  "en-US": "Companies",
+  "fr-FR": "Sociétés"
+ },
+ "openTo": [],
+ "freshness": {
+  "mode": "auto"
+ },
+ "derived": {
+  "contacts": {
+   "type": "count",
+   "association": "/contacts"
+  },
+  "einv": {
+   "type": "count",
+   "association": "/eInvoicingAddresses"
+  },
+  "subs": {
+   "type": "count",
+   "association": "/directSubsidiaries"
+  },
+  "suspects": {
+   "type": "suspects"
+  }
+ },
+ "variants": [
+  {
+   "id": "std",
+   "name": {
+    "en-US": "Standard",
+    "fr-FR": "Standard"
+   },
+   "roles": [],
+   "layout": {
+    "search": {
+     "fields": [
+      "/Identification/Name",
+      "/Identification/Id",
+      "/Identification/LegalEntityIdentifier",
+      "/LegalInformation/legalName",
+      "/Address/City",
+      "/Address/Country",
+      "/LegalInformation/ticker",
+      "/LegalInformation/isin",
+      "/LegalInformation/registrationNumber",
+      "/AdditionalInformation/ActivitySector",
+      "/AdditionalInformation/naceCode",
+      "/LegalInformation/legalForm"
+     ],
+     "placeholder": {
+      "en-US": "Search a company: name, number, LEI, legal name, city, ticker, ISIN...",
+      "fr-FR": "Rechercher une société : nom, numéro, LEI, raison sociale, ville, ticker, ISIN..."
+     }
+    },
+    "facets": [
+     {
+      "id": "fav",
+      "kind": "favorites",
+      "title": {
+       "en-US": "Favorites",
+       "fr-FR": "Favoris"
+      }
+     },
+     {
+      "id": "country",
+      "kind": "field",
+      "field": "/Address/Country",
+      "title": {
+       "en-US": "Country",
+       "fr-FR": "Pays"
+      },
+      "widget": "checks",
+      "top": 8
+     },
+     {
+      "id": "status",
+      "kind": "field",
+      "field": "/Lifecycle/status",
+      "title": {
+       "en-US": "Status",
+       "fr-FR": "Statut"
+      },
+      "widget": "checks",
+      "top": 6
+     },
+     {
+      "id": "nace",
+      "kind": "tree",
+      "field": "/AdditionalInformation/naceCode",
+      "parent": "/Section",
+      "title": {
+       "en-US": "NACE section",
+       "fr-FR": "Section NACE"
+      },
+      "top": 6
+     },
+     {
+      "id": "form",
+      "kind": "field",
+      "field": "/LegalInformation/legalForm",
+      "title": {
+       "en-US": "Legal form",
+       "fr-FR": "Forme juridique"
+      },
+      "widget": "checks",
+      "top": 6
+     },
+     {
+      "id": "size",
+      "kind": "field",
+      "field": "/LegalInformation/sizeCategory",
+      "title": {
+       "en-US": "Size",
+       "fr-FR": "Taille"
+      },
+      "widget": "checks",
+      "top": 6
+     },
+     {
+      "id": "lei",
+      "kind": "field",
+      "field": "/Lifecycle/leiStatus",
+      "title": {
+       "en-US": "LEI status",
+       "fr-FR": "Statut du LEI"
+      },
+      "widget": "checks",
+      "top": 6
+     },
+     {
+      "id": "sector",
+      "kind": "field",
+      "field": "/AdditionalInformation/ActivitySector",
+      "title": {
+       "en-US": "Activity sector",
+       "fr-FR": "Secteur d'activité"
+      },
+      "widget": "checks",
+      "top": 6
+     },
+     {
+      "id": "nature",
+      "kind": "flags",
+      "title": {
+       "en-US": "Nature",
+       "fr-FR": "Nature"
+      },
+      "widget": "chips",
+      "open": false,
+      "flags": [
+       {
+        "id": "listed",
+        "label": {
+         "en-US": "Listed",
+         "fr-FR": "Cotée"
+        },
+        "tone": "info",
+        "when": {
+         "field": "/LegalInformation/listed",
+         "in": [
+          "true"
+         ]
+        }
+       },
+       {
+        "id": "head",
+        "label": {
+         "en-US": "Group head (has subsidiaries)",
+         "fr-FR": "Tête de groupe (a des filiales)"
+        },
+        "tone": "info",
+        "when": {
+         "derived": "subs",
+         "gt": 0
+        }
+       },
+       {
+        "id": "subsidiary",
+        "label": {
+         "en-US": "Subsidiary",
+         "fr-FR": "Filiale"
+        },
+        "tone": "muted",
+        "when": {
+         "field": "/AdditionalInformation/Parent",
+         "filled": true
+        }
+       },
+       {
+        "id": "consolidated",
+        "label": {
+         "en-US": "Consolidated",
+         "fr-FR": "Consolidée"
+        },
+        "tone": "muted",
+        "when": {
+         "field": "/AdditionalInformation/isConsolidated",
+         "in": [
+          "true"
+         ]
+        }
+       },
+       {
+        "id": "lei",
+        "label": {
+         "en-US": "Has a LEI",
+         "fr-FR": "A un LEI"
+        },
+        "tone": "muted",
+        "when": {
+         "field": "/Identification/LegalEntityIdentifier",
+         "filled": true
+        }
+       }
+      ]
+     },
+     {
+      "id": "quality",
+      "kind": "ranges",
+      "field": "/Governance/completenessScore",
+      "title": {
+       "en-US": "Completeness",
+       "fr-FR": "Complétude"
+      },
+      "widget": "chips",
+      "open": false,
+      "ranges": [
+       {
+        "code": "high",
+        "label": {
+         "en-US": "Complete (90 % and more)",
+         "fr-FR": "Complète (90 % et plus)"
+        },
+        "min": 90
+       },
+       {
+        "code": "mid",
+        "label": {
+         "en-US": "Partial (60 to 90 %)",
+         "fr-FR": "Partielle (60 à 90 %)"
+        },
+        "min": 60,
+        "max": 90
+       },
+       {
+        "code": "low",
+        "label": {
+         "en-US": "Poor (under 60 %)",
+         "fr-FR": "Faible (moins de 60 %)"
+        },
+        "max": 60
+       }
+      ]
+     },
+     {
+      "id": "alerts",
+      "kind": "flags",
+      "title": {
+       "en-US": "Attention",
+       "fr-FR": "À surveiller"
+      },
+      "widget": "chips",
+      "open": false,
+      "flags": [
+       {
+        "id": "leiRenew",
+        "label": {
+         "en-US": "LEI to renew (90 days)",
+         "fr-FR": "LEI à renouveler (90 jours)"
+        },
+        "tone": "bad",
+        "when": {
+         "all": [
+          {
+           "field": "/Lifecycle/leiStatus",
+           "in": [
+            "ISSUED"
+           ]
+          },
+          {
+           "field": "/Lifecycle/leiNextRenewalDate",
+           "days": {
+            "to": 90
+           }
+          }
+         ]
+        }
+       },
+       {
+        "id": "leiLapsed",
+        "label": {
+         "en-US": "LEI lapsed",
+         "fr-FR": "LEI échu"
+        },
+        "tone": "bad",
+        "when": {
+         "field": "/Lifecycle/leiStatus",
+         "in": [
+          "LAPSED"
+         ]
+        }
+       },
+       {
+        "id": "suspect",
+        "label": {
+         "en-US": "Duplicate suspect",
+         "fr-FR": "Doublon suspecté"
+        },
+        "tone": "warn",
+        "when": {
+         "derived": "suspects",
+         "gt": 0
+        }
+       },
+       {
+        "id": "noEinv",
+        "label": {
+         "en-US": "French, no e-invoicing address",
+         "fr-FR": "Française sans adresse de facturation électronique"
+        },
+        "tone": "warn",
+        "when": {
+         "all": [
+          {
+           "field": "/Lifecycle/status",
+           "notIn": [
+            "CLOSED"
+           ]
+          },
+          {
+           "field": "/Linked_Field_State",
+           "notIn": [
+            "2"
+           ]
+          },
+          {
+           "field": "/Address/Country",
+           "in": [
+            "FR"
+           ]
+          },
+          {
+           "derived": "einv",
+           "eq": 0
+          }
+         ]
+        }
+       },
+       {
+        "id": "blacklisted",
+        "label": {
+         "en-US": "Blacklisted",
+         "fr-FR": "Sur liste noire"
+        },
+        "tone": "bad",
+        "when": {
+         "field": "/AdditionalInformation/blackListed",
+         "in": [
+          "true"
+         ]
+        }
+       },
+       {
+        "id": "noContact",
+        "label": {
+         "en-US": "No contact",
+         "fr-FR": "Sans contact"
+        },
+        "tone": "warn",
+        "when": {
+         "derived": "contacts",
+         "eq": 0
+        }
+       },
+       {
+        "id": "noLogo",
+        "label": {
+         "en-US": "No logo",
+         "fr-FR": "Sans logo"
+        },
+        "tone": "muted",
+        "when": {
+         "field": "/Logo",
+         "empty": true
+        }
+       }
+      ]
+     }
+    ],
+    "tiles": [
+     {
+      "id": "all",
+      "label": {
+       "en-US": "companies",
+       "fr-FR": "sociétés"
+      },
+      "tone": "muted",
+      "when": {
+       "all": []
+      }
+     },
+     {
+      "id": "low",
+      "label": {
+       "en-US": "under 60 % complete",
+       "fr-FR": "complétées à moins de 60 %"
+      },
+      "tone": "warn",
+      "set": {
+       "quality": [
+        "low"
+       ]
+      }
+     },
+     {
+      "id": "lei",
+      "label": {
+       "en-US": "LEIs to renew within 90 days",
+       "fr-FR": "LEI à renouveler sous 90 jours"
+      },
+      "tone": "bad",
+      "flag": "leiRenew"
+     },
+     {
+      "id": "suspect",
+      "label": {
+       "en-US": "duplicate suspects",
+       "fr-FR": "doublons suspectés"
+      },
+      "tone": "warn",
+      "flag": "suspect"
+     },
+     {
+      "id": "noEinv",
+      "label": {
+       "en-US": "French companies without e-invoicing address",
+       "fr-FR": "sociétés françaises sans adresse de facturation électronique"
+      },
+      "tone": "warn",
+      "flag": "noEinv"
+     },
+     {
+      "id": "black",
+      "label": {
+       "en-US": "blacklisted",
+       "fr-FR": "sur liste noire"
+      },
+      "tone": "bad",
+      "flag": "blacklisted"
+     }
+    ],
+    "sorts": [
+     {
+      "field": "/Identification/Name",
+      "dir": "asc",
+      "label": {
+       "en-US": "Name",
+       "fr-FR": "Nom"
+      }
+     },
+     {
+      "field": "/Governance/completenessScore",
+      "dir": "desc",
+      "label": {
+       "en-US": "Completeness",
+       "fr-FR": "Complétude"
+      }
+     },
+     {
+      "field": "/LegalInformation/employeesCount",
+      "dir": "desc",
+      "label": {
+       "en-US": "Employees",
+       "fr-FR": "Effectif"
+      }
+     },
+     {
+      "field": "/LegalInformation/annualRevenue",
+      "dir": "desc",
+      "label": {
+       "en-US": "Revenue",
+       "fr-FR": "Chiffre d'affaires"
+      }
+     },
+     {
+      "field": "/Governance/lastEnrichmentDate",
+      "dir": "desc",
+      "label": {
+       "en-US": "Last enrichment",
+       "fr-FR": "Dernier enrichissement"
+      }
+     }
+    ],
+    "group": {
+     "field": "/AdditionalInformation/ActivitySector",
+     "dir": "asc",
+     "emptyLabel": {
+      "en-US": "Without sector",
+      "fr-FR": "Sans secteur"
+     }
+    },
+    "header": {
+     "create": {
+      "label": {
+       "en-US": "New company",
+       "fr-FR": "Nouvelle société"
+      }
+     },
+     "links": [
+      {
+       "label": {
+        "en-US": "Location map",
+        "fr-FR": "Carte des implantations"
+       },
+       "service": "CompaniesLocationMap"
+      },
+      {
+       "label": {
+        "en-US": "All contacts",
+        "fr-FR": "Tous les contacts"
+       },
+       "table": "/root/Contact"
+      },
+      {
+       "label": {
+        "en-US": "E-invoicing addresses",
+        "fr-FR": "Adresses de facturation électronique"
+       },
+       "table": "/root/EInvoicingAddress"
+      },
+      {
+       "label": {
+        "en-US": "Relationships",
+        "fr-FR": "Relations"
+       },
+       "table": "/root/CompanyRelationship"
+      },
+      {
+       "label": {
+        "en-US": "Table view",
+        "fr-FR": "Vue tableau"
+       }
+      }
+     ]
+    },
+    "pageSize": 48,
+    "card": {
+     "layout": "vertical",
+     "layouts": [
+      "vertical",
+      "compact"
+     ],
+     "minWidth": 280,
+     "image": {
+      "field": "/Logo",
+      "shape": "logo",
+      "fit": "contain",
+      "whenMissing": "initials"
+     },
+     "title": "/Identification/Name",
+     "overline": [
+      {
+       "field": "/Address/Country",
+       "widget": "country",
+       "options": {
+        "show": "both"
+       }
+      }
+     ],
+     "pill": {
+      "field": "/Lifecycle/status",
+      "colors": {
+       "ACTIVE": "ok",
+       "PROSPECT": "info",
+       "CLOSED": "bad",
+       "SUSPENDED": "bad"
+      },
+      "default": "muted"
+     },
+     "subtitle": [
+      {
+       "field": "/Identification/Id",
+       "widget": "mono",
+       "options": {
+        "prefix": "#"
+       }
+      },
+      {
+       "field": "/Identification/LegalEntityIdentifier",
+       "widget": "mono",
+       "options": {
+        "prefix": "LEI "
+       }
+      }
+     ],
+     "lines": [
+      {
+       "field": "/Identification/description",
+       "widget": "text",
+       "options": {
+        "nolabel": true
+       }
+      },
+      {
+       "field": "/LegalInformation/legalForm",
+       "label": {
+        "en-US": "Legal form",
+        "fr-FR": "Forme juridique"
+       }
+      },
+      {
+       "field": "/AdditionalInformation/naceCode",
+       "label": {
+        "en-US": "NACE",
+        "fr-FR": "NACE"
+       }
+      },
+      {
+       "field": "/Address/City",
+       "label": {
+        "en-US": "Location",
+        "fr-FR": "Localisation"
+       }
+      },
+      {
+       "field": "/AdditionalInformation/Parent",
+       "widget": "link",
+       "label": {
+        "en-US": "Parent",
+        "fr-FR": "Société mère"
+       }
+      },
+      {
+       "field": "/LegalInformation/employeesCount",
+       "widget": "num",
+       "label": {
+        "en-US": "Employees",
+        "fr-FR": "Effectif"
+       }
+      },
+      {
+       "field": "/LegalInformation/annualRevenue",
+       "widget": "money",
+       "options": {
+        "compact": true
+       },
+       "label": {
+        "en-US": "Revenue",
+        "fr-FR": "Chiffre d'affaires"
+       }
+      },
+      {
+       "field": "/Lifecycle/leiNextRenewalDate",
+       "widget": "relative",
+       "options": {
+        "warnDays": 90,
+        "pastBad": true
+       },
+       "label": {
+        "en-US": "LEI renewal",
+        "fr-FR": "Renouvellement LEI"
+       }
+      }
+     ],
+     "tags": [
+      {
+       "flags": "alerts",
+       "widget": "flags"
+      },
+      {
+       "flags": "nature",
+       "widget": "flags"
+      }
+     ],
+     "gauge": {
+      "field": "/Governance/completenessScore",
+      "widget": "bar",
+      "max": 100,
+      "green": 90,
+      "amber": 60
+     },
+     "actions": [
+      {
+       "action": "open"
+      },
+      {
+       "action": "linked",
+       "association": "/contacts",
+       "count": "contacts",
+       "hideWhenNone": false,
+       "label": {
+        "en-US": "Contacts",
+        "fr-FR": "Contacts"
+       }
+      },
+      {
+       "action": "linked",
+       "association": "/directSubsidiaries",
+       "count": "subs",
+       "hideWhenNone": true,
+       "label": {
+        "en-US": "Subsidiaries",
+        "fr-FR": "Filiales"
+       }
+      },
+      {
+       "action": "favorite"
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

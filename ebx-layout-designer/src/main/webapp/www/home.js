@@ -1,0 +1,47 @@
+/* "Record form layouts" page, fed by window.LD_HOME (LayoutsHomeUserService). Opening the designer navigates the top
+   window, inside the current perspective when there is one. */
+(function(){
+'use strict';
+const H = window.LD_HOME;
+const root = document.getElementById('ld-home');
+if (!H || !root) return;
+const LANG = (H.userLocale || 'en').slice(0,2);
+/* French, English, Italian; any other language reads English */
+const t = (fr, en, it) => LANG === 'fr' ? fr : LANG === 'it' && it ? it : en;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+
+/* the designer of one table: an ebx-ui route of the current perspective, else a web component */
+function designerUrl(ds, dataset, table){
+  let key = null;
+  try { const m = window.top.location.pathname.match(/\/ebx-ui\/ui\/custom\/([^/]+)\//); if (m) key = m[1]; } catch (_){ /* other origin */ }
+  if (key) return `/ebx-ui/ui/custom/${encodeURIComponent(key)}/data/B${encodeURIComponent(ds)}/${encodeURIComponent(dataset)}${table}?service=${encodeURIComponent(H.service)}&serviceMode=TABLE_VIEW`;
+  return `/ebx/?branch=${encodeURIComponent(ds)}&instance=${encodeURIComponent(dataset)}&xpath=${encodeURIComponent(table)}&service=${encodeURIComponent(H.service)}`;
+}
+function go(url){ try { window.top.location.href = url; } catch (_){ window.location.href = url; } }
+/* a dataset of the layout's model holding its table: the first one met */
+function datasetOf(model, table){
+  for (const s of H.dataspaces) for (const d of s.datasets) if (d.model === model && d.tables.some(x => x.path === table)) return {ds:s.key, dataset:d.name, label:`${s.label} › ${d.label}`};
+  return null;
+}
+const tableLabel = (model, table) => { for (const s of H.dataspaces) for (const d of s.datasets) if (d.model === model){ const x = d.tables.find(x => x.path === table); if (x) return x.label; } return table; };
+
+const rows = H.layouts.map((l, i) => { const at = datasetOf(l.model, l.table);
+  return `<tr><td><b>${esc(tableLabel(l.model, l.table))}</b><div class="hint mono">${esc(l.table)}</div></td><td class="mono" style="font-size:11.5px;max-width:360px;overflow-wrap:anywhere">${esc(l.model.replace(/^urn:ebx:(module|publication):/, ''))}</td>
+    <td>${l.version}</td><td>${l.active ? `<span class="badge done">${t('active','active','attivo')}</span>` : `<span class="badge todo">${t('inactive','inactive','inattivo')}</span>`}</td><td>${esc(l.updatedOn)} ${esc(l.updatedBy || '')}</td>
+    <td>${at ? `<button type="button" class="btn small" data-open="${i}" title="${esc(at.label)}">${t('Ouvrir le designer','Open the designer','Apri il designer')}</button>` : `<span class="hint">${t('Aucun dataset ouvert sur ce modèle','No open dataset on this model','Nessun dataset aperto su questo modello')}</span>`}</td></tr>`; }).join('');
+
+function aboutUrl(){ let key = null;
+  try { const m = window.top.location.pathname.match(/\/ebx-ui\/ui\/custom\/([^/]+)\//); if (m) key = m[1]; } catch (_){ /* other origin */ }
+  if (key) return `/ebx-ui/ui/custom/${encodeURIComponent(key)}/data/BLayoutDesigner/LayoutDesigner/root/FormLayout?service=${encodeURIComponent(H.about)}&serviceMode=TABLE_VIEW`;
+  return `/ebx/?branch=LayoutDesigner&instance=LayoutDesigner&xpath=${encodeURIComponent('/root/FormLayout')}&service=${encodeURIComponent(H.about)}`; }
+const links = `<p class="hint" style="display:flex;gap:16px;justify-content:flex-end;margin:0 0 8px"><a href="${esc(H.helpUrl)}" target="_blank" rel="noopener">${esc(H.helpLabel)}</a><a href="#" data-about>${esc(H.aboutLabel)}</a></p>`;
+root.innerHTML = `<div class="wrap" style="max-width:1200px">${links}
+    ${H.problem ? `<div class="explain" role="status">${esc(H.problem)}</div>` : ''}
+  <section class="out"><div class="out-hd"><h2>${t('Mises en page enregistrées','Saved layouts','Layout salvati')} · ${H.layouts.length}</h2></div>
+    <div style="padding:8px 16px 16px;overflow-x:auto">${H.layouts.length ? `<table class="ld-h-table" style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th>${t('Table','Table','Tabella')}</th><th>${t('Modèle','Model','Modello')}</th><th>Version</th><th>${t('État','State','Stato')}</th><th>${t('Modifiée','Changed','Modificato')}</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : `<p class="hint">${t('Aucune mise en page enregistrée pour l’instant.','No saved layout yet.','Nessun layout salvato per ora.')}</p>`}</div></section>
+</div>`;
+
+if (H.go){ go(designerUrl(H.go.dataspace, H.go.dataset, H.go.table)); }
+root.addEventListener('click', e => { if (e.target.closest('[data-about]')) { e.preventDefault(); go(aboutUrl()); return; } const b = e.target.closest('[data-open]'); if (!b) return; const l = H.layouts[+b.dataset.open]; const at = datasetOf(l.model, l.table); if (at) go(designerUrl(at.ds, at.dataset, l.table)); });
+root.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.preventDefault(); });
+})();

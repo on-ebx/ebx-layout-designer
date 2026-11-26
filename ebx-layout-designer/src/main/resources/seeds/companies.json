@@ -1,0 +1,610 @@
+{
+ "format": "ebx-form-layout/1",
+ "name": "Companies – Sociétés (rev 4.2)",
+ "model": "urn:ebx:module:EBX FastTrack - TIBCO EBX Presales environment:/WEB-INF/ebx/schemas/Companies.xsd",
+ "table": "/root/Companies",
+ "locales": [
+  "en-US",
+  "fr-FR",
+  "it-IT"
+ ],
+ "tabs": [
+  {
+   "label": {
+    "en-US": "Overview",
+    "fr-FR": "Vue d'ensemble",
+    "it-IT": "Panoramica"
+   },
+   "count": [],
+   "rows": [
+    {
+     "columns": 1,
+     "blocks": [
+      [
+       {
+        "type": "hero",
+        "title": "/Identification/Name",
+        "sub": [
+         "/LegalInformation/legalName",
+         "/LegalInformation/legalForm",
+         "/Address/City"
+        ],
+        "chips": [
+         "/AdditionalInformation/ActivitySector",
+         "/Address/Country",
+         "/Lifecycle/status",
+         "/LegalInformation/isin"
+        ],
+        "meter": "/Governance/completenessScore",
+        "status": "/EInvoicing/readiness",
+        "id": "b1"
+       }
+      ]
+     ]
+    },
+    {
+     "columns": 1,
+     "blocks": [
+      [
+       {
+        "type": "facts",
+        "items": [
+         "/LegalInformation/registrationNumber",
+         "/AdditionalInformation/naceCode",
+         "/LegalInformation/employeesCount",
+         "/LegalInformation/annualRevenue",
+         "/LegalInformation/incorporationDate"
+        ],
+        "count": "/directSubsidiaries",
+        "id": "b2"
+       }
+      ]
+     ]
+    },
+    {
+     "columns": 1,
+     "blocks": [
+      [
+       {
+        "type": "validation",
+        "title": {
+         "en-US": "To review",
+         "fr-FR": "À traiter",
+         "it-IT": "Da verificare"
+        },
+        "sev": {
+         "error": true,
+         "warning": true,
+         "info": true
+        },
+        "group": "severity",
+        "max": 5,
+        "links": true,
+        "hideEmpty": false,
+        "actions": [
+         {
+          "on": "/EInvoicing",
+          "btn": {
+           "en-US": "Add an address",
+           "fr-FR": "Ajouter une adresse",
+           "it-IT": "Aggiungi un indirizzo"
+          },
+          "go": "/eInvoicingAddresses"
+         }
+        ],
+        "id": "b3"
+       }
+      ]
+     ]
+    },
+    {
+     "columns": 2,
+     "ratio": "11",
+     "blocks": [
+      [
+       {
+        "type": "panel",
+        "title": {
+         "en-US": "Identity",
+         "fr-FR": "Identité",
+         "it-IT": "Identità"
+        },
+        "note": {
+         "en-US": "The LEI is changed in the Identifiers tab; this field is its copy.",
+         "fr-FR": "Le LEI se modifie dans l'onglet Identifiants ; ce champ en est la copie."
+        },
+        "fields": [
+         {
+          "p": "/Identification/Name"
+         },
+         {
+          "p": "/Identification/LegalEntityIdentifier",
+          "ro": true,
+          "w": "mono"
+         },
+         {
+          "p": "/Identification/description",
+          "w": "area",
+          "wide": true
+         }
+        ],
+        "id": "b4"
+       },
+       {
+        "type": "panel",
+        "title": {
+         "en-US": "Legal",
+         "fr-FR": "Juridique",
+         "it-IT": "Dati legali"
+        },
+        "note": {
+         "en-US": "Taken from GLEIF and Sirene by the enrichment; editable.",
+         "fr-FR": "Repris de GLEIF et de Sirene par l'enrichissement ; modifiable."
+        },
+        "fields": [
+         {
+          "p": "/LegalInformation/legalName"
+         },
+         {
+          "p": "/LegalInformation/legalForm",
+          "w": "nocreate"
+         },
+         {
+          "p": "/LegalInformation/entityCategory"
+         },
+         {
+          "p": "/LegalInformation/jurisdiction",
+          "w": "nocreate"
+         },
+         {
+          "p": "/LegalInformation/registrationAuthority",
+          "w": "nocreate"
+         },
+         {
+          "p": "/LegalInformation/registrationNumber"
+         },
+         {
+          "p": "/LegalInformation/incorporationDate"
+         }
+        ],
+        "id": "b5"
+       },
+       {
+        "type": "panel",
+        "title": {
+         "en-US": "Size and market",
+         "fr-FR": "Taille et marché",
+         "it-IT": "Dimensioni e mercato"
+        },
+        "fields": [
+         {
+          "p": "/LegalInformation/employeesCount"
+         },
+         {
+          "p": "/LegalInformation/sizeCategory"
+         },
+         {
+          "p": "/LegalInformation/annualRevenue"
+         },
+         {
+          "p": "/LegalInformation/revenueYear"
+         },
+         {
+          "p": "/LegalInformation/listed"
+         },
+         {
+          "p": "/LegalInformation/stockExchange"
+         },
+         {
+          "p": "/LegalInformation/ticker"
+         },
+         {
+          "p": "/LegalInformation/isin"
+         }
+        ],
+        "id": "b6"
+       },
+       {
+        "type": "panel",
+        "title": {
+         "en-US": "Governance",
+         "fr-FR": "Gouvernance",
+         "it-IT": "Governance"
+        },
+        "note": {
+         "en-US": "Filled in by the enrichment: read only.",
+         "fr-FR": "Renseigné par l'enrichissement : lecture seule."
+        },
+        "fields": [
+         {
+          "p": "/Governance/enrichmentSource"
+         },
+         {
+          "p": "/Governance/lastEnrichmentDate"
+         },
+         {
+          "p": "/Governance/gleifLastUpdate"
+         },
+         {
+          "p": "/Governance/wikidataId"
+         }
+        ],
+        "ro": true,
+        "hideCreate": true,
+        "id": "b7"
+       }
+      ],
+      [
+       {
+        "type": "panel",
+        "title": {
+         "en-US": "E-invoicing",
+         "fr-FR": "Facturation électronique",
+         "it-IT": "Fatturazione elettronica"
+        },
+        "note": {
+         "en-US": "Company established in France: covered by the reform.",
+         "fr-FR": "Société établie en France : concernée par la réforme."
+        },
+        "fields": [
+         {
+          "p": "/EInvoicing/readiness",
+          "ro": true,
+          "w": "badge"
+         },
+         {
+          "p": "/EInvoicing/emissionObligationDate",
+          "ro": true
+         },
+         {
+          "p": "/EInvoicing/partnerType",
+          "w": "radio"
+         },
+         {
+          "p": "/EInvoicing/invoicingRegime"
+         },
+         {
+          "p": "/EInvoicing/preferredFormat"
+         }
+        ],
+        "cond": "./Address/Country = 'FR'",
+        "id": "b8"
+       },
+       {
+        "type": "tree",
+        "title": {
+         "en-US": "Group structure",
+         "fr-FR": "Structure du groupe",
+         "it-IT": "Struttura del gruppo"
+        },
+        "note": {
+         "en-US": "Head of group · GLEIF relationships and Parent field.",
+         "fr-FR": "Tête de groupe · relations GLEIF et champ Parent."
+        },
+        "parent": "/AdditionalInformation/Parent",
+        "children": "/directSubsidiaries",
+        "hideCreate": true,
+        "id": "b9"
+       },
+       {
+        "type": "panel",
+        "title": {
+         "en-US": "Contact details",
+         "fr-FR": "Coordonnées",
+         "it-IT": "Recapiti"
+        },
+        "fields": [
+         {
+          "p": "/Contact/phone"
+         },
+         {
+          "p": "/Contact/website"
+         },
+         {
+          "p": "/Contact/email"
+         }
+        ],
+        "id": "b10"
+       },
+       {
+        "type": "map",
+        "lat": "/Address/latitude",
+        "lng": "/Address/longitude",
+        "id": "b11"
+       },
+       {
+        "type": "duplicates",
+        "title": {
+         "en-US": "Sources and golden record",
+         "fr-FR": "Sources et golden record",
+         "it-IT": "Fonti e golden record"
+        },
+        "note": {
+         "en-US": "Match and Merge: reference of its group.",
+         "fr-FR": "Match and Merge : référence de son groupe."
+        },
+        "hideCreate": true,
+        "id": "b12"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "label": {
+    "en-US": "Classification and status",
+    "fr-FR": "Classification et statut",
+    "it-IT": "Classificazione e stato"
+   },
+   "count": [],
+   "rows": [
+    {
+     "columns": 2,
+     "ratio": "11",
+     "blocks": [
+      [
+       {
+        "type": "panel",
+        "title": {
+         "en-US": "Classification and parent",
+         "fr-FR": "Classification et rattachement",
+         "it-IT": "Classificazione e controllante"
+        },
+        "fields": [
+         {
+          "p": "/AdditionalInformation/ActivitySector"
+         },
+         {
+          "p": "/AdditionalInformation/naceCode"
+         },
+         {
+          "p": "/AdditionalInformation/Parent"
+         },
+         {
+          "p": "/AdditionalInformation/ultimateParent"
+         },
+         {
+          "p": "/AdditionalInformation/active"
+         },
+         {
+          "p": "/AdditionalInformation/blackListed"
+         },
+         {
+          "p": "/AdditionalInformation/isConsolidated"
+         }
+        ],
+        "id": "b13"
+       }
+      ],
+      [
+       {
+        "type": "panel",
+        "title": {
+         "en-US": "Lifecycle",
+         "fr-FR": "Cycle de vie",
+         "it-IT": "Ciclo di vita"
+        },
+        "fields": [
+         {
+          "p": "/Lifecycle/status"
+         },
+         {
+          "p": "/Lifecycle/statusDate"
+         },
+         {
+          "p": "/Lifecycle/leiStatus"
+         },
+         {
+          "p": "/Lifecycle/leiNextRenewalDate"
+         },
+         {
+          "p": "/Lifecycle/leiEntityStatus"
+         },
+         {
+          "p": "/Lifecycle/blacklistReason"
+         }
+        ],
+        "id": "b14"
+       },
+       {
+        "type": "panel",
+        "title": {
+         "en-US": "Logo",
+         "fr-FR": "Logo",
+         "it-IT": "Logo"
+        },
+        "note": {
+         "en-US": "Digital Asset Manager image.",
+         "fr-FR": "Image du Digital Asset Manager."
+        },
+        "fields": [
+         {
+          "p": "/Logo"
+         }
+        ],
+        "id": "b15"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "label": {
+    "en-US": "Group structure",
+    "fr-FR": "Structure du groupe",
+    "it-IT": "Struttura del gruppo"
+   },
+   "count": [
+    "/parentRelationships",
+    "/childRelationships"
+   ],
+   "rows": [
+    {
+     "columns": 1,
+     "blocks": [
+      [
+       {
+        "type": "grid",
+        "a": "/parentRelationships",
+        "style": "native",
+        "title": {
+         "en-US": "Parents",
+         "fr-FR": "Maisons mères",
+         "it-IT": "Società controllanti"
+        },
+        "note": {
+         "en-US": "Declared relationships to the companies consolidating this one (GLEIF).",
+         "fr-FR": "Relations déclarées vers les sociétés qui consolident celle-ci (GLEIF)."
+        },
+        "id": "b16"
+       },
+       {
+        "type": "grid",
+        "a": "/childRelationships",
+        "style": "native",
+        "title": {
+         "en-US": "Subsidiaries and branches",
+         "fr-FR": "Filiales et succursales",
+         "it-IT": "Controllate e succursali"
+        },
+        "note": {
+         "en-US": "Relationships declared by the companies this one consolidates.",
+         "fr-FR": "Relations déclarées par les sociétés que celle-ci consolide."
+        },
+        "id": "b17"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "label": {
+    "en-US": "Addressing and billing",
+    "fr-FR": "Adressage et facturation",
+    "it-IT": "Indirizzi e fatturazione"
+   },
+   "count": [
+    "/addresses",
+    "/eInvoicingAddresses",
+    "/bankAccounts"
+   ],
+   "rows": [
+    {
+     "columns": 1,
+     "blocks": [
+      [
+       {
+        "type": "grid",
+        "a": "/eInvoicingAddresses",
+        "style": "native",
+        "title": {
+         "en-US": "E-invoicing addresses",
+         "fr-FR": "Adresses de facturation électronique",
+         "it-IT": "Indirizzi di fatturazione elettronica"
+        },
+        "note": {
+         "en-US": "One line per usage and channel (directory, Peppol, email, Chorus Pro).",
+         "fr-FR": "Une ligne par usage et par canal (annuaire, Peppol, courriel, Chorus Pro)."
+        },
+        "id": "b18"
+       }
+      ]
+     ]
+    },
+    {
+     "columns": 2,
+     "ratio": "11",
+     "blocks": [
+      [
+       {
+        "type": "grid",
+        "a": "/addresses",
+        "style": "native",
+        "title": {
+         "en-US": "Postal addresses",
+         "fr-FR": "Adresses postales",
+         "it-IT": "Indirizzi postali"
+        },
+        "note": {
+         "en-US": "Head office, legal, billing, delivery addresses…",
+         "fr-FR": "Siège, adresse légale, de facturation, de livraison…"
+        },
+        "id": "b19"
+       }
+      ],
+      [
+       {
+        "type": "grid",
+        "a": "/bankAccounts",
+        "style": "native",
+        "title": {
+         "en-US": "Bank accounts",
+         "fr-FR": "Comptes bancaires",
+         "it-IT": "Conti bancari"
+        },
+        "note": {
+         "en-US": "The default account is the one used for payments.",
+         "fr-FR": "Le compte par défaut est celui des paiements."
+        },
+        "id": "b20"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "label": {
+    "en-US": "Contacts",
+    "fr-FR": "Contacts",
+    "it-IT": "Contatti"
+   },
+   "count": [
+    "/contacts"
+   ],
+   "rows": [
+    {
+     "columns": 1,
+     "blocks": [
+      [
+       {
+        "type": "grid",
+        "a": "/contacts",
+        "style": "native",
+        "id": "b21"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "label": {
+    "en-US": "Identifiers",
+    "fr-FR": "Identifiants",
+    "it-IT": "Identificativi"
+   },
+   "count": [
+    "/identifiers"
+   ],
+   "rows": [
+    {
+     "columns": 1,
+     "blocks": [
+      [
+       {
+        "type": "grid",
+        "a": "/identifiers",
+        "style": "native",
+        "id": "b22"
+       }
+      ]
+     ]
+    }
+   ]
+  }
+ ]
+}
