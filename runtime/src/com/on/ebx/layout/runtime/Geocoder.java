@@ -19,6 +19,11 @@ import com.orchestranetworks.service.LoggingCategory;
  * {@code ebx.layout.geocoder.url} names another one, a self-hosted Nominatim for instance, and {@code off} disables it).
  * Answers are kept in memory by address text, failures for ten minutes, and calls are spaced by more than one second as
  * the public service's usage policy asks.
+ * <p>
+ * Since 1.15.0 a form never waits for the service: {@link #known} answers from memory only and {@link #lookLater} queues
+ * the address for a single background thread, so that the position is there at the next display. Positions found are
+ * also written to a file ({@code ebx.layout.geocoder.cache}, by default {@code <ebx.home>/layout-designer-geocache.tsv})
+ * and read back at the first use, so that a restart does not send every address to the service again.
  */
 final class Geocoder
 {
@@ -42,6 +47,22 @@ final class Geocoder
 	private static final HttpClient CLIENT = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).followRedirects(HttpClient.Redirect.NORMAL).build();
 	private static long lastCall;
 
+	private static final String CACHE_PROPERTY = "ebx.layout.geocoder.cache";
+	private static final int QUEUE_MAX = 500;
+	private static final java.util.Set<String> QUEUED = new java.util.HashSet<String>();
+	private static final java.util.concurrent.ThreadPoolExecutor WORKER = new java.util.concurrent.ThreadPoolExecutor(1, 1, 60L,
+		java.util.concurrent.TimeUnit.SECONDS, new java.util.concurrent.LinkedBlockingQueue<Runnable>(Geocoder.QUEUE_MAX), r -> {
+			final Thread t = new Thread(r, "layout-designer-geocoder");
+			t.setDaemon(true);
+			return t;
+		}, new java.util.concurrent.ThreadPoolExecutor.DiscardPolicy());
+	private static boolean loaded;
+
+	static
+	{
+		Geocoder.WORKER.allowCoreThreadTimeOut(true);
+	}
+
 	private Geocoder()
 	{
 	}
@@ -62,7 +83,137 @@ final class Geocoder
 		}
 	}
 
-	/** {latitude, longitude}, or null when the address is unknown or the service cannot be reached. */
+	/** The position in memory (or in the file) for this address, without calling the service; null when not known yet or not found. */
+	static double[] known(final String pAddress)
+	{
+		Geocoder.load();
+		final String q = pAddress == null ? "" : pAddress.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+		synchronized (Geocoder.CACHE)
+		{
+			final Object[] hit = Geocoder.CACHE.get(q);
+			return hit == null ? null : (double[]) hit[0];
+		}
+	}
+
+	/** Queues the address for the background thread, once; the form that asked does not wait. */
+	static void lookLater(final String pAddress, final Locale pLocale)
+	{
+		final String q = pAddress == null ? "" : pAddress.trim().replaceAll("\\s+", " ");
+		if (q.isEmpty() || !Geocoder.enabled() || Geocoder.isKnown(q))
+		{
+			return;
+		}
+		final String key = q.toLowerCase(Locale.ROOT);
+		synchronized (Geocoder.QUEUED)
+		{
+			if (!Geocoder.QUEUED.add(key))
+			{
+				return;
+			}
+		}
+		Geocoder.WORKER.execute(() -> {
+			try
+			{
+				final double[] at = Geocoder.locate(q, pLocale);
+				if (at != null)
+				{
+					Geocoder.save(key, at);
+				}
+			}
+			finally
+			{
+				synchronized (Geocoder.QUEUED)
+				{
+					Geocoder.QUEUED.remove(key);
+				}
+			}
+		});
+	}
+
+	private static java.io.File file()
+	{
+		final String configured = System.getProperty(Geocoder.CACHE_PROPERTY, "").trim();
+		if ("off".equalsIgnoreCase(configured))
+		{
+			return null;
+		}
+		if (!configured.isEmpty())
+		{
+			return new java.io.File(configured);
+		}
+		final String home = System.getProperty("ebx.home", "").trim();
+		return home.isEmpty() ? null : new java.io.File(home, "layout-designer-geocache.tsv");
+	}
+
+	/** Reads the positions found before (one line per address: address, tab, latitude, tab, longitude). */
+	private static void load()
+	{
+		synchronized (Geocoder.CACHE)
+		{
+			if (Geocoder.loaded)
+			{
+				return;
+			}
+			Geocoder.loaded = true;
+		}
+		final java.io.File f = Geocoder.file();
+		if (f == null || !f.isFile())
+		{
+			return;
+		}
+		try
+		{
+			int n = 0;
+			for (final String line : java.nio.file.Files.readAllLines(f.toPath(), StandardCharsets.UTF_8))
+			{
+				final String[] p = line.split("\t");
+				if (p.length == 3)
+				{
+					try
+					{
+						final double[] at = new double[] { Double.parseDouble(p[1]), Double.parseDouble(p[2]) };
+						synchronized (Geocoder.CACHE)
+						{
+							Geocoder.CACHE.put(p[0], new Object[] { at, Long.valueOf(System.currentTimeMillis()) });
+						}
+						n++;
+					}
+					catch (final NumberFormatException ex)
+					{
+						// a damaged line: skipped
+					}
+				}
+			}
+			LoggingCategory.getKernel().info("[layout-designer] geocoder: " + n + " positions read from " + f);
+		}
+		catch (final Exception ex)
+		{
+			LoggingCategory.getKernel().warn("[layout-designer] geocoder cache not read (" + f + "): " + ex);
+		}
+	}
+
+	private static void save(final String pKey, final double[] pAt)
+	{
+		final java.io.File f = Geocoder.file();
+		if (f == null || pKey.indexOf('\t') >= 0 || pKey.indexOf('\n') >= 0)
+		{
+			return;
+		}
+		synchronized (Geocoder.class)
+		{
+			try
+			{
+				java.nio.file.Files.write(f.toPath(), (pKey + "\t" + pAt[0] + "\t" + pAt[1] + "\n").getBytes(StandardCharsets.UTF_8),
+					java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+			}
+			catch (final Exception ex)
+			{
+				LoggingCategory.getKernel().warn("[layout-designer] geocoder cache not written (" + f + "): " + ex);
+			}
+		}
+	}
+
+	/** {latitude, longitude}, or null when the address is unknown or the service cannot be reached. Calls the service: never from a form. */
 	static double[] locate(final String pAddress, final Locale pLocale)
 	{
 		final String q = pAddress == null ? "" : pAddress.trim().replaceAll("\\s+", " ");

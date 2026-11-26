@@ -1,5 +1,15 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.15.0 (2026-10-13)
+
+- **A form never waits for the geocoding service any more.** The *map* and *sites on a map* blocks placed an address
+  without coordinates by asking Nominatim while the form was being drawn: about 0.8 s per address plus the 1.1 s the
+  public service asks between two calls, up to six addresses per form, and again after every restart (memory cache).
+  Measured on EBX 6.2.3 on the supplier form: 0.7 to 6.2 s for a record opened for the first time, 0.5 to 0.8 s once its
+  addresses were known. Now an address not known yet is looked up by one background thread and shows "position being
+  looked up"; it is placed at the next opening. Positions found are kept in a file (`<ebx.home>/layout-designer-geocache.tsv`,
+  property `ebx.layout.geocoder.cache`, `off` to disable) and read back after a restart.
+
 ## 1.14.0 (2026-10-13)
 
 - **An "Actions" block** (palette, category Actions): buttons that launch a workflow on the record, or open a service on

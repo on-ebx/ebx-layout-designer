@@ -958,6 +958,7 @@ final class LayoutPane implements UIFormPane
 		// no coordinates: the position of the address, when the block names address fields (number, street, postcode, city, country…)
 		String address = "";
 		boolean approximate = false;
+		boolean pendingPosition = false;
 		if ((Double.isNaN(la) || Double.isNaN(lo)) && b.path("address").isArray() && this.rc.record != null)
 		{
 			final List<String> parts = new ArrayList<String>();
@@ -970,17 +971,23 @@ final class LayoutPane implements UIFormPane
 				}
 			}
 			address = String.join(", ", parts);
-			final double[] at = Geocoder.locate(address, this.rc.locale);
+			// never wait for the geocoding service while the form is drawn (1.15.0): looked up in the background, shown next time
+			final double[] at = Geocoder.known(address);
 			if (at != null)
 			{
 				la = at[0];
 				lo = at[1];
 				approximate = true;
 			}
+			else if (!address.isEmpty() && !Geocoder.isKnown(address))
+			{
+				Geocoder.lookLater(address, this.rc.locale);
+				pendingPosition = true;
+			}
 		}
 		if (Double.isNaN(la) || Double.isNaN(lo))
 		{
-			w.add("<div class=\"ldf-more\">").add(LayoutPane.esc(RuntimeText.get(address.isEmpty() ? "noCoords" : "addressNotFound", this.rc.locale)));
+			w.add("<div class=\"ldf-more\">").add(LayoutPane.esc(RuntimeText.get(address.isEmpty() ? "noCoords" : pendingPosition ? "addressPending" : "addressNotFound", this.rc.locale)));
 			if (!address.isEmpty())
 			{
 				w.add(" · <a href=\"https://www.openstreetmap.org/search?query=").add(LayoutPane.esc(java.net.URLEncoder.encode(address, java.nio.charset.StandardCharsets.UTF_8)))

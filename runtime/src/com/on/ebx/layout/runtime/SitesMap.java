@@ -10,14 +10,13 @@ import com.onwbp.adaptation.Adaptation;
 
 /**
  * The "Sites on a map" block: the rows of an association (establishments, addresses) on an OpenStreetMap map, with the
- * list beside it. A row is placed by its latitude and longitude, else by its address through {@link Geocoder}; at most
- * {@link #LOOKUPS} addresses not yet known are looked up per display (the public service takes one a second), the others
- * are placed at the next display. Drawn in the browser by {@code blocks.js} with OpenStreetMap tiles.
+ * list beside it. A row is placed by its latitude and longitude, else by its address through {@link Geocoder}: an address
+ * not known yet is looked up in the background (the public service takes one a second) and placed at the next display;
+ * the form never waits for the service. Drawn in the browser by {@code blocks.js} with OpenStreetMap tiles.
  */
 final class SitesMap
 {
 	static final int MAX_ROWS = 200;
-	static final int LOOKUPS = 6;
 
 	private SitesMap()
 	{
@@ -54,7 +53,6 @@ final class SitesMap
 			t.put(k, RuntimeText.get("sm." + k, rc.locale));
 		}
 		final ArrayNode sites = data.putArray("sites");
-		int lookups = 0;
 		boolean cut = false;
 		final List<Adaptation> rows = rc.rows(a, SitesMap.MAX_ROWS + 1);
 		for (final Adaptation r : rows)
@@ -103,33 +101,33 @@ final class SitesMap
 				s.put("miss", true);
 				continue;
 			}
-			final boolean known = Geocoder.isKnown(adr);
-			if (!known && lookups >= SitesMap.LOOKUPS)
+			// never wait for the geocoding service while the form is drawn (1.15.0): known positions now, the others next time
+			double[] at = Geocoder.known(adr);
+			boolean pending = false;
+			if (at == null && !Geocoder.isKnown(adr))
 			{
-				s.put("pending", true);
-				continue;
+				Geocoder.lookLater(adr, rc.locale);
+				pending = true;
 			}
-			if (!known)
-			{
-				lookups++;
-			}
-			double[] at = Geocoder.locate(adr, rc.locale);
-			if (at == null && parts.size() > 1)
+			if (at == null && !pending && parts.size() > 1)
 			{
 				// the street may be unknown to the map: the town (the last parts) gives an approximate position
 				final String town = String.join(", ", parts.subList(Math.max(0, parts.size() - (address.size() > 2 ? 2 : 1)), parts.size()));
-				if (Geocoder.isKnown(town) || lookups < SitesMap.LOOKUPS)
+				at = Geocoder.known(town);
+				if (at != null)
 				{
-					if (!Geocoder.isKnown(town))
-					{
-						lookups++;
-					}
-					at = Geocoder.locate(town, rc.locale);
-					if (at != null)
-					{
-						s.put("approx", true);
-					}
+					s.put("approx", true);
 				}
+				else if (!Geocoder.isKnown(town))
+				{
+					Geocoder.lookLater(town, rc.locale);
+					pending = true;
+				}
+			}
+			if (at == null && pending)
+			{
+				s.put("pending", true);
+				continue;
 			}
 			if (at == null)
 			{

@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit 7d11ae05ccf68ad3015e6e8872e31fc44b9bee67
-Merge feature/actions-tones: Actions block, panel colour by a condition, grids outside the first tab lazy (1.14.0)
+Exported from EBX-Layout-Designer commit 236bbcf975266c7344904397a6afebf5cf32072b
+1.15.0: maps never wait for the geocoding service while a form is drawn; positions kept across restarts
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

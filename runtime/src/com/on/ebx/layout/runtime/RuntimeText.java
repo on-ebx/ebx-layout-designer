@@ -59,6 +59,7 @@ public final class RuntimeText
 		RuntimeText.put("ubVia", "through {n}", "par {n}", "tramite {n}");
 		RuntimeText.put("ubOpen", "Show", "Voir", "Mostra");
 		RuntimeText.put("addressNotFound", "Address not found on the map.", "Adresse introuvable sur la carte.", "Indirizzo non trovato sulla mappa.");
+		RuntimeText.put("addressPending", "Position being looked up: the map shows at the next opening.", "Position en cours de recherche : la carte s\u2019affiche \u00e0 la prochaine ouverture.", "Posizione in corso di ricerca: la mappa appare alla prossima apertura.");
 		RuntimeText.put("fromAddress", "position from the address {n}", "position d'apr\u00e8s l'adresse {n}", "posizione dall'indirizzo {n}");
 		RuntimeText.put("histFields", "{n} fields", "{n} champs", "{n} campi");
 		RuntimeText.put("orgTitle", "Group structure", "Structure du groupe", "Struttura del gruppo");
