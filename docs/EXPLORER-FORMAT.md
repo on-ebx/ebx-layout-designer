@@ -31,6 +31,7 @@ of the table is opened.
   "format": "ebx-layout-designer/explorer", "version": 1,
   "title": {"fr-FR": "Fournisseurs", "en-US": "Suppliers"},
   "openTo": [],
+  "freshness": {"mode": "onDemand", "maxAgeMinutes": 60},
   "derived": {"etab": {"type": "count", "association": "/etablissements"}},
   "variants": [{"id": "std", "name": {"fr-FR": "Standard"}, "roles": [], "layout": {
     "search": {"fields": ["/raisonSociale", "/siren"]},
@@ -38,6 +39,9 @@ of the table is opened.
   }}]
 }
 ```
+
+`freshness` (1.19.0): `mode` = `onDemand` (default) or `auto`; `maxAgeMinutes` (default 60) for `onDemand`. Set in the
+designer (explorer settings). See *Kept answers* below.
 
 `openTo`: role names allowed to open the explorer; empty = every user who may read the table. `variants`: the first one
 (after the first) whose `roles` the user holds is used, else the first. Any facet, tile, card part or action may carry
@@ -166,12 +170,22 @@ Every answer is EBX's own: the explorer keeps no copy of the data.
 - **At the same time**: the statements of one page (count, page of records, each facet, each value of a short list) are
   sent to EBX in parallel on the explorer's own pool (as many threads as cores, 8 at most, for the whole server), the
   user's session shared by the threads as Insight's profiling does. Answers are identical to one-after-another.
-- **Kept answers**: EBX's answers are kept one minute, invalidated as soon as a table they read changes. A user who sees
-  every record of every table the explorer reads (EBX counts them with the user's session and without) shares them with
-  every other such user; anyone else keeps answers of their own. Users asking the same question at the same moment wait
-  for one computation. Measured on 576,692 records, 200 simultaneous users on the same page: median 2.5-4 s with the
-  answers kept, 4.7-11 s right after a change; 47-519 s without sharing.
-- **Freshness**: nothing to build; a change made in EBX shows in the next answer.
+- **Kept answers** (1.19.0, chosen per explorer by its configurator, `freshness`):
+  - *On demand* (default): the answers computed are kept until a user presses **Refresh** or until the maximum age
+    (`maxAgeMinutes`, 60 by default), whatever changes in the data meanwhile. The page shows when they were computed
+    ("Computed at 10:42 (3 min ago)") and, when a table read has changed since, "Data changed since." with the
+    Refresh button highlighted. Refresh starts a new computation for every user sharing those answers. This is the
+    setting for large tables or many users: a hundred users opening the page cost one computation per question.
+  - *Automatic*: answers kept one minute, invalidated as soon as a table they read changes (1.18.0 behaviour); the
+    page says "Updated automatically". For small volumes or few users.
+  - Cards (computed values and flags of the records shown) are always read fresh.
+  - A user who sees every record of every table the explorer reads (EBX counts them with the user's session and
+    without) shares answers with every other such user; anyone else keeps answers of their own. Users asking the same
+    question at the same moment wait for one computation. Measured on 576,692 records, 200 simultaneous users on the
+    same page: median 2.5-4 s with the answers kept, 4.7-11 s right after a change; 47-519 s without sharing.
+- **Two steps** (1.19.0): the page first asks the count, the records and the tiles, then the facets in a second request;
+  facets whose box is collapsed are not counted until opened. A request replaced by a newer one from the same page (the
+  user kept typing) stops between two statements sent to EBX and is answered `{"cancelled": true}`.
 - **Administrators' options** on the page's query: `explain=1` returns every statement sent to EBX and its time;
   with it, `route=sql` asks SQL even where XPath could answer and `parallel=0` sends the statements one after another
   (comparisons). `LDX_RUN.ajax.load` runs a load test: `n` simulated users (1-300) asking the same page at the same time,

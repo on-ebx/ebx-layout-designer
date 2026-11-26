@@ -264,6 +264,10 @@ then **Actions › Design the explorer** (or *The explorer* in the form designer
 - **Who sees what**: a facet, a tile, a card attribute or an action can be kept for some roles; a *variant* is another
   version of the whole explorer for some roles. *Preview as* shows a role's explorer. EBX permissions come on top, on
   the real page: a user only sees, counts and finds the records and fields EBX lets them read.
+- **Freshness** (explorer settings): *On demand* (default) shares the computed results and keeps them until someone
+  presses **Refresh** on the page or until the maximum age (60 minutes by default); the page shows when they were
+  computed and says when data changed since. *Automatic* recomputes as soon as the data changes: keep it for small tables
+  or few users.
 - **Save** stores the explorer; it shows at its next opening. Put it in a perspective with an action on the service
   *Explorer* of the table, parameter `ldxExplorer` = the explorer's id (the link is in the top bar).
 

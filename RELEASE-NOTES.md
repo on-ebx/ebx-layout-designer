@@ -1,5 +1,15 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.19.0 (2026-10-15)
+
+- **Freshness chosen by the explorer's configurator.** *On demand* (the default): computed results are shared and kept
+  until someone presses **Refresh** or until a maximum age (60 minutes by default); the page says when they were
+  computed and warns when data changed since. *Automatic*: recomputed as soon as a table read changes, for small volumes
+  or few users. Set in the designer, explorer settings (`freshness` in the explorer's JSON).
+- **Two steps**: count, records and tiles come first, the facets right after in a second request.
+- **Collapsed facets are not counted** until their box is opened.
+- **A request replaced by a newer one stops** on the server (search-as-you-type no longer queues work nobody reads).
+
 ## 1.18.0 (2026-10-15)
 
 - **Explorers ask EBX for every answer.** The explorer no longer reads the whole table into memory: each search,

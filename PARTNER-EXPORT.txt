@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit 98da7340cd9c51527011897b423e20dc767b3b27
-Docs: explorers on EBX's engine (parallel statements, shared answers, text filters, admin options, measurements)
+Exported from EBX-Layout-Designer commit aab732bca0d527c54b7e7279bdac0772a31b53de
+Explorer 1.19.0: freshness chosen by the configurator, two-step answers, lazy facets, cancelled requests
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

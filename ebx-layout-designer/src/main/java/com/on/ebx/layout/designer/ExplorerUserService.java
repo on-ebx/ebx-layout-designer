@@ -61,6 +61,8 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 {
 	/** In a pop-up command, replaced by the page with the n-th primary key value of the record. */
 	static final String MARK = "LDXMARK";
+	/** Per user, explorer and open page: the number of its latest request. */
+	private static final java.util.Map<String, java.util.concurrent.atomic.AtomicLong> LATEST = new java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicLong>();
 
 	private Adaptation dataset;
 	private AdaptationTable table;
@@ -536,6 +538,25 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 				}
 				request.facetSearch.putAll(ExplorerUserService.pairs(pContext.getParameter("fq")));
 				request.favorites = ExplorerStore.favorites(this.dataset.getHome().getRepository(), session.getUserReference().getUserId(), this.explorerId, this.dataset);
+				request.part = "main".equals(pContext.getParameter("part")) || "facets".equals(pContext.getParameter("part")) ? pContext.getParameter("part") : "all";
+				for (final String id : String.valueOf(pContext.getParameter("closed")).split(";"))
+				{
+					if (!id.isEmpty() && !"null".equals(id))
+					{
+						request.closed.add(id);
+					}
+				}
+				request.refresh = "1".equals(pContext.getParameter("refresh"));
+				// a newer request of the same page (the user kept typing) makes this one useless: it stops between two statements
+				final String tab = session.getUserReference().getUserId() + "|" + this.explorerId + "|" + pContext.getParameter("tab");
+				final long gen = ExplorerUserService.integer(pContext.getParameter("gen"), 0, 0, Integer.MAX_VALUE);
+				final java.util.concurrent.atomic.AtomicLong latest = ExplorerUserService.LATEST.computeIfAbsent(tab, k -> new java.util.concurrent.atomic.AtomicLong());
+				latest.accumulateAndGet(gen, Math::max);
+				request.cancelled = () -> latest.get() > gen;
+				if (ExplorerUserService.LATEST.size() > 10_000)
+				{
+					ExplorerUserService.LATEST.clear();
+				}
 				final int off = ExplorerUserService.integer(pContext.getParameter("off"), 0, 0, Integer.MAX_VALUE);
 				final int lim = ExplorerUserService.integer(pContext.getParameter("lim"), view.spec.pageSize, 1, 96);
 				// an administrator may ask what EBX was asked, with each statement's time
@@ -549,9 +570,18 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 					Engine.startTrace();
 				}
 				final Query.Result result = Query.run(view, request, off, lim);
-				out.put("all", result.all);
-				out.put("total", result.total);
+				if (!"facets".equals(request.part))
+				{
+					out.put("all", result.all);
+					out.put("total", result.total);
+				}
 				out.put("off", off);
+				out.put("computedAt", result.computedAt);
+				out.put("mode", result.mode);
+				if (result.changed)
+				{
+					out.put("changed", true);
+				}
 				final ObjectNode tiles = out.putObject("tiles");
 				result.tiles.forEach((k, v) -> tiles.put(k, v.intValue()));
 				final ObjectNode facets = out.putObject("facets");
@@ -577,6 +607,12 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 					}
 				}
 			}
+		}
+		catch (final Engine.Cancelled ex)
+		{
+			// the page asked a newer request: it ignores this answer
+			out.removeAll();
+			out.put("cancelled", true);
 		}
 		catch (final RuntimeException ex)
 		{
@@ -755,6 +791,10 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 		if (pPage.more)
 		{
 			o.put("more", true);
+		}
+		if (pPage.lazy)
+		{
+			o.put("lazy", true);
 		}
 		final ArrayNode items = o.putArray("items");
 		for (final Query.Item it : pPage.items)

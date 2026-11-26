@@ -205,6 +205,10 @@ Dans l'inspecteur de chaque bloc, et de chaque bouton d'un bloc *Actions*, *Selo
 
 ## 8. Enregistrer, déclarer, utiliser
 
+- **Fraîcheur** (réglages de l’explorateur) : *À la demande* (par défaut) partage les résultats calculés et les garde
+  jusqu’à ce qu’un utilisateur clique **Actualiser** sur la page ou jusqu’à l’âge maximum (60 minutes par défaut) ; la page
+  indique quand ils ont été calculés et signale si des données ont changé depuis. *Automatique* recalcule dès que les
+  données changent : à réserver aux petites tables ou à peu d’utilisateurs.
 - **Enregistrer** écrit la mise en page (JSON) comme nouvelle version dans `LayoutDesigner/FormLayout`. Elle s'affiche à
   la prochaine ouverture d'une fiche, **sans redémarrage**, dès que la table déclare la fiche conçue.
 - **Activation** (le bandeau sous l'en-tête, depuis la 1.9.0 : orange = pas encore utilisée, bleu = en attente du

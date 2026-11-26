@@ -100,6 +100,9 @@ const C = {
  permSearch:['Droits EBX : un champ masqué pour l’utilisateur n’est ni cherché ni proposé au tri.','EBX permissions: a field hidden for the user is neither searched nor offered as a sort.'],
  variantD:['Une variante est une version complète de l’explorateur. Un utilisateur voit la première variante (après la première) dont il a un des rôles, sinon la première.','A variant is a complete version of the explorer. A user sees the first variant (after the first) one of whose roles they hold, else the first one.'],
  vName:['Nom','Name'], forRoles:['Pour les rôles','For roles'], firstVariant:['Première variante : pour tous les rôles sans variante à eux.','First variant: for every role without a variant of its own.'], pageSize:['Cartes par page','Cards per page'],
+  freshness:['Fraîcheur des résultats','Freshness of the results'], frOnDemand:['À la demande (recommandé)','On demand (recommended)'], frAuto:['Automatique','Automatic'],
+  frMaxAge:['Âge maximum (minutes)','Maximum age (minutes)'],
+  frHint:['À la demande : les résultats calculés sont partagés et gardés jusqu’à « Actualiser » ou l’âge maximum ; la page dit quand ils ont été calculés et si des données ont changé depuis. Automatique : recalculés dès qu’une table lue change (au plus une minute de retard) ; à réserver aux petits volumes ou à peu d’utilisateurs.','On demand: computed results are shared and kept until "Refresh" or the maximum age; the page says when they were computed and whether data changed since. Automatic: computed again as soon as a table read changes (at most a minute late); keep it for small volumes or few users.'],
  dupVariant:['Dupliquer en nouvelle variante','Duplicate as a new variant'], delVariant:['Supprimer la variante','Delete the variant'], allVariants:['Toutes les variantes','All variants'], neverShown:['aucun rôle : jamais vue','no role: never shown'], newVariantOpt:['+ Nouvelle variante (copie)','+ New variant (copy)'],
  explorerS:['Explorateur','Explorer'], rowLabel:['Nom de l’explorateur','Explorer name'], pageTitle:['Titre de la page','Page title'], openTo:['Qui peut ouvrir l’explorateur','Who may open the explorer'], openToHint:['Aucun rôle coché : quiconque peut lire la table.','No role ticked: anyone who may read the table.'],
  active:['Actif','Active'], isOff:['Désactivé : la page répond « Cet explorateur est désactivé ».','Turned off: the page answers “This explorer is turned off”.'], activate:['Activer','Turn on'], deactivate:['Désactiver','Turn off'], delExplorer:['Supprimer l’explorateur','Delete the explorer'],
@@ -957,6 +960,10 @@ function renderInspector(){
     h += `<div class="fld"><label for="ldx-label">${esc(c('rowLabel'))}</label><input type="text" id="ldx-label" data-label="1" value="${esc(label)}"></div>`;
     h += `<div class="fld"><span class="l">${esc(c('pageTitle'))}</span>${locIn(D, 'title', label)}</div>`;
     h += rolesEd(D.openTo ? {roles:D.openTo, __open:true} : {roles:[]}, c('openTo'), ' ', c('openToHint'));
+    const fr = D.freshness || {}, frMode = fr.mode === 'auto' ? 'auto' : 'onDemand';
+    h += `<div class="fld"><label for="ldx-fresh">${esc(c('freshness'))}</label><select id="ldx-fresh" data-frmode="1"><option value="onDemand"${frMode === 'onDemand' ? ' selected' : ''}>${esc(c('frOnDemand'))}</option><option value="auto"${frMode === 'auto' ? ' selected' : ''}>${esc(c('frAuto'))}</option></select></div>`;
+    if (frMode === 'onDemand') h += `<div class="fld"><label for="ldx-frage">${esc(c('frMaxAge'))}</label><input type="number" min="1" max="1440" id="ldx-frage" data-frage="1" value="${esc(fr.maxAgeMinutes || 60)}"></div>`;
+    h += `<div class="where">${esc(c('frHint'))}</div>`;
     if (CUR && CUR.id != null){
       h += `<div class="acts"><span class="status${CUR.active === false ? ' off' : ' ok'}">${esc(CUR.active === false ? c('inactive') : c('active'))}</span><button type="button" class="btn small ghost" data-activate="${CUR.active === false ? 'activate' : 'deactivate'}">${esc(CUR.active === false ? c('activate') : c('deactivate'))}</button><button type="button" class="btn small ghost danger" data-delexpl="1">${esc(c('delExplorer'))}</button></div>`;
       if (CUR.active === false) h += `<div class="where warn">${esc(c('isOff'))}</div>`;
@@ -1260,6 +1267,8 @@ root.addEventListener('change', e => {
   if (t.matches('[data-otone]')){ snap(); const o = optTarget(); o.colors = o.colors || {}; o.colors[t.dataset.otone] = t.value; return commit(''); }
   if (t.matches('[data-oval]')){ snap(); const o = optTarget(); if (t.value === '') delete o[t.dataset.oval]; else o[t.dataset.oval] = t.value; return commit(''); }
   if (t.matches('[data-onum]')){ snap(); const o = optTarget(), k = t.dataset.onum; if (t.value === '') delete o[k]; else o[k] = +t.value; return commit(''); }
+  if (t.matches('[data-frmode]')){ snap(); D.freshness = Object.assign({}, D.freshness || {}, {mode: t.value}); if (t.value !== 'auto') D.freshness.maxAgeMinutes = D.freshness.maxAgeMinutes || 60; return commit(''); }
+  if (t.matches('[data-frage]')){ snap(); D.freshness = Object.assign({mode: 'onDemand'}, D.freshness || {}, {maxAgeMinutes: Math.max(1, Math.min(1440, +t.value || 60))}); return commit(''); }
   if (t.matches('[data-psize]')){ snap(); X.pageSize = Math.max(1, +t.value || 48); return commit(''); }
   if (t.matches('[data-onolabel]')){ snap(); const o = optTarget(); if (t.checked) o.nolabel = true; else delete o.nolabel; return commit(''); }
   if (t.matches('[data-partref]')){ snap(); const pt = X.card[S.pick.list][S.pick.i]; setRef(pt, t.value); if (wFor(t.value).indexOf(pt.widget) < 0) pt.widget = defW(S.pick.list, t.value); pt.options = {}; return commit(''); }

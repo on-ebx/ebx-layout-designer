@@ -31,12 +31,10 @@ import com.orchestranetworks.service.LoggingCategory;
  */
 public final class Engine
 {
-	private static final long TILES_MS = 60_000L;
 	/** Lists of values counted one value at a time up to this size; beyond, one GROUP BY. */
 	private static final int SHORT_LIST = 30;
 	/** Up to this many matching records, a long list of values is counted by reading the records (EBX's index). */
 	private static final int READ_LIMIT = 5000;
-	private static final Map<String, Object[]> TILES = new ConcurrentHashMap<String, Object[]>();
 	/** When set (an administrator's {@code explain}), every statement sent to EBX and its time, for this thread. */
 	private static final ThreadLocal<List<String[]>> TRACE = new ThreadLocal<List<String[]>>();
 	/** For this thread's call: the cache key prefix (user and tables' state), and whether SQL is preferred (admin experiment). */
@@ -51,6 +49,48 @@ public final class Engine
 	private static final Map<String, java.util.concurrent.CompletableFuture<Object>> INFLIGHT = new ConcurrentHashMap<String, java.util.concurrent.CompletableFuture<Object>>();
 	private static final java.util.regex.Pattern ALIAS = java.util.regex.Pattern.compile("\\b([cmsux])\\d+\\b");
 
+	/**
+	 * One call's context, carried to the pool's threads: how long answers stay valid, the time of the oldest answer used
+	 * (shown on the page), and whether a newer request of the same page made this one useless.
+	 */
+	static final class Call
+	{
+		long ttl = Engine.ANSWERS_MS;
+		final java.util.concurrent.atomic.AtomicLong oldest = new java.util.concurrent.atomic.AtomicLong(Long.MAX_VALUE);
+		java.util.function.BooleanSupplier cancelled = () -> false;
+		/** On-demand mode: the data changed after the answers kept were computed. */
+		boolean changed;
+		String mode = "onDemand";
+	}
+
+	private static final ThreadLocal<Call> CALL = new ThreadLocal<Call>();
+
+	/** A request dropped because the same page asked a newer one (the user kept typing). */
+	public static final class Cancelled extends RuntimeException
+	{
+		private static final long serialVersionUID = 1L;
+
+		Cancelled()
+		{
+			super("superseded by a newer request");
+		}
+	}
+
+	private static void checkCancelled()
+	{
+		final Call c = Engine.CALL.get();
+		if (c != null && c.cancelled.getAsBoolean())
+		{
+			throw new Cancelled();
+		}
+	}
+
+	/**
+	 * Per explorer, dataset and sharing scope, in on-demand mode: when the answers kept were started (their "epoch") and
+	 * the state of the tables then. A refresh, or the maximum age, starts a new epoch.
+	 */
+	private static final Map<String, long[]> EPOCHS = new ConcurrentHashMap<String, long[]>();
+
 	/** An administrator's experiment: ask EBX SQL even where an XPath request could answer. */
 	public static void preferSql(final boolean pOn)
 	{
@@ -64,10 +104,55 @@ public final class Engine
 		}
 	}
 
-	/** Opens the answer cache of one call (the page's query, the cards). */
-	private static void begin(final View pView)
+	/**
+	 * Opens the answer cache of one call (the page's query, the cards). Automatic mode: answers valid a minute and until a
+	 * table read changes. On-demand mode (the default): answers valid until someone refreshes or until the explorer's
+	 * maximum age ({@code freshness.maxAgeMinutes}, 60), whatever changes in the data meanwhile; the page says when they
+	 * were computed and whether the data changed since.
+	 */
+	private static void begin(final View pView, final boolean pRefresh, final java.util.function.BooleanSupplier pCancelled, final boolean pAuto)
 	{
-		Engine.CACHE_KEY.set(Engine.scope(pView) + Boolean.TRUE.equals(Engine.PREFER_SQL.get()) + "|");
+		final Call call = new Call();
+		if (pCancelled != null)
+		{
+			call.cancelled = pCancelled;
+		}
+		final com.fasterxml.jackson.databind.JsonNode f = pView.spec.root.path("freshness");
+		call.mode = pAuto || "auto".equals(f.path("mode").asText("")) ? "auto" : "onDemand";
+		final String base = Engine.scope(pView);
+		final long token = Engine.token(pView.model);
+		String state;
+		if ("auto".equals(call.mode))
+		{
+			state = "t" + token;
+		}
+		else
+		{
+			final long maxAge = Math.max(1, f.path("maxAgeMinutes").asInt(60)) * 60_000L;
+			final String key = base + pView.spec.root.toString().hashCode();
+			final long now = System.currentTimeMillis();
+			long[] epoch = Engine.EPOCHS.get(key);
+			if (epoch == null || pRefresh || now - epoch[0] >= maxAge)
+			{
+				epoch = new long[] { now, token };
+				Engine.EPOCHS.put(key, epoch);
+				if (Engine.EPOCHS.size() > 5000)
+				{
+					Engine.EPOCHS.entrySet().removeIf(e -> now - e.getValue()[0] >= maxAge);
+				}
+			}
+			call.ttl = maxAge;
+			call.changed = epoch[1] != token;
+			state = "e" + epoch[0];
+		}
+		Engine.CALL.set(call);
+		Engine.CACHE_KEY.set(base + state + "|" + Boolean.TRUE.equals(Engine.PREFER_SQL.get()) + "|");
+	}
+
+	/** This call's context (freshness, oldest answer), read by the page before {@link #end}. */
+	static Call call()
+	{
+		return Engine.CALL.get();
 	}
 
 	/** Per user and table state: does this user see every record of every table the explorer reads? */
@@ -83,10 +168,10 @@ public final class Engine
 	{
 		final Model m = pView.model;
 		final long token = Engine.token(m);
-		final String where = m.dataset.getHome().getKey().getName() + "|" + m.dataset.getAdaptationName().getStringName() + "|" + m.table.getTablePath().format() + "|"
-			+ token + "|";
+		final String where = m.dataset.getHome().getKey().getName() + "|" + m.dataset.getAdaptationName().getStringName() + "|" + m.table.getTablePath().format() + "|";
 		final String user = pView.session.getUserReference().getUserId();
-		final String key = user + "|" + where;
+		// who sees everything is asked again a minute later or as soon as the data changes: rights are never kept longer
+		final String key = user + "|" + where + token;
 		final Object[] known = Engine.SEES_ALL.get(key);
 		final long now = System.currentTimeMillis();
 		boolean all;
@@ -137,6 +222,7 @@ public final class Engine
 	private static void end()
 	{
 		Engine.CACHE_KEY.remove();
+		Engine.CALL.remove();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -151,10 +237,21 @@ public final class Engine
 		final String key = prefix + pKind + "|" + Engine.ALIAS.matcher(pStatement).replaceAll("$1");
 		final Object[] known = Engine.ANSWERS.get(key);
 		final long now = System.currentTimeMillis();
-		if (known != null && now - ((Long) known[1]).longValue() < Engine.ANSWERS_MS)
+		final Call call = Engine.CALL.get();
+		final long ttl = call == null ? Engine.ANSWERS_MS : call.ttl;
+		if (known != null && now - ((Long) known[1]).longValue() < ttl)
 		{
 			Engine.traced(pKind + " (kept)", pStatement, now);
+			if (call != null)
+			{
+				call.oldest.accumulateAndGet(((Long) known[1]).longValue(), Math::min);
+			}
 			return (T) known[0];
+		}
+		Engine.checkCancelled();
+		if (call != null)
+		{
+			call.oldest.accumulateAndGet(now, Math::min);
 		}
 		// one computation per question: users asking it at the same moment wait for the first one's answer
 		final java.util.concurrent.CompletableFuture<Object> mine = new java.util.concurrent.CompletableFuture<Object>();
@@ -183,7 +280,7 @@ public final class Engine
 		}
 		if (Engine.ANSWERS.size() > 20_000)
 		{
-			Engine.ANSWERS.entrySet().removeIf(e -> now - ((Long) e.getValue()[1]).longValue() > Engine.ANSWERS_MS);
+			Engine.ANSWERS.entrySet().removeIf(e -> now - ((Long) e.getValue()[1]).longValue() > 60 * 60_000L);
 			if (Engine.ANSWERS.size() > 20_000)
 			{
 				Engine.ANSWERS.clear();
@@ -228,6 +325,7 @@ public final class Engine
 		final List<String[]> trace = Engine.TRACE.get();
 		final Boolean sql = Engine.PREFER_SQL.get();
 		final Boolean noCache = Engine.NO_CACHE.get();
+		final Call call = Engine.CALL.get();
 		final List<java.util.concurrent.ForkJoinTask<T>> forks = new ArrayList<java.util.concurrent.ForkJoinTask<T>>();
 		for (final java.util.concurrent.Callable<T> c : pTasks)
 		{
@@ -236,6 +334,8 @@ public final class Engine
 				final List<String[]> t0 = Engine.TRACE.get();
 				final Boolean s0 = Engine.PREFER_SQL.get();
 				final Boolean n0 = Engine.NO_CACHE.get();
+				final Call c0 = Engine.CALL.get();
+				Engine.set(Engine.CALL, call);
 				Engine.set(Engine.NO_CACHE, noCache);
 				Engine.set(Engine.CACHE_KEY, key);
 				Engine.set(Engine.TRACE, trace);
@@ -250,6 +350,7 @@ public final class Engine
 					Engine.set(Engine.TRACE, t0);
 					Engine.set(Engine.PREFER_SQL, s0);
 					Engine.set(Engine.NO_CACHE, n0);
+					Engine.set(Engine.CALL, c0);
 				}
 			}));
 		}
@@ -348,18 +449,23 @@ public final class Engine
 
 	static void forget(final int pExplorer)
 	{
-		final String mark = "|" + pExplorer + "|";
-		Engine.TILES.keySet().removeIf(k -> k.contains(mark));
+		// a saved explorer has a new definition, hence new keys: nothing kept is reused for it
 	}
 
 	// ----- the page ---------------------------------------------------------------------------------------------------
 
 	static Query.Result run(final View pView, final Query.Request pRequest, final int pOffset, final int pLimit)
 	{
-		Engine.begin(pView);
+		Engine.begin(pView, pRequest.refresh, pRequest.cancelled, false);
 		try
 		{
-			return Engine.runKept(pView, pRequest, pOffset, pLimit);
+			final Query.Result out = Engine.runKept(pView, pRequest, pOffset, pLimit);
+			final Call call = Engine.CALL.get();
+			final long oldest = call.oldest.get();
+			out.computedAt = oldest == Long.MAX_VALUE ? System.currentTimeMillis() : oldest;
+			out.changed = call.changed;
+			out.mode = call.mode;
+			return out;
 		}
 		finally
 		{
@@ -390,18 +496,26 @@ public final class Engine
 		Collections.addAll(all, selected);
 		final Model.Pred where = Model.and(all);
 
-		final Object[] tiles = Engine.tiles(pView);
-		out.all = ((Integer) tiles[0]).intValue();
-		@SuppressWarnings("unchecked")
-		final Map<String, Integer> tileCounts = (Map<String, Integer>) tiles[1];
-		out.tiles.putAll(tileCounts);
+		final boolean main = !"facets".equals(pRequest.part), withFacets = !"main".equals(pRequest.part);
 		final Spec.Sort sort = pView.sorts.isEmpty() ? null : pView.sorts.get(Math.max(0, Math.min(pView.sorts.size() - 1, Engine.sortIndex(pView, pRequest.sort))));
 		final List<java.util.concurrent.Callable<Object>> tasks = new ArrayList<java.util.concurrent.Callable<Object>>();
-		tasks.add(() -> Integer.valueOf(Engine.count(pView, where)));
-		tasks.add(() -> Engine.page(pView, where, sort, pOffset, pLimit));
+		// the page first (total, records, tiles), the facets in the same call or in a second one ("two steps")
+		tasks.add(() -> main ? Integer.valueOf(Engine.count(pView, where)) : null);
+		tasks.add(() -> main ? Engine.page(pView, where, sort, pOffset, pLimit) : null);
+		tasks.add(() -> main ? Integer.valueOf(Engine.count(pView, Model.Pred.TRUE)) : null);
+		for (final Spec.Tile t : pView.tiles)
+		{
+			tasks.add(() -> main ? Integer.valueOf(Engine.count(pView, Engine.tilePred(pView, t))) : null);
+		}
+		final int first = tasks.size();
 		for (int f = 0; f < nf; f++)
 		{
 			final Spec.Facet facet = pView.facets.get(f);
+			if (!withFacets || pRequest.closed.contains(facet.id))
+			{
+				tasks.add(() -> null);
+				continue;
+			}
 			final List<Model.Pred> others = new ArrayList<Model.Pred>();
 			others.add(text);
 			others.add(tileP);
@@ -418,13 +532,30 @@ public final class Engine
 				Math.max(1, Math.min(Query.MAX_VALUES, shown == null ? facet.top : shown.intValue())), pRequest.facetSearch.get(facet.id), pRequest.favorites));
 		}
 		final List<Object> done = Engine.all(tasks);
-		out.total = ((Integer) done.get(0)).intValue();
-		@SuppressWarnings("unchecked")
-		final List<String> keys = (List<String>) done.get(1);
-		out.keys.addAll(keys);
-		for (int f = 0; f < nf; f++)
+		if (main)
 		{
-			out.facets.put(pView.facets.get(f).id, (Query.FacetPage) done.get(2 + f));
+			out.total = ((Integer) done.get(0)).intValue();
+			@SuppressWarnings("unchecked")
+			final List<String> keys = (List<String>) done.get(1);
+			out.keys.addAll(keys);
+			out.all = ((Integer) done.get(2)).intValue();
+			for (int i = 0; i < pView.tiles.size(); i++)
+			{
+				out.tiles.put(pView.tiles.get(i).id, (Integer) done.get(3 + i));
+			}
+		}
+		if (withFacets)
+		{
+			for (int f = 0; f < nf; f++)
+			{
+				Query.FacetPage page = (Query.FacetPage) done.get(first + f);
+				if (page == null)
+				{
+					page = new Query.FacetPage();
+					page.lazy = true;
+				}
+				out.facets.put(pView.facets.get(f).id, page);
+			}
 		}
 		LoggingCategory.getKernel().debug("[layout-designer] explorer query on " + m.table.getTablePath().format() + ": " + out.total + "/" + out.all + " records, "
 			+ (System.currentTimeMillis() - start) + " ms");
@@ -547,38 +678,6 @@ public final class Engine
 		}
 		final Model.Pred p = m.pred(pTile.when);
 		return p == null ? Model.Pred.FALSE : p;
-	}
-
-	/** {all visible records, tile counts}: the same for every query of a user, kept a minute while the tables stay the same. */
-	private static Object[] tiles(final View pView)
-	{
-		final Model m = pView.model;
-		final String key = Engine.scope(pView) + pView.spec.variantId + "|" + pView.spec.root.toString().hashCode() + "|";
-		final long token = Engine.token(m);
-		final Object[] known = Boolean.TRUE.equals(Engine.NO_CACHE.get()) ? null : Engine.TILES.get(key);
-		if (known != null && ((Long) known[2]).longValue() == token && System.currentTimeMillis() - ((Long) known[3]).longValue() < Engine.TILES_MS)
-		{
-			return known;
-		}
-		final List<java.util.concurrent.Callable<Integer>> tasks = new ArrayList<java.util.concurrent.Callable<Integer>>();
-		tasks.add(() -> Integer.valueOf(Engine.count(pView, Model.Pred.TRUE)));
-		for (final Spec.Tile t : pView.tiles)
-		{
-			tasks.add(() -> Integer.valueOf(Engine.count(pView, Engine.tilePred(pView, t))));
-		}
-		final List<Integer> n = Engine.all(tasks);
-		final Map<String, Integer> counts = new LinkedHashMap<String, Integer>();
-		for (int i = 0; i < pView.tiles.size(); i++)
-		{
-			counts.put(pView.tiles.get(i).id, n.get(i + 1));
-		}
-		final Object[] out = { n.get(0), counts, Long.valueOf(token), Long.valueOf(System.currentTimeMillis()) };
-		Engine.TILES.put(key, out);
-		if (Engine.TILES.size() > 2000)
-		{
-			Engine.TILES.entrySet().removeIf(e -> System.currentTimeMillis() - ((Long) e.getValue()[3]).longValue() > Engine.TILES_MS);
-		}
-		return out;
 	}
 
 	/** Changes when a table the explorer reads changes. */
@@ -1196,7 +1295,8 @@ public final class Engine
 	 */
 	public static Cards cards(final View pView, final List<String> pKeys, final Set<String> pDerived, final Set<String> pFlagFacets)
 	{
-		Engine.begin(pView);
+		// the cards are never older than the automatic mode allows, whatever the explorer's mode
+		Engine.begin(pView, false, null, true);
 		try
 		{
 			return Engine.cardsKept(pView, pKeys, pDerived, pFlagFacets);

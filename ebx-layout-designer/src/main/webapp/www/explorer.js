@@ -30,7 +30,8 @@
     narrowMany: ['Pour les autres, cherchez.', 'For the others, search.'], found: ['{n} trouvée(s)', '{n} found'], ofTotal: ['{a} sur {b}, les plus fréquentes', '{a} of {b}, most frequent first'],
     narrow: ['Pour les {n} autres, cherchez.', 'For the other {n}, search.'], all: ['Toutes', 'All'], yes: ['Oui', 'Yes'], no: ['Non', 'No'],
     copy: ['Copier', 'Copy'], copied: ['Copié', 'Copied'], compliant: ['Rien à signaler', 'Nothing to report'], error: ['Le serveur n’a pas répondu correctement.', 'The server answer could not be read.'],
-    sort: ['Trier', 'Sort'], ago: ['il y a {n}', '{n} ago'], inT: ['dans {n}', 'in {n}'], today: ['aujourd’hui', 'today'], d: ['j', 'd'], mo: ['mois', 'mo'], y: ['an(s)', 'y']
+    sort: ['Trier', 'Sort'], computed: ['Calculé à {t}', 'Computed at {t}'], agoMin: ['il y a {n} min', '{n} min ago'], now: ['à l’instant', 'just now'],
+    refresh: ['Actualiser', 'Refresh'], changed: ['Des données ont changé depuis.', 'Data changed since.'], auto: ['Mis à jour automatiquement', 'Updated automatically'], ago: ['il y a {n}', '{n} ago'], inT: ['dans {n}', 'in {n}'], today: ['aujourd’hui', 'today'], d: ['j', 'd'], mo: ['mois', 'mo'], y: ['an(s)', 'y']
   };
   var S_ = function (k, args) { var v = (STR[k] || [k, k])[LANG === 'fr' ? 0 : 1]; for (var a in args || {}) v = v.split('{' + a + '}').join(args[a]); return v; };
   var nf = function (n, opts) { try { return new Intl.NumberFormat(LOC, opts || {}).format(n); } catch (x) { return String(n); } };
@@ -54,20 +55,25 @@
     for (var k in params) if (params[k] !== '' && params[k] != null) u += (u.indexOf('?') < 0 ? '?' : '&') + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
     return u;
   };
-  var seq = 0;
+  /* each request carries its number and the page's id: the server drops the work of a request a newer one replaced */
+  var seq = 0, TAB = Math.random().toString(36).slice(2, 10);
   var ask = function (u, done) {
     var mine = ++seq, h = new EBX_AJAXResponseHandler();
     h.handleAjaxResponseSuccess = function (text) {
       if (mine !== seq) return;
       var d; try { d = JSON.parse(text); } catch (x) { d = null; }
+      if (d && d.cancelled) return;
       if (!d || d.error) { R = R || {}; R.error = d && d.error ? d.error : S_('error'); draw(); return; }
       done(d);
     };
     h.handleAjaxResponseFailed = function () {};
-    h.sendRequest(u);
+    h.sendRequest(u + (u.indexOf('?') < 0 ? '?' : '&') + 'gen=' + mine + '&tab=' + TAB);
   };
-  var params = function (off, lim) {
+  /* collapsed facets are not counted: they are asked when opened */
+  var closed = function () { return (C.facets || []).filter(function (f) { return S.collapsed[f.id]; }).map(function (f) { return f.id; }).join(';'); };
+  var params = function (off, lim, part, force) {
     return {
+      part: part || 'all', closed: closed(), refresh: force ? 1 : '',
       q: S.q, tile: S.tile || '', sort: S.sort, off: off, lim: lim,
       f: Object.keys(S.sel).map(function (id) { var v = on(S.sel[id]); return v.length ? id + '=' + v.map(escV).join('|') : null; }).filter(Boolean).join(';'),
       more: Object.keys(S.more).map(function (id) { return id + ':' + S.more[id]; }).join(';'),
@@ -76,9 +82,27 @@
   };
   var R = null, CARDS = [];
   var PAGE = C.pageSize || 48;
-  var refresh = function (keepFocus) { ask(url(B.ajax.query, params(0, PAGE)), function (d) { R = d; CARDS = d.cards || []; remember(d); draw(keepFocus); }); };
-  var more = function () { ask(url(B.ajax.query, params(CARDS.length, PAGE)), function (d) { R = d; CARDS = CARDS.concat(d.cards || []); remember(d); draw(false); }); };
-  var reload = function () { ask(url(B.ajax.query, params(0, Math.max(PAGE, CARDS.length))), function (d) { R = d; CARDS = d.cards || []; remember(d); draw(false); }); };
+  /* two steps: the count, the records and the tiles first, then the facets (the slow part on a big table) */
+  var facetsOnly = function (keepFocus) {
+    if (!(C.facets || []).length) return;
+    ask(url(B.ajax.query, params(0, 1, 'facets')), function (d) {
+      R = R || {}; R.facets = d.facets || {}; R.waiting = false; stamp(d); remember(d); draw(keepFocus);
+    });
+  };
+  var askMain = function (off, lim, keepFocus, force, add) {
+    ask(url(B.ajax.query, params(off, lim, 'main', force)), function (d) {
+      var old = R && R.facets;
+      R = d; R.facets = old || {}; R.waiting = !add && !!(C.facets || []).length;
+      CARDS = add ? CARDS.concat(d.cards || []) : d.cards || [];
+      if (R.computedAt) R.at = R.computedAt;
+      draw(keepFocus);
+      if (!add) facetsOnly(keepFocus);
+    });
+  };
+  var stamp = function (d) { if (d.computedAt && R && (!R.at || d.computedAt < R.at)) R.at = d.computedAt; if (d.changed && R) R.changed = true; };
+  var refresh = function (keepFocus) { askMain(0, PAGE, keepFocus); };
+  var more = function () { askMain(CARDS.length, PAGE, false, false, true); };
+  var reload = function (force) { askMain(0, Math.max(PAGE, CARDS.length), false, force); };
   /* the labels of selected values, for the chips (a long list does not send them all) */
   var remember = function (d) {
     for (var id in d.facets || {}) (d.facets[id].items || []).forEach(function (it) { if (it.sel) (S.selLabels[id] = S.selLabels[id] || {})[it.v] = it.l; });
@@ -211,6 +235,11 @@
   var facetBox = function (f) {
     var page = R && R.facets ? R.facets[f.id] : null;
     if (!page) return '';
+    if (page.lazy && !S.collapsed[f.id]) page = null;
+    if (!page || page.lazy) {
+      var t0 = f.kind === 'favorites' ? (T(f.title) || S_('myFav')) : T(f.title);
+      return '<div class="ldx-facet' + (S.collapsed[f.id] ? ' collapsed' : '') + '"><h4 data-fold="' + esc(f.id) + '"><span>' + esc(t0) + '</span><span aria-hidden="true">' + (S.collapsed[f.id] ? '▸' : '▾') + '</span></h4><div class="ldx-fb"><p class="ldx-fnote">…</p></div></div>';
+    }
     var sel = S.sel[f.id] || {}, items = page.items || [], total = page.total || 0, many = !!page.more, h = '';
     var title = f.kind === 'favorites' ? (T(f.title) || S_('myFav')) : T(f.title);
     var long = f.kind !== 'flags' && f.kind !== 'ranges' && f.kind !== 'favorites' && (total > (f.top || 10) || S.fq[f.id]);
@@ -249,6 +278,20 @@
     return '<div class="ldx-chips">' + c.map(function (x) { return '<span class="ldx-chip">' + esc(x[2]) + '<button type="button" data-rm="' + esc(x[0]) + '" data-v="' + esc(x[1]) + '" aria-label="✕">×</button></span>'; }).join('')
       + '<button type="button" class="ldx-clear" data-clear="1">' + esc(S_('clear')) + '</button></div>';
   };
+  /* when the answers shown were computed, and the button to compute them again */
+  var age = function () {
+    var m = Math.floor((Date.now() - R.at) / 60000);
+    return m < 1 ? S_('now') : S_('agoMin', {n: m});
+  };
+  var fresh = function () {
+    if (!R || !R.at) return '';
+    var t; try { t = new Date(R.at).toLocaleTimeString(LOC, {hour: '2-digit', minute: '2-digit'}); } catch (x) { t = ''; }
+    return '<div class="ldx-fresh' + (R.changed ? ' changed' : '') + '">'
+      + (R.mode === 'auto' ? '<span>' + esc(S_('auto')) + '</span>' : '<span>' + esc(S_('computed', {t: t})) + ' (<span class="ldx-age">' + esc(age()) + '</span>)</span>')
+      + (R.changed ? '<span class="ldx-changed">' + esc(S_('changed')) + '</span>' : '')
+      + (R.mode === 'auto' ? '' : '<button type="button" class="ldx-refresh" data-refresh="1">&#8635; ' + esc(S_('refresh')) + '</button>') + '</div>';
+  };
+  setInterval(function () { var a = root.querySelector('.ldx-age'); if (a && R && R.at) a.textContent = age(); }, 30000);
   var draw = function (keepFocus) {
     var active = document.activeElement, fid = active && active.id, pos = active && active.selectionStart;
     var tiles = (C.tiles || []).length ? '<div class="ldx-tiles">' + C.tiles.map(function (t) {
@@ -262,13 +305,14 @@
     var main = '<div class="ldx-bar">' + (side ? '<button type="button" class="ldx-toggle" data-side="1">' + esc(S.noSide ? S_('showF') : S_('hideF')) + '</button>' : '')
       + '<span class="ldx-count">' + nf(total) + ' ' + esc(total > 1 ? S_('records') : S_('record')) + (R ? ' <small>/ ' + nf(all) + '</small>' : '') + '</span>'
       + ((C.sorts || []).length > 1 ? '<select id="ldx-sort" aria-label="' + esc(S_('sort')) + '">' + C.sorts.map(function (s) { return '<option value="' + s.i + '"' + (+S.sort === s.i ? ' selected' : '') + '>' + esc(T(s.label)) + '</option>'; }).join('') + '</select>' : '') + '</div>' + chips();
+    main += fresh();
     if (R && R.error) main += '<div class="ldx-error">' + esc(R.error) + '</div>';
     var lay = CARD.layout || 'vertical', minW = +CARD.minWidth || 260;
     main += CARDS.length ? '<div class="ldx-grid' + (lay === 'compact' ? ' compact' : '') + '" style="' + (lay === 'compact' ? '' : 'grid-template-columns:repeat(auto-fill,minmax(min(100%,' + minW + 'px),1fr))') + '">' + CARDS.map(card).join('') + '</div>'
       + (total > CARDS.length ? '<button type="button" class="ldx-more">' + esc(S_('more')) + ' (' + nf(total - CARDS.length) + ')</button>' : '')
       : R ? '<div class="ldx-empty">' + esc(S_('none')) + '</div>' : '<p class="ldx-loading">…</p>';
     var oldSide = root.querySelector('.ldx-side'), scroll = oldSide ? oldSide.scrollTop : 0;
-    root.innerHTML = tiles + '<div class="ldx-body' + (S.noSide || !side ? ' noside' : '') + '">' + (side ? '<aside class="ldx-side">' + side + '</aside>' : '') + '<section class="ldx-main">' + main + '</section></div>';
+    root.innerHTML = tiles + '<div class="ldx-body' + (S.noSide || !side ? ' noside' : '') + '">' + (side ? '<aside class="ldx-side' + (R && R.waiting ? ' waiting' : '') + '">' + side + '</aside>' : '') + '<section class="ldx-main">' + main + '</section></div>';
     var ns = root.querySelector('.ldx-side'); if (ns) ns.scrollTop = scroll;
     if (keepFocus && fid) { var el = document.getElementById(fid); if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch (x) {} } }
     save();
@@ -333,7 +377,13 @@
     }
     if ((el = t.closest('[data-tile]'))) { S.tile = S.tile === el.dataset.tile ? null : el.dataset.tile; refresh(); return; }
     if ((el = t.closest('[data-chip]'))) { var m = (S.sel[el.dataset.chip] = S.sel[el.dataset.chip] || {}); m[el.dataset.v] = !m[el.dataset.v]; refresh(); return; }
-    if ((el = t.closest('[data-fold]'))) { S.collapsed[el.dataset.fold] = !S.collapsed[el.dataset.fold]; draw(); return; }
+    if ((el = t.closest('[data-fold]'))) {
+      var fid = el.dataset.fold; S.collapsed[fid] = !S.collapsed[fid]; draw();
+      var pg = R && R.facets && R.facets[fid];
+      if (!S.collapsed[fid] && (!pg || pg.lazy)) facetsOnly();
+      return;
+    }
+    if (t.closest('[data-refresh]')) { R.changed = false; R.at = null; reload(true); return; }
     if ((el = t.closest('[data-fmore]'))) { var f = (C.facets || []).filter(function (x) { return x.id === el.dataset.fmore; })[0]; S.more[el.dataset.fmore] = Math.min(50, (S.more[el.dataset.fmore] || (f && f.top) || 10) + 10); refresh(); return; }
     if ((el = t.closest('[data-fless]'))) { delete S.more[el.dataset.fless]; refresh(); return; }
     if ((el = t.closest('[data-rm]'))) {

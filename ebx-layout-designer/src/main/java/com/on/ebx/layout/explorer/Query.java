@@ -41,6 +41,8 @@ public final class Query
 		public int total;
 		/** True when {@link #total} is only "more than the values shown" (a long list under a filter: not counted exactly). */
 		public boolean more;
+		/** Not counted: the facet is collapsed on the page (counted when opened). */
+		public boolean lazy;
 		public final List<Item> items = new ArrayList<Item>();
 	}
 
@@ -51,6 +53,10 @@ public final class Query
 		public final List<String> keys = new ArrayList<String>();
 		public final Map<String, Integer> tiles = new LinkedHashMap<String, Integer>();
 		public final Map<String, FacetPage> facets = new LinkedHashMap<String, FacetPage>();
+		/** When the oldest answer used was computed (ms); whether the data changed since (on-demand mode); the mode. */
+		public long computedAt;
+		public boolean changed;
+		public String mode;
 	}
 
 	/** What the page asks: per facet, how many values to show and the text typed in the facet's own search. */
@@ -63,6 +69,14 @@ public final class Query
 		public final Map<String, Integer> shown = new HashMap<String, Integer>();
 		public final Map<String, String> facetSearch = new HashMap<String, String>();
 		public Set<String> favorites = new TreeSet<String>();
+		/** {@code main}: total, tiles and the page of records; {@code facets}: the facets only; {@code all}: everything. */
+		public String part = "all";
+		/** Facets collapsed on the page: not counted. */
+		public final Set<String> closed = new TreeSet<String>();
+		/** Start new answers (the Refresh button). */
+		public boolean refresh;
+		/** True once the same page asked a newer request: this one stops. */
+		public java.util.function.BooleanSupplier cancelled;
 	}
 
 	private Query()
