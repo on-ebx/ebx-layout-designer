@@ -4,7 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.onwbp.adaptation.AdaptationTable;
 import com.onwbp.base.text.UserMessage;
 import com.orchestranetworks.instance.Repository;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.orchestranetworks.service.LoggingCategory;
+import com.orchestranetworks.service.Profile;
+import com.orchestranetworks.service.Session;
 import com.orchestranetworks.ui.form.UIForm;
 import com.orchestranetworks.ui.form.UIFormBody;
 import com.orchestranetworks.ui.form.UIFormContext;
@@ -38,6 +41,7 @@ public class ConfigurableForm extends UIForm
 			super.defineBody(pBody, pContext);
 			return;
 		}
+		layout = ConfigurableForm.forUser(layout, pContext);
 		final RenderContext rc = new RenderContext(pContext, layout);
 		final JsonNode tabs = layout.path("tabs");
 		if (tabs.size() == 1)
@@ -52,5 +56,33 @@ public class ConfigurableForm extends UIForm
 			pane.addTab(UserMessage.createInfo(rc.tabLabel(tab)), new LayoutPane(rc, tab, i));
 		}
 		pBody.setContent(pane);
+	}
+
+	/** The layout as the current user sees it: their role's variant and restrictions, then their own arrangement. */
+	static JsonNode forUser(final JsonNode pLayout, final UIFormContext pContext)
+	{
+		try
+		{
+			final Session session = pContext.getSession();
+			final ObjectNode resolved = Audience.resolve(pLayout, roles -> Behaviors.inAnyRole(session, roles), ConfigurableForm.seesAll(pLayout, session));
+			if (Personal.allowed(resolved) && session.getUserReference() != null)
+			{
+				final JsonNode prefs = LayoutStore.findPrefs(Repository.getDefault(), session.getUserReference().getUserId(),
+					pContext.getCurrentDataSet().getSchemaLocation(), pContext.getCurrentTable().getTablePath(), resolved.path("variant").asText());
+				Personal.apply(resolved, prefs, pContext.isCreatingRecord());
+			}
+			return resolved;
+		}
+		catch (final RuntimeException ex)
+		{
+			LoggingCategory.getKernel().error("[layout-designer] the layout could not be adapted to the user: " + ex, ex);
+			return pLayout;
+		}
+	}
+
+	/** Administrators see every tab, block and field unless the layout says {@code "adminSeesAll": false}. */
+	static boolean seesAll(final JsonNode pLayout, final Session pSession)
+	{
+		return pLayout.path("adminSeesAll").asBoolean(true) && pSession.isUserInRole(Profile.ADMINISTRATOR);
 	}
 }

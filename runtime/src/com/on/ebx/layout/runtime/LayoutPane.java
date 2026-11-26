@@ -32,6 +32,8 @@ final class LayoutPane implements UIFormPane
 	private final JsonNode tab;
 	private final int tabIndex;
 	private Behaviors.Rules rules;
+	/** Blocks that passed their display conditions on this tab. */
+	private int drawn;
 
 	LayoutPane(final RenderContext pContext, final JsonNode pTab, final int pTabIndex)
 	{
@@ -45,6 +47,11 @@ final class LayoutPane implements UIFormPane
 	{
 		pWriter.add("<style>").add(Css.STYLE).add("</style><div class=\"ldf\">");
 		this.rules = new Behaviors.Rules(pWriter);
+		this.drawn = 0;
+		if (this.tabIndex == 0)
+		{
+			this.personalizeButton(pWriter);
+		}
 		final JsonNode rows = this.tab.path("rows");
 		for (int r = 0; r < rows.size(); r++)
 		{
@@ -84,6 +91,15 @@ final class LayoutPane implements UIFormPane
 				pWriter.add("</details>");
 			}
 		}
+		if (rows.size() == 0)
+		{
+			pWriter.add("<div class=\"ldf-none\">").add(LayoutPane.esc(RuntimeText.get("nothingForRole", this.rc.locale))).add("</div>");
+		}
+		else if (this.drawn == 0 && Personal.MINE.equals(this.tab.path("id").asText()))
+		{
+			// every pinned block has a condition this record does not meet
+			pWriter.add("<div class=\"ldf-none\">").add(LayoutPane.esc(RuntimeText.get("pinnedNotHere", this.rc.locale))).add("</div>");
+		}
 		pWriter.add("</div>");
 		pWriter.addJS_cr(Css.GO_JS);
 		pWriter.addJS_cr(DisplayWidgets.JS);
@@ -107,6 +123,7 @@ final class LayoutPane implements UIFormPane
 		{
 			return;
 		}
+		this.drawn++;
 		final JsonNode showIf = b.get("showIf");
 		final boolean dynamic = showIf != null && !showIf.path("field").asText("").isEmpty();
 		if (dynamic)
@@ -123,11 +140,48 @@ final class LayoutPane implements UIFormPane
 			w.add("<div class=\"ldf-dyn\" id=\"ldd-").add(id).add("\"").add(on ? "" : " style=\"display:none\"").add(">");
 			this.rules.show(this.rc, showIf, "ldd-" + id, clear);
 		}
+		final boolean folded = b.path("_collapsed").asBoolean(false);
+		if (folded)
+		{
+			final String title = this.rc.blockTitle(b);
+			w.add("<details class=\"ldf-fold\"><summary>").add(LayoutPane.esc(title.isEmpty() ? RuntimeText.get("foldedBlock", this.rc.locale) : title)).add("</summary>");
+		}
 		this.typed(w, b, id);
+		if (folded)
+		{
+			w.add("</details>");
+		}
 		if (dynamic)
 		{
 			w.add("</div>");
 		}
+	}
+
+	/** "Arrange my form": the user's own arrangement, in EBX's pop-up (a module service on the record, documented API). */
+	private void personalizeButton(final UIFormPaneWriter w)
+	{
+		if (!Personal.allowed(this.rc.layout) || this.rc.creating || this.rc.record == null)
+		{
+			return;
+		}
+		String js = null;
+		try
+		{
+			final com.orchestranetworks.ui.UIHttpManagerComponent wc = this.rc.context.createWebComponentForSubSession();
+			wc.selectInstanceOrOccurrence(this.rc.record);
+			wc.setService(com.orchestranetworks.service.ServiceKey.forModuleServiceName(LayoutPaths.MODULE_NAME, LayoutPaths.PERSONALIZE_SERVICE));
+			js = w.buildButtonPreview(wc).getJavaScriptCommand();
+		}
+		catch (final RuntimeException ex)
+		{
+			LoggingCategory.getKernel().error("[layout-designer] personalization link not built: " + ex, ex);
+		}
+		if (js == null)
+		{
+			return;
+		}
+		w.add("<div class=\"ldf-mine\"><button type=\"button\" class=\"ldf-mine-btn\" onclick=\"").add(LayoutPane.esc(js)).add(";return false;\">")
+			.add(LayoutPane.esc(RuntimeText.get("arrangeMyForm", this.rc.locale))).add("</button></div>");
 	}
 
 	private void typed(final UIFormPaneWriter w, final JsonNode b, final String id)

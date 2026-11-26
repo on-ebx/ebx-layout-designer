@@ -1,6 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!--LayoutDesigner: data model of the ebx-layout-designer module. One row of FormLayout per (data model, table):
-    the layout drawn in the designer, as JSON, read at each display by com.on.ebx.layout.runtime.ConfigurableForm.-->
+    the layout drawn in the designer, as JSON, read at each display by com.on.ebx.layout.runtime.ConfigurableForm.
+    UserFormPreference: one user's own arrangement of a form, laid over that layout.-->
 <xs:schema xmlns:osd="urn:ebx-schemas:common_1.0" xmlns:fmt="urn:ebx-schemas:format_1.0" xmlns:xs="http://www.w3.org/2001/XMLSchema">
     <xs:import namespace="urn:ebx-schemas:common_1.0" schemaLocation="http://schema.orchestranetworks.com/common_1.0.xsd"/>
     <xs:annotation>
@@ -120,6 +121,92 @@
                                     <xs:documentation xml:lang="fr-FR"><osd:label>Modifié le</osd:label></xs:documentation>
                                     <xs:documentation xml:lang="it-IT"><osd:label>Modificato il</osd:label></xs:documentation>
                                 </xs:annotation>
+                            </xs:element>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="UserFormPreference" minOccurs="0" maxOccurs="unbounded">
+                    <xs:annotation>
+                        <xs:documentation xml:lang="en-US">
+                            <osd:label>Personal form arrangements</osd:label>
+                            <osd:description>How a user arranged a form for themself (tab order, blocks hidden, folded or pinned), laid over the layout drawn in the designer. One row per user, data model, table and variant.</osd:description>
+                        </xs:documentation>
+                        <xs:documentation xml:lang="fr-FR">
+                            <osd:label>Fiches personnalisées</osd:label>
+                            <osd:description>Comment un utilisateur a organisé une fiche pour lui-même (ordre des onglets, blocs masqués, repliés ou épinglés), posé sur la mise en page dessinée dans le designer. Une ligne par utilisateur, modèle, table et variante.</osd:description>
+                        </xs:documentation>
+                        <xs:documentation xml:lang="it-IT">
+                            <osd:label>Schede personalizzate</osd:label>
+                            <osd:description>Come un utente ha organizzato una scheda per sé (ordine delle schede, blocchi nascosti, chiusi o fissati). Una riga per utente, modello, tabella e variante.</osd:description>
+                        </xs:documentation>
+                        <xs:appinfo>
+                            <osd:table>
+                                <primaryKeys>/user /model /table /variant </primaryKeys>
+                                <defaultLabel>${./user} · ${./table}</defaultLabel>
+                            </osd:table>
+                        </xs:appinfo>
+                    </xs:annotation>
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="user" minOccurs="1" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>User</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Utilisateur</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Utente</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:string"><xs:maxLength value="200"/></xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="model" minOccurs="1" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Data model</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Modèle de données</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Modello di dati</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:string"><xs:maxLength value="1000"/></xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="table" minOccurs="1" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Table</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Table</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Tabella</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:string"><xs:maxLength value="500"/></xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="variant" minOccurs="1" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Variant</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Variante</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Variante</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:string"><xs:maxLength value="100"/></xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="prefs" minOccurs="0" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Arrangement (JSON)</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Organisation (JSON)</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Organizzazione (JSON)</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="osd:text"></xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="updatedOn" minOccurs="0" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Updated on</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Modifié le</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Modificato il</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:dateTime"></xs:restriction>
+                                </xs:simpleType>
                             </xs:element>
                         </xs:sequence>
                     </xs:complexType>

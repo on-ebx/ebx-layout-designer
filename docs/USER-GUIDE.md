@@ -79,7 +79,7 @@ A behaviour changes what is shown, not what EBX validates: to block saving, add 
 | **Group structure** | the parent foreign key and the association of children: parent, the record, its children |
 | **Duplicates** | the Match and Merge state of the record (golden, merged, group). Without the add-on, the block says so |
 | **Help text** | a paragraph for the user |
-| **Registered component** | a Java block written by a developer (section 8) |
+| **Registered component** | a Java block written by a developer (section 9) |
 
 Since 1.4.0:
 
@@ -149,7 +149,35 @@ are EBX's own and are already translated.
 
 The designer's own screens are in French or English, after the user's locale.
 
-## 7. Save, declare, use
+## 7. Who sees what: roles, variants, personal form
+
+By default **everyone sees the whole form**, as before 1.10.0. Nothing needs setting when it is not useful; then three
+levels, from the lightest to the most complete:
+
+1. **Restrict a part.** Select a tab, block or field: the *Who sees it* part of the inspector has two lists of roles,
+   *Visible for* (empty = everyone) and *Read only for*. Roles come from EBX's directory; another name is typed in the
+   field below (LDAP or SSO directory). A hidden tab takes its blocks with it, a panel whose fields are all hidden
+   disappears. A mandatory field hidden for a role prevents that role from creating a record: the designer says so.
+2. **A variant for a role.** *Form › + New variant* (or *Profiles and variants › Duplicate as a variant*) copies the form
+   being edited; give it a name and the roles that get it, then edit it like any other. When a record opens, each user
+   gets the first variant they have a role for (the order is set in *Profiles and variants*), else the standard form.
+   Example: a one-tab "Creation request" form for the requester.
+3. **The personal form.** Tick *Users can arrange their form* in *Profiles and variants*: a button *Arrange my form*
+   appears at the top of the form (and in the record's Actions menu). Each user reorders the tabs, picks the tab opened
+   first, hides or folds a block, or pins it to a first tab *My essentials*. It is never a copy: a later change made in
+   the designer reaches everyone, a new block appears at its place. Tick *Always shown* on a tab or block that must stay
+   (e.g. blocked payments). While a record is created nothing is hidden or folded. *Back to the standard form* clears the
+   user's arrangement.
+
+*Preview as* (at the top) shows the form of a role or of a user of the directory: in *Design* mode what they do not see
+is struck through and greyed; in *Preview* mode it disappears, and the form switches to the variant they would get.
+*Profiles and variants* lists the variants, *who gets which form* and the *Who sees what* table (a click on a row selects
+it).
+
+Administrators see everything (an option can turn that off). **This is not security**: a field left out of the form stays
+readable in the table view, an export or the APIs; EBX permissions protect the data.
+
+## 8. Save, declare, use
 
 - **Save** writes the layout (JSON) as a new version in `LayoutDesigner/FormLayout`. It shows at the next opening of a
   record, **no restart**, as soon as the table declares the designed form.
@@ -165,7 +193,7 @@ The designer's own screens are in French or English, after the user's locale.
 - **</> Code**: the saved JSON, and the same layout as a frozen `UIForm` class for a project that does not want the
   designer at run time (optional).
 
-## 8. For developers: registered components
+## 9. For developers: registered components
 
 A module can add its own block. Implement `com.on.ebx.layout.runtime.LayoutComponent` (`getLabel(Locale)`,
 `write(UIFormPaneWriter, UIFormContext, JsonNode block, Locale)`) and register it once at start:
@@ -178,7 +206,7 @@ It then appears in the palette under *Registered components*; the runtime opens 
 note, and the component writes inside it. The module needs the runtime jar on its compile classpath only (it is on the
 server's at run time).
 
-## 9. Limitations
+## 10. Limitations
 
 - **DMA models**: the designer cannot write the declaration itself (declare the class in the model screen or with
   `set_form_layout`), nor read it: the state in the top bar then says *DMA model: check the declaration*. The state of a

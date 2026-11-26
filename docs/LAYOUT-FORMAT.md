@@ -27,12 +27,16 @@ A layout is one JSON document, stored in field `layout` of `LayoutDesigner/FormL
 `model` is the schema location: `urn:ebx:module:<module name>:/WEB-INF/ebx/schemas/X.xsd` for a module model,
 `urn:ebx:publication:<publication>` for a DMA model.
 
+Since 1.10.0 the document may also hold `personal`, `adminSeesAll` and `variants`: see *Who sees what* below.
+
 ## Tab
 
 | Key | Type | Meaning |
 |---|---|---|
+| `id` | string | since 1.10.0, stable id of the tab (a personal arrangement names tabs by it); absent: `t<index>` |
 | `label` | text | tab title |
 | `count` | array of paths | associations whose rows are summed into the title ("Orders (5)") |
+| `roles`, `roRoles`, `locked` | | since 1.10.0, see *Who sees what* |
 | `rows` | array of rows | |
 
 ## Row
@@ -55,6 +59,7 @@ A layout is one JSON document, stored in field `layout` of `LayoutDesigner/FormL
 | `hideCreate` | `true`: not shown when a record is created |
 | `showIf` | a live condition (see *Behaviours*): the block shows or hides while the user types, without saving |
 | `onHide` | on a panel with `showIf`: `keep` (default) or `clear` the values of its fields when it hides |
+| `roles`, `roRoles`, `locked` | since 1.10.0, see *Who sees what* (a field of a panel also takes `roles` and `roRoles`) |
 
 ## Block types
 
@@ -222,6 +227,49 @@ shown, never what EBX validates: a value that must be mandatory needs a rule in 
             {"p": "/Price", "w": "money", "ro": true, "currency": "EUR"},
             {"p": "/Mobile", "mandatoryIf": {"field": "/SmsOptIn", "in": ["true"]}}]}
 ```
+
+## Who sees what (1.10.0)
+
+By default everyone sees the whole form, as before 1.10.0. Three optional layers:
+
+**Roles of a tab, block or field.** `roles`: visible only for these roles; `roRoles`: read only for these roles. Values
+are role names as in the directory (`"Acheteur"`), `"administrator"` for the built-in one. A user who has none of the
+`roles` does not get the item at all (a tab with it, a panel whose fields are all hidden, a row left empty); a user
+who has one of the `roRoles` gets it read only (a panel or tab read only makes its fields read only). Administrators see
+everything and keep their rights, unless the document says `"adminSeesAll": false`.
+
+```json
+{"id": "com", "label": {"fr-FR": "Conditions commerciales"}, "roles": ["Acheteur", "Comptabilite"], "rows": [ … ]}
+{"type": "panel", "id": "pay", "roRoles": ["Acheteur"], "fields": [{"p": "/Iban", "roles": ["Comptabilite"]}]}
+```
+
+**Variants.** `variants` is an array of whole forms for some roles, in priority order; a user gets the first variant
+one of whose `roles` they have, else the standard form (`tabs`). A variant holds `id`, `name` (text), `roles` and its
+own `tabs`, which take the same keys as the standard ones. A variant without roles is never used.
+
+```json
+"variants": [{"id": "req", "name": {"fr-FR": "Demande de création"}, "roles": ["Demandeur"], "tabs": [ … ]}]
+```
+
+**Personal arrangement.** `"personal": true` lets every user arrange the form for themself ("Arrange my form", a button
+on the form and an entry of the record's Actions menu). Each user's arrangement is one row of
+`LayoutDesigner/UserFormPreference` (key: user, model, table, variant id — `std` for the standard form), its `prefs`
+field a JSON object laid over the layout, never a copy of it:
+
+| Key | Meaning |
+|---|---|
+| `tabs` | tab ids in the user's order; a tab not listed keeps its place |
+| `defaultTab` | tab opened first |
+| `hiddenTabs`, `hidden` | tabs and blocks (ids) not shown |
+| `collapsed` | blocks folded under their title |
+| `pinned` | blocks moved, in this order, to a first tab "My essentials" |
+
+A tab or block with `"locked": true` can be neither hidden nor moved by a user. While a record is created nothing is
+hidden or folded. A preference naming a tab or block that no longer exists is ignored, and a block added later appears at
+its place for everyone.
+
+None of this is security: a field left out of a form stays readable in the table view, an export or the APIs. EBX
+permissions protect the data.
 
 ## Example
 

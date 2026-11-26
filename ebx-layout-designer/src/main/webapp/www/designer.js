@@ -149,7 +149,30 @@ const C = {
  famTree:['Familles en arbre (facultatif)','Families in a tree (optional)'], famParent:['Champ « famille parente »','“Parent family” field'], famNoTree:['— pas d’héritage —','— no inheritance —'],
  famTreeHint:['Une sous-famille reçoit aussi les attributs de ses familles parentes ; si deux niveaux citent le même attribut, le plus proche décide s’il est obligatoire.','A sub-family also gets the attributes of its parent families; when two levels list the same attribute, the closest one decides whether it is mandatory.'],
  newTag:['nouveau','new'], noBlockMatch:['Aucun bloc ne correspond.','No block matches.'],
- wbHint:['Widgets d’affichage et comportements se règlent dans l’inspecteur d’un champ ou d’un panneau.','Display widgets and behaviours are set in the inspector of a field or a panel.']
+ wbHint:['Widgets d’affichage et comportements se règlent dans l’inspecteur d’un champ ou d’un panneau.','Display widgets and behaviours are set in the inspector of a field or a panel.'],
+ // roles, variants, personal arrangement (1.10.0)
+ who:['Qui voit','Who sees it'], visibleFor:['Visible pour','Visible for'], roFor:['Lecture seule pour','Read only for'], everyone:['Tout le monde','Everyone'],
+ visAll:['Tous les rôles : aucune restriction.','Every role: no restriction.'], visSome:['Les autres rôles ne voient pas {0}.','Other roles do not see {0}.'], thisTab:['cet onglet','this tab'], thisBlock:['ce bloc','this block'], thisField:['ce champ','this field'],
+ otherRole:['+ un autre rôle (Entrée)','+ another role (Enter)'], nRoles:['{0} rôles','{0} roles'], roShort:['lecture seule','read only'], hiddenFor:['masqué pour ce rôle','hidden for this role'], lockedShort:['toujours affiché','always shown'],
+ locked:['Toujours affiché (l’utilisateur ne peut ni le masquer ni le déplacer)','Always shown (users can neither hide nor move it)'],
+ notSecurity:['Organisation de la fiche, pas sécurité : la donnée reste soumise aux permissions d’EBX (vue tableau, export, API).','Arranges the form, not security: the data stays under EBX permissions (table view, export, API).'],
+ reqHidden:['Champ obligatoire : un rôle qui ne le voit pas ne pourra pas créer d’enregistrement.','Mandatory field: a role that does not see it will not be able to create a record.'],
+ adminNote:['Les administrateurs voient tout, sauf si vous décochez l’option dans « Profils et variantes ».','Administrators see everything, unless you untick the option in “Profiles and variants”.'],
+ aud:['Profils et variantes','Profiles and variants'], audTitle:['La fiche selon les profils','The form by profile'],
+ audIntro:['Par défaut tout le monde voit toute la fiche. Vous pouvez ensuite restreindre un onglet, un bloc ou un champ à certains rôles (inspecteur, « Qui voit »), créer une fiche entièrement différente pour un rôle (variante), et laisser chacun organiser la sienne.','By default everyone sees the whole form. You may then restrict a tab, block or field to some roles (inspector, “Who sees it”), make an entirely different form for a role (variant), and let everyone arrange their own.'],
+ personalOn:['Les utilisateurs peuvent personnaliser leur fiche (ordre des onglets, blocs masqués, repliés ou épinglés)','Users can arrange their form (tab order, blocks hidden, folded or pinned)'],
+ personalHint:['Un bouton « Personnaliser ma fiche » apparaît sur la fiche, et dans le menu Actions. L’organisation de chacun est posée sur la vôtre : un bloc ajouté plus tard apparaît chez tout le monde. Cochez « Toujours affiché » sur ce qui doit rester.','A button “Arrange my form” appears on the form, and in the Actions menu. Each one’s arrangement is laid over yours: a block added later appears for everyone. Tick “Always shown” on what must stay.'],
+ adminAllOpt:['Les administrateurs voient tout (restrictions de rôle non appliquées)','Administrators see everything (role restrictions not applied)'],
+ variants:['Variantes de la fiche','Form variants'], variantsHint:['À l’ouverture, chacun reçoit la première variante dont il a un rôle, sinon la fiche standard.','When opened, each user gets the first variant they have a role for, else the standard form.'],
+ stdForm:['Fiche standard','Standard form'], variant:['Variante','Variant'], forOthers:['pour tous les autres','for everyone else'], forRoles:['pour : {0}','for: {0}'], noRoleYet:['aucun rôle : jamais utilisée','no role: never used'],
+ open:['Ouvrir','Open'], editing:['en cours','editing'], dupVariant:['Dupliquer en variante','Duplicate as a variant'], delVariant:['Supprimer la variante','Delete the variant'], delVariantQ:['Supprimer la variante « {0} » ?','Delete the variant “{0}”?'],
+ variantName:['Nom de la variante','Variant name'], variantRoles:['Rôles qui la reçoivent','Roles that get it'], newVariantName:['Variante','Variant'],
+ explVariant:['Variante créée, copie de « {0} ». Donnez-lui des rôles : sans rôle, personne ne la reçoit.','Variant created, a copy of “{0}”. Give it roles: without a role nobody gets it.'],
+ whoGets:['Qui reçoit quelle fiche','Who gets which form'], matrix:['Qui voit quoi','Who sees what'], matrixNone:['Aucune restriction de rôle dans « {0} » : tout le monde voit tout.','No role restriction in “{0}”: everyone sees everything.'],
+ mxItem:['Onglet, bloc, champ','Tab, block, field'], mxRead:['lecture','read'],
+ asLabel:['Aperçu en tant que','Preview as'], asAll:['Tout le monde (conception)','Everyone (design)'], asRolesGrp:['Rôles','Roles'], asUsersGrp:['Utilisateurs','Users'],
+ seenAs:['Fiche vue par {0} : {1}','Form as seen by {0}: {1}'], adminAll:['administrateur : voit tout','administrator: sees everything'], editingVariant:['Vous modifiez : {0}','You are editing: {0}'],
+ formPick:['Fiche','Form'], newVariantOpt:['+ Nouvelle variante (copie)','+ New variant (copy)']
 };
 const c = (k, ...a) => { let s = (C[k] || [k,k])[UI]; a.forEach((v,i) => { s = s.split('{'+i+'}').join(v); }); return s; };
 
@@ -434,6 +457,8 @@ function specBase(){
   if (sel.k === 'block') return S.blocks[sel.id];
   if (sel.k === 'field') return S.blocks[sel.b] && S.blocks[sel.b].fields[sel.i];
   if (sel.k === 'row'){ const Lr = locRow(sel.id); return Lr && Lr.r; }
+  if (sel.k === 'tab') return tabOf(sel.id);
+  if (sel.k === 'aud' && vi > 0) return ALLV[vi];
   return null;
 }
 /* behaviours of a block (live "show if") and of a panel (fields driven by a configuration table) */
@@ -587,8 +612,11 @@ function previewWidget(w, f, v){
 let seq = 0; const nid = p => p + Date.now().toString(36) + (++seq);
 function fromLayout(Lt){
   const S = {tabs:[], blocks:{}};
-  ((Lt && Lt.tabs) || []).forEach(t => {
-    const tab = {id:nid('t'), label:t.label || {}, count:(t.count || []).slice(), rows:[]};
+  ((Lt && Lt.tabs) || []).forEach((t, ti) => {
+    const tid = t.id && !S.tabs.some(x => x.id === t.id) ? t.id : (S.tabs.some(x => x.id === 't' + ti) ? nid('t') : 't' + ti);
+    const tab = {id:tid, label:t.label || {}, count:(t.count || []).slice(), rows:[]};
+    ['roles','roRoles'].forEach(k => { if (t[k] && t[k].length) tab[k] = t[k].slice(); });
+    if (t.locked) tab.locked = true;
     (t.rows || []).forEach(r => {
       const row = {id:nid('r'), cols:r.columns === 2 ? 2 : 1, ratio:r.ratio || '11', c:[], section:r.section};
       (r.blocks || []).forEach(col => { const ids = []; (col || []).forEach(b => { const id = b.id && !S.blocks[b.id] ? b.id : nid('b'); S.blocks[id] = Object.assign({}, b, {id}); ids.push(id); }); row.c.push(ids); });
@@ -601,11 +629,35 @@ function fromLayout(Lt){
   if (!S.tabs.length) S.tabs.push({id:nid('t'), label:L('Général','General','Generale'), count:[], rows:[]});
   return S;
 }
+const arrOrU = a => a && a.length ? a : undefined;
+function tabsOut(S2){
+  return S2.tabs.map(t => ({id:t.id, label:t.label, count:t.count, roles:arrOrU(t.roles), roRoles:arrOrU(t.roRoles), locked:t.locked || undefined,
+    rows:t.rows.map(r => ({columns:r.cols, ratio:r.cols===2?(r.ratio||'11'):undefined, section:r.section && r.section.on ? r.section : undefined, blocks:r.c.map(col => col.map(id => S2.blocks[id]).filter(Boolean))}))}));
+}
 function toLayout(){
   return {format:'ebx-form-layout/1', model:B.model.location, table:B.model.table, locales:LOCALES,
-    tabs:S.tabs.map(t => ({label:t.label, count:t.count, rows:t.rows.map(r => ({columns:r.cols, ratio:r.cols===2?(r.ratio||'11'):undefined, section:r.section && r.section.on ? r.section : undefined, blocks:r.c.map(col => col.map(id => S.blocks[id]).filter(Boolean))}))}))};
+    personal:LAY.personal || undefined, adminSeesAll:LAY.adminSeesAll ? undefined : false,
+    tabs:tabsOut(ALLV[0].S),
+    variants:ALLV.length > 1 ? ALLV.slice(1).map(v => ({id:v.id, name:v.name, roles:v.roles, tabs:tabsOut(v.S)})) : undefined};
 }
-let S = fromLayout(B.layout);
+/* the standard form and its variants (one per group of roles, in priority order); S is the one being edited */
+const LAY = {personal:!!(B.layout && B.layout.personal), adminSeesAll:!(B.layout && B.layout.adminSeesAll === false)};
+let ALLV = [{id:'std', name:null, roles:[], S:fromLayout(B.layout)}].concat(((B.layout && B.layout.variants) || []).map(v => ({id:v.id || nid('v'), name:v.name || {}, roles:(v.roles || []).slice(), S:fromLayout(v)})));
+let vi = 0;
+let S = ALLV[0].S;
+/* who the canvas is shown as: '' everyone, a role name, or 'u:<login>' */
+let as = '';
+const DIR = B.directory || {roles:[], users:[]};
+const roleL = k => { const r = DIR.roles.find(x => x.k.toLowerCase() === String(k).toLowerCase()); return r ? r.l : k; };
+const sameRole = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+const inAny = (list, mine) => (list || []).some(r => mine.some(m => sameRole(m, r)));
+function asRoles(){ if (!as) return null; if (as.indexOf('u:') === 0){ const u = DIR.users.find(x => 'u:' + x.k === as); return u ? u.roles : []; } return [as]; }
+function seesAllAs(){ const m = asRoles(); return !!m && LAY.adminSeesAll && m.some(x => sameRole(x, 'administrator')); }
+function hiddenFor(o){ const m = asRoles(); return !!m && !seesAllAs() && !!(o && o.roles && o.roles.length) && !inAny(o.roles, m); }
+function roFor(o){ const m = asRoles(); return !!m && !seesAllAs() && !!(o && o.roRoles && o.roRoles.length) && inAny(o.roRoles, m); }
+function variantFor(m){ for (let i = 1; i < ALLV.length; i++) if (ALLV[i].roles.length && inAny(ALLV[i].roles, m)) return i; return 0; }
+const vName = v => v.id === 'std' ? c('stdForm') : (T(v.name) || c('variant'));
+function useVariant(i){ vi = Math.max(0, Math.min(ALLV.length - 1, i)); S = ALLV[vi].S; if (!tabOf(cur)) cur = S.tabs[0].id; if (sel && sel.k !== 'aud' && sel.k !== 'i18n' && sel.k !== 'deploy') sel = null; }
 let cur = S.tabs[0].id, sel = null, mode = 'design', narrow = false, ptab = 'fields', otab = 'json', creating = false, onlyMissing = true;
 let explain = '', flash = null, history = [], dirty = !!B.draft;
 
@@ -614,7 +666,7 @@ const esc = s => String(s==null?'':s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<
 const tabOf = id => S.tabs.find(t => t.id === id);
 const curTab = () => tabOf(cur) || S.tabs[0];
 function tx(o){ const s = esc(T(o)); if (mode === 'design' && isMissing(o, lang)) { const from = o[DEF] ? DEF : Object.keys(o).find(k => o[k]); return `<span class="untr" title="${esc(lang)} → ${esc(from)}">${s}</span>`; } return s; }
-function snapshot(){ history.push(JSON.stringify({S, cur})); if (history.length > 60) history.shift(); dirty = true; }
+function snapshot(){ history.push(JSON.stringify({V:ALLV, vi, LAY, cur})); if (history.length > 60) history.shift(); dirty = true; }
 function commit(msg){ explain = msg || ''; renderAll(); }
 function locate(bid){ for (const t of S.tabs) for (let ri = 0; ri < t.rows.length; ri++){ const r = t.rows[ri]; for (let ci = 0; ci < r.c.length; ci++){ const k = r.c[ci].indexOf(bid); if (k >= 0) return {t, r, ri, ci, k}; } } return null; }
 function orderedBlocks(){ const out = []; S.tabs.forEach(t => t.rows.forEach(r => r.c.forEach(col => col.forEach(id => S.blocks[id] && out.push({t, b:S.blocks[id]}))))); return out; }
@@ -721,19 +773,40 @@ function renderValidation(b){
   if (all.length > shown.length) body += `<div class="more">${esc(u('more', all.length - shown.length))}</div>`;
   return `<div class="vrep"><div class="vhd"><h4>${tx(b.title)}${all.length ? ` · ${all.length}` : ''}</h4><div class="vcs">${counts}</div></div>${body}</div>`;
 }
+/* who sees it: in design for everyone, the roles; previewed as someone, hidden or read only for them */
+function audTags(o, small){
+  const cls = small ? 'atag sm' : 'atag';
+  if (as){
+    if (hiddenFor(o)) return `<span class="${cls} hid">${esc(c('hiddenFor'))}</span>`;
+    if (roFor(o) || o._asRo) return `<span class="${cls} ro">${esc(c('roShort'))}</span>`;
+    return '';
+  }
+  let h = '';
+  if (o.roles && o.roles.length) h += `<span class="${cls} vis" title="${esc(c('visibleFor') + ' ' + o.roles.map(roleL).join(', '))}">${esc(o.roles.length === 1 ? roleL(o.roles[0]) : c('nRoles', o.roles.length))}</span>`;
+  if (o.roRoles && o.roRoles.length) h += `<span class="${cls} ro" title="${esc(c('roFor') + ' ' + o.roRoles.map(roleL).join(', '))}">${esc(c('roShort'))} · ${esc(o.roRoles.length === 1 ? roleL(o.roRoles[0]) : c('nRoles', o.roRoles.length))}</span>`;
+  if (o.locked && LAY.personal) h += `<span class="${cls} lk">${esc(c('lockedShort'))}</span>`;
+  return h;
+}
 function renderBlock(b){
-  const tag = `<div class="btag"><span draggable="true" data-drag="block" data-id="${b.id}">${esc(bl(b.type))}${b.type === 'custom' ? ' · ' + esc(b.cls) : ''}</span>${b.showIf && b.showIf.field ? `<span class="cond">${esc(c('liveIf', lab(b.showIf.field)))}</span>` : ''}${b.attributesBy && b.attributesBy.table ? `<span class="cond">${esc(c('famTag'))}</span>` : ''}${b.cond ? `<span class="cond" title="${esc(b.cond)}">${esc(c('cond2', b.cond))}</span>` : ''}${b.hideCreate ? `<span class="cond">${esc(c('hiddenCreate'))}</span>` : ''}</div>`;
+  const tag = `<div class="btag"><span draggable="true" data-drag="block" data-id="${b.id}">${esc(bl(b.type))}${b.type === 'custom' ? ' · ' + esc(b.cls) : ''}</span>${audTags(b)}${b.showIf && b.showIf.field ? `<span class="cond">${esc(c('liveIf', lab(b.showIf.field)))}</span>` : ''}${b.attributesBy && b.attributesBy.table ? `<span class="cond">${esc(c('famTag'))}</span>` : ''}${b.cond ? `<span class="cond" title="${esc(b.cond)}">${esc(c('cond2', b.cond))}</span>` : ''}${b.hideCreate ? `<span class="cond">${esc(c('hiddenCreate'))}</span>` : ''}</div>`;
   const selc = sel && sel.k === 'block' && sel.id === b.id ? ' sel' : '';
   if (creating && b.hideCreate && mode === 'preview') return '';
+  const tabNow = curTab();
+  const bHid = hiddenFor(b) || hiddenFor(tabNow);
+  if (bHid && mode === 'preview') return '';
+  const bRo = roFor(b) || roFor(tabNow);
+  if (bRo && b.type === 'panel' && !b.ro){ return renderBlock(Object.assign({}, b, {ro:true, _asRo:true})); }
   const flashc = flash && flash.b === b.id && flash.i == null ? ' flash' : '';
   let inner = '';
   switch (b.type){
     case 'panel': {
-      const rows = (b.fields || []).map((f, i) => {
-        const fd = F[f.p]; if (!fd) return '';
+      const rows = (b.fields || []).map((f0, i) => {
+        const fd = F[f0.p]; if (!fd) return '';
+        const fHid = hiddenFor(f0); if (fHid && mode === 'preview') return '';
+        const f = roFor(f0) && !f0.ro ? Object.assign({}, f0, {ro:true}) : f0;
         const s = (sel && sel.k === 'field' && sel.b === b.id && sel.i === i ? ' sel' : '') + (flash && flash.b === b.id && flash.i === i ? ' flash' : '');
         const label = hasText(f.label) ? tx(f.label) : esc(lab(f.p));
-        return `<div class="fr${f.wide ? ' wide' : ''}${s}" data-item="field" data-b="${b.id}" data-i="${i}"><div class="fl" draggable="true" data-drag="field" data-b="${b.id}" data-i="${i}">${label}${fd.req ? ' <i>*</i>' : ''}</div><div class="fv" draggable="true" data-drag="field" data-b="${b.id}" data-i="${i}">${renderWidget(f, b)}</div></div>`;
+        return `<div class="fr${f.wide ? ' wide' : ''}${s}${fHid ? ' ashid' : ''}" data-item="field" data-b="${b.id}" data-i="${i}"><div class="fl" draggable="true" data-drag="field" data-b="${b.id}" data-i="${i}">${label}${fd.req ? ' <i>*</i>' : ''}${mode === 'design' ? audTags(f0, true) : ''}</div><div class="fv" draggable="true" data-drag="field" data-b="${b.id}" data-i="${i}">${renderWidget(f, b)}</div></div>`;
       }).join('');
       inner = `<div class="panel">${head(b)}<div class="pf" data-drop="fields" data-b="${b.id}">${rows || (mode === 'design' ? `<div class="pf-empty">${esc(c('dropFields'))}</div>` : '')}</div></div>`; break; }
     case 'hero': {
@@ -772,11 +845,12 @@ function renderBlock(b){
     case 'custom': inner = `<div class="panel${flashc}">${head(b)}<div class="note-b">${esc(u('component', b.cls))}</div></div>`; break;
     default: if (BL[b.type]) inner = `<div class="panel${flashc}">${head(b)}${previewMore(b)}</div>`;
   }
-  return `<div class="blk${selc}" data-item="block" data-id="${b.id}" data-type="${b.type}">${tag}${inner}</div>`;
+  return `<div class="blk${selc}${bHid ? ' ashid' : ''}" data-item="block" data-id="${b.id}" data-type="${b.type}">${tag}${inner}</div>`;
 }
 function renderCanvas(){
   const t = curTab();
-  const tabs = S.tabs.map(x => { const n = creating ? null : tabCount(x); return `<button type="button" class="tab${sel && sel.k === 'tab' && sel.id === x.id ? ' sel' : ''}" role="tab" aria-selected="${x.id === cur}" data-tab="${x.id}" ${mode === 'design' ? 'draggable="true" data-drag="tab"' : ''}>${tx(x.label)}${n ? ` <span class="n">${n}</span>` : ''}</button>`; }).join('')
+  if (mode === 'preview' && hiddenFor(t)){ const vis = S.tabs.find(x => !hiddenFor(x)); if (vis){ cur = vis.id; return renderCanvas(); } }
+  const tabs = S.tabs.map(x => { if (mode === 'preview' && hiddenFor(x)) return ''; const n = creating ? null : tabCount(x); return `<button type="button" class="tab${sel && sel.k === 'tab' && sel.id === x.id ? ' sel' : ''}${hiddenFor(x) ? ' ashid' : ''}" role="tab" aria-selected="${x.id === cur}" data-tab="${x.id}" ${mode === 'design' ? 'draggable="true" data-drag="tab"' : ''}>${tx(x.label)}${n ? ` <span class="n">${n}</span>` : ''}${mode === 'design' ? audTags(x, true) : ''}</button>`; }).join('')
     + (mode === 'design' ? `<button type="button" class="tab add" id="ld-addtab">${esc(c('addTab'))}</button>` : '');
   let rows = '';
   t.rows.forEach((r, ri) => {
@@ -792,9 +866,88 @@ function renderCanvas(){
   const cv = $('#ld-canvas');
   cv.className = `canvas ${mode === 'design' ? 'design' : ''} ${narrow ? 'narrow' : ''}`;
   cv.setAttribute('lang', lang);
-  cv.innerHTML = `<div class="ws"><b>${esc(creating ? u('newRecord') : (B.record.label || ''))}</b><span>${esc(B.model.dataset)} › ${esc(T(B.model.tableLabel))}</span></div>
+  const asLine = as ? `<div class="asline">${esc(c('seenAs', asLabel(), vName(ALLV[vi])))}${seesAllAs() ? ' · ' + esc(c('adminAll')) : ''}</div>` : (ALLV.length > 1 ? `<div class="asline">${esc(c('editingVariant', vName(ALLV[vi])))}</div>` : '');
+  cv.innerHTML = `${asLine}<div class="ws"><b>${esc(creating ? u('newRecord') : (B.record.label || ''))}</b><span>${esc(B.model.dataset)} › ${esc(T(B.model.tableLabel))}</span></div>
     <nav class="tabs" role="tablist">${tabs}</nav><div class="body">${rows}</div>`;
   $('#ld-cbar').innerHTML = `<span><b>${S.tabs.length}</b> ${esc(c('tabs'))} · <b>${Object.keys(S.blocks).length}</b> ${esc(c('nblocks'))} · <b>${placedFields().size}</b> ${esc(c('nfields', B.fields.length))}</span><span>${esc(c('shownIn', lang))}${mode === 'design' ? ' · ' + esc(c('untrHint')) : ''}</span>`;
+}
+
+
+/* ---------- who sees what: roles of a tab, block or field; the variants; the matrix ---------- */
+function rolesHtml(o, key, label){
+  const cur = o[key] || [];
+  const many = DIR.roles.length > 14;
+  const shown = many ? DIR.roles.filter(r => cur.some(x => sameRole(x, r.k))) : DIR.roles;
+  const extra = cur.filter(x => !DIR.roles.some(r => sameRole(r.k, x)));
+  const chip = (k, l) => `<button type="button" class="chip${cur.some(x => sameRole(x, k)) ? ' on' : ''}${key === 'roRoles' ? ' ro' : ''}" data-rtog="${key}|${esc(k)}">${esc(l)}</button>`;
+  return `<div class="fld"><span class="l">${esc(label)}</span><div class="chips">${shown.map(r => chip(r.k, r.l)).join('')}${extra.map(x => chip(x, x)).join('')}</div>
+    <input type="text" list="ld-rolelist" data-radd="${key}" placeholder="${esc(c('otherRole'))}" aria-label="${esc(label)}"></div>`;
+}
+function audSection(o, kind){
+  const what = c(kind === 'tab' ? 'thisTab' : kind === 'field' ? 'thisField' : 'thisBlock');
+  let h = `<h3 class="sub">${esc(c('who'))}</h3>` + rolesHtml(o, 'roles', c('visibleFor'))
+    + `<p class="hint">${esc(o.roles && o.roles.length ? c('visSome', what) : c('visAll'))}</p>` + rolesHtml(o, 'roRoles', c('roFor'));
+  if (kind === 'field' && F[o.p] && F[o.p].req && o.roles && o.roles.length) h += `<div class="warnx">${esc(c('reqHidden'))}</div>`;
+  if (kind !== 'field' && LAY.personal) h += `<label class="chk"><input type="checkbox" data-sk="locked" data-sv="bool"${o.locked ? ' checked' : ''}> ${esc(c('locked'))}</label>`;
+  if ((o.roles && o.roles.length) || (o.roRoles && o.roRoles.length)) h += `<p class="hint">${esc(c('notSecurity'))}${LAY.adminSeesAll ? ' ' + esc(c('adminNote')) : ''}</p>`;
+  return h;
+}
+function usedRoles(){
+  const set = new Map(); const add = r => { if (r && !set.has(String(r).toLowerCase())) set.set(String(r).toLowerCase(), r); };
+  ALLV.forEach(v => { v.roles.forEach(add); v.S.tabs.forEach(t => { (t.roles || []).concat(t.roRoles || []).forEach(add); });
+    Object.values(v.S.blocks).forEach(b => { (b.roles || []).concat(b.roRoles || []).forEach(add); (b.fields || []).forEach(f => (f.roles || []).concat(f.roRoles || []).forEach(add)); }); });
+  return [...set.values()];
+}
+function matrixHtml(){
+  const v = ALLV[vi], roles = usedRoles().filter(r => !sameRole(r, 'administrator'));
+  const rowsOf = [];
+  v.S.tabs.forEach(t => {
+    rowsOf.push({o:t, name:T(t.label), lvl:0, tab:t});
+    t.rows.forEach(r => r.c.forEach(col => col.forEach(id => { const b = v.S.blocks[id]; if (!b) return;
+      if ((b.roles && b.roles.length) || (b.roRoles && b.roRoles.length)) rowsOf.push({o:b, name:blockName(b), lvl:1, tab:t, sel:{k:'block', id}});
+      (b.fields || []).forEach((f, i) => { if ((f.roles && f.roles.length) || (f.roRoles && f.roRoles.length)) rowsOf.push({o:f, name:hasText(f.label) ? T(f.label) : lab(f.p), lvl:2, tab:t, sel:{k:'field', b:id, i}, parent:b}); }); })));
+  });
+  if (!roles.length) return `<p class="hint">${esc(c('matrixNone', vName(v)))}</p>`;
+  const cell = (x, r) => {
+    const m = [r]; const vis = o => !(o && o.roles && o.roles.length) || inAny(o.roles, m); const ro = o => !!(o && o.roRoles && o.roRoles.length) && inAny(o.roRoles, m);
+    if (!vis(x.tab) || (x.parent && !vis(x.parent)) || !vis(x.o)) return '<td class="n">—</td>';
+    if (ro(x.tab) || (x.parent && ro(x.parent)) || ro(x.o)) return `<td class="r">${esc(c('mxRead'))}</td>`;
+    return '<td class="y">✓</td>';
+  };
+  return `<div class="mxw"><table class="mx"><thead><tr><th>${esc(c('mxItem'))}</th>${roles.map(r => `<th>${esc(roleL(r))}</th>`).join('')}</tr></thead><tbody>${rowsOf.map(x => `<tr data-mxgo="${esc(JSON.stringify({t:x.tab.id, s:x.sel || {k:'tab', id:x.tab.id}}))}"><th class="l${x.lvl}">${esc(x.name)}</th>${roles.map(r => cell(x, r)).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+function audPanelHtml(){
+  let h = `<div class="insp"><span class="kind">${esc(c('aud'))}</span><h3>${esc(c('audTitle'))}</h3><p class="hint">${esc(c('audIntro'))}</p>
+    <label class="chk"><input type="checkbox" data-lay="personal"${LAY.personal ? ' checked' : ''}> ${esc(c('personalOn'))}</label><p class="hint">${esc(c('personalHint'))}</p>
+    <label class="chk"><input type="checkbox" data-lay="adminSeesAll"${LAY.adminSeesAll ? ' checked' : ''}> ${esc(c('adminAllOpt'))}</label>
+    <h3 class="sub">${esc(c('variants'))}</h3><p class="hint">${esc(c('variantsHint'))}</p><div class="vars">`;
+  ALLV.forEach((v, i) => {
+    const sub = v.id === 'std' ? c('forOthers') : v.roles.length ? c('forRoles', v.roles.map(roleL).join(', ')) : c('noRoleYet');
+    h += `<div class="varx${i === vi ? ' cur' : ''}"><span class="vn">${i === 0 ? '★' : i}</span><div class="vt"><b>${esc(vName(v))}</b><small>${esc(sub)} · ${v.S.tabs.length} ${esc(c('tabs'))}</small></div><div class="vb">${i === vi ? `<span class="pill">${esc(c('editing'))}</span>` : `<button type="button" class="btn small ghost" data-vopen="${i}">${esc(c('open'))}</button>`}${i > 1 ? `<button type="button" class="btn small ghost" data-vup="${i}" aria-label="${esc(c('up'))}">↑</button>` : ''}${i > 0 && i < ALLV.length - 1 ? `<button type="button" class="btn small ghost" data-vdown="${i}" aria-label="${esc(c('down'))}">↓</button>` : ''}</div></div>`;
+  });
+  h += `</div><button type="button" class="btn small" data-vdup="1" style="align-self:flex-start">${esc(c('dupVariant'))}</button>`;
+  if (vi > 0){
+    const v = ALLV[vi];
+    h += `<div class="rule">${locField('variant.name', c('variantName'), v.name)}${rolesHtml(v, 'roles', c('variantRoles'))}<button type="button" class="btn small ghost" data-vdel="${vi}" style="align-self:flex-start">${esc(c('delVariant'))}</button></div>`;
+  }
+  if (ALLV.length > 1 && DIR.roles.length > 1){
+    h += `<h3 class="sub">${esc(c('whoGets'))}</h3><div class="list-mini">${DIR.roles.filter(r => !sameRole(r.k, 'administrator')).map(r => `<label style="justify-content:space-between"><span>${esc(r.l)}</span><span style="color:var(--muted)">${esc(vName(ALLV[variantFor([r.k])]))}</span></label>`).join('')}</div>`;
+  }
+  h += `<h3 class="sub">${esc(c('matrix'))} · ${esc(vName(ALLV[vi]))}</h3>${matrixHtml()}<p class="hint">${esc(c('notSecurity'))}</p></div>`;
+  return h;
+}
+function asLabel(){ if (as.indexOf('u:') === 0){ const u = DIR.users.find(x => 'u:' + x.k === as); return u ? u.l : as.slice(2); } return roleL(as); }
+function asOptions(){
+  return `<option value="">${esc(c('asAll'))}</option><optgroup label="${esc(c('asRolesGrp'))}">${DIR.roles.map(r => `<option value="${esc(r.k)}"${as === r.k ? ' selected' : ''}>${esc(r.l)}</option>`).join('')}</optgroup>`
+    + (DIR.users.length ? `<optgroup label="${esc(c('asUsersGrp'))}">${DIR.users.map(u => `<option value="u:${esc(u.k)}"${as === 'u:' + u.k ? ' selected' : ''}>${esc(u.l)}</option>`).join('')}</optgroup>` : '');
+}
+function varOptions(){ return ALLV.map((v, i) => `<option value="${i}"${i === vi ? ' selected' : ''}>${esc(vName(v))}${i > 0 && v.roles.length ? ' · ' + esc(v.roles.map(roleL).join(', ')) : ''}</option>`).join('') + `<option value="new">${esc(c('newVariantOpt'))}</option>`; }
+function renderTopPicks(){ const a = $('#ld-as'), v = $('#ld-var'); if (a) a.innerHTML = asOptions(); if (v) v.innerHTML = varOptions(); const b = $('#ld-aud'); if (b) b.setAttribute('aria-pressed', !!(sel && sel.k === 'aud')); }
+function dupVariant(){
+  snapshot(); const src = ALLV[vi];
+  const copy = {id:nid('v'), name:{[lang]:c('newVariantName') + ' ' + ALLV.length}, roles:[], S:JSON.parse(JSON.stringify(src.S))};
+  ALLV.push(copy); useVariant(ALLV.length - 1); sel = {k:'aud'};
+  commit(esc(c('explVariant', vName(src))));
 }
 
 /* ======================= palette ======================= */
@@ -854,6 +1007,7 @@ function locField(key, label, obj, ph, multi){
 function locRef(key){
   const [kind, a] = key.split('.');
   if (kind === 'tab') return {o:tabOf(sel.id), p:'label'};
+  if (kind === 'variant') return {o:ALLV[vi], p:'name'};
   if (kind === 'block') return {o:S.blocks[sel.id], p:a};
   if (kind === 'field') return {o:S.blocks[sel.b].fields[sel.i], p:'label'};
   if (kind === 'action') return {o:S.blocks[sel.id].actions[+a], p:'btn'};
@@ -872,6 +1026,8 @@ function renderInspector(){
       <div class="info">${esc(c('helpLoc', LOCALES.join(', ')))}</div><div class="info">${esc(c('helpRules'))}</div></div>`;
   } else if (sel.k === 'deploy'){
     h += deployHtml();
+  } else if (sel.k === 'aud'){
+    h += audPanelHtml();
   } else if (sel.k === 'i18n'){
     const texts = allTexts(); const miss = missingByLocale();
     h += `<div class="insp"><span class="kind">${esc(c('translations'))}</span><h3>${esc(c('trTitle'))}</h3><p class="hint">${esc(c('trHint', LOCALES.join(', '), DEF))}</p>
@@ -882,7 +1038,7 @@ function renderInspector(){
     const t = tabOf(sel.id);
     h += `<div class="insp"><span class="kind">${esc(c('tab'))}</span><h3>${esc(T(t.label))}</h3>${locField('tab.label', c('label'), t.label)}
       <div class="fld"><span class="l">${esc(c('counter'))}</span><div class="list-mini">${B.assocs.map(a => `<label><input type="checkbox" data-count="${esc(a.p)}"${t.count.includes(a.p) ? ' checked' : ''}> ${esc(lab(a.p))} <span style="color:var(--muted)">(${a.n})</span></label>`).join('')}</div><p class="hint">${esc(c('counterHint'))}</p></div>
-      ${S.tabs[0] === t ? `<div class="info">${esc(c('home'))}</div>` : ''}
+      ${S.tabs[0] === t ? `<div class="info">${esc(c('home'))}</div>` : ''}${audSection(t, 'tab')}
       <div class="row-btns"><button type="button" class="btn small ghost" data-act="tleft">${esc(c('left'))}</button><button type="button" class="btn small ghost" data-act="tright">${esc(c('right'))}</button><button type="button" class="btn small ghost" data-act="tdel"${S.tabs.length < 2 ? ' disabled' : ''}>${esc(c('delTab'))}</button></div></div>`;
   } else if (sel.k === 'row'){
     const Lr = locRow(sel.id); if (!Lr){ sel = null; return renderInspector(); }
@@ -944,6 +1100,7 @@ function renderInspector(){
     if (b.type === 'duplicates') h += `<div class="info">${esc(c('dupInfo'))}</div>`;
     if (b.type === 'note') h += locField('block.text', c('text'), b.text, null, true);
     if (b.type === 'custom') h += `<div class="fld"><label for="ld-i-cc">${esc(c('component'))}</label><input type="text" id="ld-i-cc" class="mono" value="${esc(b.cls)}"></div><div class="info">${esc(c('compInfo'))}</div>`;
+    h += audSection(b, 'block');
     h += behaviourBlockHtml(b);
     h += `<div class="fld"><label for="ld-i-cond">${esc(c('condX'))}</label><input type="text" id="ld-i-cond" class="mono" value="${esc(b.cond || '')}" placeholder="${esc(c('always'))}"></div>
       <label class="chk"><input type="checkbox" id="ld-i-hc"${b.hideCreate ? ' checked' : ''}> ${esc(c('hideCreate'))}</label>${moveBtns()}</div>`;
@@ -957,7 +1114,7 @@ function renderInspector(){
       ${WG[f.w] ? `<div class="rule">${specHtml(WG[f.w].spec, f) || `<p class="hint">${esc(c('noSetting'))}</p>`}</div>` : ''}${isDisplayW(f.w) ? `<p class="hint">${esc(c('displayHint'))}</p>` : ''}
       <label class="chk"><input type="checkbox" id="ld-i-fro"${f.ro || fd.fn ? ' checked' : ''}${fd.fn ? ' disabled' : ''}> ${esc(c('ro'))}</label>
       <label class="chk"><input type="checkbox" id="ld-i-fwide"${f.wide ? ' checked' : ''}> ${esc(c('wide'))}</label>
-      ${fd.req ? `<div class="info">${esc(c('reqInfo'))}</div>` : ''}${behaviourFieldHtml(f)}${moveBtns()}</div>`;
+      ${fd.req ? `<div class="info">${esc(c('reqInfo'))}</div>` : ''}${audSection(f, 'field')}${behaviourFieldHtml(f)}${moveBtns()}</div>`;
   }
   $('#ld-insp').innerHTML = h;
   /* on a narrow screen the inspector is a drawer: open while something is selected */
@@ -1069,7 +1226,7 @@ function renderStatus(){
   $('#ld-i18n').innerHTML = `${esc(c('translations'))} <span class="badge ${n ? 'todo' : 'done'}">${esc(n ? c('todo', n) : c('complete'))}</span>`;
   $('#ld-i18n').setAttribute('aria-pressed', !!(sel && sel.k === 'i18n'));
 }
-function renderAll(){ renderCanvas(); renderPalette(); renderInspector(); renderOutput(); renderStatus(); }
+function renderAll(){ renderTopPicks(); renderCanvas(); renderPalette(); renderInspector(); renderOutput(); renderStatus(); }
 
 /* ======================= mutations ======================= */
 function newBlock(type, extra){
@@ -1258,13 +1415,22 @@ root.addEventListener('click', e => {
   if (t.closest('#ld-w-wide')){ narrow = false; return renderAll(); }
   if (t.closest('#ld-w-narrow')){ narrow = true; return renderAll(); }
   if (t.closest('#ld-i18n')){ sel = sel && sel.k === 'i18n' ? null : {k:'i18n'}; explain = ''; return renderAll(); }
+  if (t.closest('#ld-aud')){ sel = sel && sel.k === 'aud' ? null : {k:'aud'}; explain = ''; return renderAll(); }
+  const rt = t.closest('[data-rtog]'); if (rt){ const o = specBase(); if (!o) return; snapshot(); const i = rt.dataset.rtog.indexOf('|'); const k = rt.dataset.rtog.slice(0, i), v = rt.dataset.rtog.slice(i + 1);
+    const cur2 = (o[k] || []).filter(x => !sameRole(x, v)); if (cur2.length === (o[k] || []).length) cur2.push(v); if (cur2.length) o[k] = cur2; else delete o[k]; return commit(''); }
+  const vo = t.closest('[data-vopen]'); if (vo){ useVariant(+vo.dataset.vopen); sel = {k:'aud'}; explain = ''; return renderAll(); }
+  const vu = t.closest('[data-vup]'); if (vu){ snapshot(); const i = +vu.dataset.vup; [ALLV[i - 1], ALLV[i]] = [ALLV[i], ALLV[i - 1]]; if (vi === i) vi--; else if (vi === i - 1) vi++; return commit(''); }
+  const vd = t.closest('[data-vdown]'); if (vd){ snapshot(); const i = +vd.dataset.vdown; [ALLV[i + 1], ALLV[i]] = [ALLV[i], ALLV[i + 1]]; if (vi === i) vi++; else if (vi === i + 1) vi--; return commit(''); }
+  if (t.closest('[data-vdup]')) return dupVariant();
+  const vx = t.closest('[data-vdel]'); if (vx){ const i = +vx.dataset.vdel; if (i < 1 || !confirm(c('delVariantQ', vName(ALLV[i])))) return; snapshot(); ALLV.splice(i, 1); useVariant(0); sel = {k:'aud'}; return commit(''); }
+  const mg = t.closest('[data-mxgo]'); if (mg){ const o = JSON.parse(mg.dataset.mxgo); cur = o.t; sel = o.s; explain = ''; return renderAll(); }
   for (const k of ['fields','assoc','blocks']) if (t.closest('#ld-pt-' + k)){ ptab = k; return renderPalette(); }
   for (const k of ['json','java']) if (t.closest('#ld-o-' + k)){ otab = k; return renderCode(); }
   if (t.closest('[data-steps]')){ sel = sel && sel.k === 'deploy' ? null : {k:'deploy'}; explain = ''; return renderAll(); }
   const cpy = t.closest('[data-copy]'); if (cpy){ const v = cpy.dataset.copy; const ok = () => toast(c('copied')); try { navigator.clipboard.writeText(v).then(ok, () => toast(v)); } catch (x) { toast(v); } return; }
   if (t.closest('#ld-codebtn')){ const d = $('#ld-dlg'); if (d.showModal) d.showModal(); else d.setAttribute('open', ''); return renderCode(); }
   if (t.closest('#ld-dlg-close')){ $('#ld-dlg').close ? $('#ld-dlg').close() : $('#ld-dlg').removeAttribute('open'); return; }
-  if (t.closest('#ld-undo')){ const s = history.pop(); if (s){ const o = JSON.parse(s); S = o.S; cur = o.cur; sel = null; dirty = history.length > 0; commit(c('explUndo')); } return; }
+  if (t.closest('#ld-undo')){ const s = history.pop(); if (s){ const o = JSON.parse(s); ALLV = o.V; Object.assign(LAY, o.LAY); vi = Math.min(o.vi, ALLV.length - 1); S = ALLV[vi].S; cur = o.cur; sel = null; dirty = history.length > 0; commit(c('explUndo')); } return; }
   if (t.closest('#ld-close')) return closeDesigner();
   if (t.closest('#ld-save')) return submit('save');
   const sb = t.closest('[data-submit]'); if (sb) return submit(sb.dataset.submit);
@@ -1299,7 +1465,12 @@ root.addEventListener('click', e => {
   const pd = t.closest('[data-pdel]'); if (pd){ snapshot(); const [k, i] = pd.dataset.pdel.split(':'); S.blocks[sel.id][k].splice(+i, 1); return commit(''); }
 });
 /* Enter in a text field would submit EBX's form */
-root.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.preventDefault(); });
+root.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT'){ e.preventDefault(); if (e.target.dataset.radd != null) addRole(e.target); } });
+function addRole(inp){
+  const v = inp.value.trim(); if (!v) return; const o = specBase(); if (!o) return;
+  const r = DIR.roles.find(x => sameRole(x.k, v) || sameRole(x.l, v)); const k = r ? r.k : v; const key = inp.dataset.radd;
+  snapshot(); const arr = (o[key] || []).filter(x => !sameRole(x, k)); arr.push(k); o[key] = arr; inp.value = ''; commit('');
+}
 root.addEventListener('input', e => {
   const t = e.target;
   if (t.id === 'ld-psearch') return renderPalette();
@@ -1318,6 +1489,10 @@ root.addEventListener('input', e => {
 root.addEventListener('change', e => {
   const t = e.target;
   if (t.id === 'ld-lang'){ lang = t.value; return renderAll(); }
+  if (t.id === 'ld-as'){ as = t.value; if (as) useVariant(variantFor(asRoles())); return renderAll(); }
+  if (t.id === 'ld-var'){ if (t.value === 'new') return dupVariant(); useVariant(+t.value); explain = ''; return renderAll(); }
+  if (t.dataset.lay){ snapshot(); LAY[t.dataset.lay] = t.checked; return commit(''); }
+  if (t.dataset.radd != null){ return addRole(t); }
   if (t.id === 'ld-rec'){ if (t.value === '__new'){ creating = true; return renderAll(); } creating = false; return submit('record', t.value); }
   if (!sel) return;
   if (t.id === 'ld-i-miss'){ onlyMissing = t.checked; return renderInspector(); }
@@ -1368,6 +1543,9 @@ root.innerHTML = `<div class="wrap">
     <div class="pick"><label for="ld-rec">${esc(c('preview'))}</label><select id="ld-rec">${B.records.length ? recOpts : `<option>${esc(c('noRecord'))}</option>`}</select></div>
     <div class="pick"><label for="ld-lang">${esc(c('language'))}</label><select id="ld-lang">${LOCALES.map(l => `<option value="${l}"${l === lang ? ' selected' : ''}>${l}${l === DEF ? ' ★' : ''}</option>`).join('')}</select></div>
     <div class="pick"><label>${esc(c('texts'))}</label><button type="button" class="btn ghost" id="ld-i18n" aria-pressed="false">${esc(c('translations'))}</button></div>
+    <div class="pick"><label for="ld-var">${esc(c('formPick'))}</label><select id="ld-var" class="varsel"></select></div>
+    <div class="pick"><label for="ld-as">${esc(c('asLabel'))}</label><select id="ld-as"></select></div>
+    <div class="pick"><label>&nbsp;</label><button type="button" class="btn ghost" id="ld-aud" aria-pressed="false">${esc(c('aud'))}</button></div>
     <div class="pick"><label>${esc(c('mode'))}</label><div class="seg"><button type="button" id="ld-m-design" aria-pressed="true">${esc(c('design'))}</button><button type="button" id="ld-m-preview" aria-pressed="false">${esc(c('previewMode'))}</button></div></div>
     <div class="pick"><label>${esc(c('width'))}</label><div class="seg"><button type="button" id="ld-w-wide" aria-pressed="true">1 440 px</button><button type="button" id="ld-w-narrow" aria-pressed="false">890 px</button></div></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${B.helpUrl ? `<a class="btn ghost" href="${esc(B.helpUrl)}" target="_blank" rel="noopener">${esc(c('help'))}</a>` : ''}<button type="button" class="btn ghost" id="ld-codebtn">${esc(c('code'))}</button><span class="status saved" id="ld-status"></span><button type="button" class="btn ghost" id="ld-undo" disabled>${esc(c('undo'))}</button><button type="button" class="btn primary" id="ld-save">${esc(c('save'))}</button><button type="button" class="btn ghost" id="ld-close" title="${esc(c('closeTip'))}">${esc(c('closeDesigner'))}</button></div>
@@ -1378,6 +1556,7 @@ root.innerHTML = `<div class="wrap">
     <section class="canvas-wrap"><div class="canvas-bar" id="ld-cbar"></div><div class="canvas design" id="ld-canvas"></div></section>
     <aside class="side inspector" aria-label="${esc(c('selection'))}"><div class="side-hd"><div class="insp-hd"><h2>${esc(c('selection'))}</h2><button type="button" class="btn small ghost insp-close" id="ld-insp-close">${esc(c('closeInsp'))}</button></div></div><div class="side-bd" id="ld-insp"></div></aside>
   </div>
+  <datalist id="ld-rolelist">${DIR.roles.map(r => `<option value="${esc(r.l)}"></option>`).join('')}</datalist>
   <dialog class="ld-dlg" id="ld-dlg" aria-labelledby="ld-dlg-t"><div class="ld-dlg-hd"><h2 id="ld-dlg-t">${esc(c('codeTitle'))}</h2><div class="seg"><button type="button" id="ld-o-json" aria-pressed="true">${esc(c('outJson'))}</button><button type="button" id="ld-o-java" aria-pressed="false">${esc(c('outJava'))}</button></div><button type="button" class="btn small ghost" id="ld-dlg-close">${esc(c('closeDlg'))}</button></div>
     <div class="ld-dlg-bd"><pre class="code" id="ld-code"></pre><div class="how" id="ld-how"></div><div><button type="button" class="btn small ghost" id="ld-copy">${esc(c('copy'))}</button></div></div></dialog>
 </div>`;

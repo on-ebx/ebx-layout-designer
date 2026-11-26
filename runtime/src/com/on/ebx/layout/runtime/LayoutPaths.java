@@ -25,6 +25,15 @@ public final class LayoutPaths
 	public static final Path UPDATED_BY = Path.parse("./updatedBy");
 	public static final Path UPDATED_ON = Path.parse("./updatedOn");
 
+	/** One user's own arrangement of a form ({@link Personal}); key: user, model, table, variant. */
+	public static final Path USER_PREFS = Path.parse("/root/UserFormPreference");
+	public static final Path PREFS_USER = Path.parse("./user");
+	public static final Path PREFS_VARIANT = Path.parse("./variant");
+	public static final Path PREFS = Path.parse("./prefs");
+
+	/** The module service that lets a user arrange a form for themself. */
+	public static final String PERSONALIZE_SERVICE = "PersonalizeForm";
+
 	/** The class a data model declares as its record form to use a layout of this designer. */
 	public static final String FORM_CLASS = "com.on.ebx.layout.runtime.ConfigurableForm";
 

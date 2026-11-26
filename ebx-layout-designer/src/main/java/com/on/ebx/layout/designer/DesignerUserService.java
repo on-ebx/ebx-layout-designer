@@ -41,7 +41,7 @@ public final class DesignerUserService implements UserService<TableViewEntitySel
 	static final String SUBMIT_ID = "ldSubmit";
 	static final String CLOSE_ID = "ldClose";
 	/** Changed at each release, so that browsers fetch the new page script. */
-	static final String ASSET_VERSION = "1.9.0";
+	static final String ASSET_VERSION = "1.10.0.2";
 
 	private AdaptationTable table;
 	private String recordKey;
@@ -132,8 +132,10 @@ public final class DesignerUserService implements UserService<TableViewEntitySel
 		try
 		{
 			final XsdActivator.State activation = XsdActivator.state(model, tablePath);
-			boot = LayoutStore.json().writeValueAsString(
-				ModelExport.export(repository, this.table, this.record(), pSession.getLocale(), this.draft, activation, this.notice, this.noticeError));
+			final com.fasterxml.jackson.databind.node.ObjectNode data = ModelExport.export(repository, this.table, this.record(), pSession.getLocale(), this.draft,
+				activation, this.notice, this.noticeError);
+			data.set("directory", DirectoryRoles.export(repository, pSession, pSession.getLocale()));
+			boot = LayoutStore.json().writeValueAsString(data);
 		}
 		catch (final Exception ex)
 		{

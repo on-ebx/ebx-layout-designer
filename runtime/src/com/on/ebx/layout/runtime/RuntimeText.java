@@ -26,6 +26,14 @@ public final class RuntimeText
 		RuntimeText.put("hoursMore", "+ {n} more", "+ {n} autres", "+ altri {n}");
 		RuntimeText.put("hoursCreate", "The hours are entered once the record is created.", "Les horaires se saisissent une fois l'enregistrement cr\u00e9\u00e9.", "Gli orari si inseriscono dopo la creazione del record.");
 		RuntimeText.put("hoursSetup", "Choose the association of the regular hours and its fields in the designer.", "Choisissez dans le designer l'association des horaires de la semaine et ses champs.", "Scegli nel designer l'associazione degli orari settimanali e i suoi campi.");
+		// roles and personal arrangement (1.10.0)
+		RuntimeText.put("myEssentials", "My essentials", "Mes essentiels", "I miei essenziali");
+		RuntimeText.put("arrangeMyForm", "Arrange my form", "Personnaliser ma fiche", "Personalizza la mia scheda");
+		RuntimeText.put("pinnedNotHere", "Your pinned blocks do not apply to this record (they show only under a condition it does not meet).",
+			"Vos blocs épinglés ne concernent pas cette fiche (ils ne s'affichent que sous une condition qu'elle ne remplit pas).",
+			"I tuoi blocchi fissati non riguardano questo record (compaiono solo a una condizione che non soddisfa).");
+		RuntimeText.put("foldedBlock", "Folded block", "Bloc replié", "Blocco chiuso");
+		RuntimeText.put("nothingForRole", "Nothing on this form is shown for your role.", "Rien sur cette fiche n'est affiché pour votre rôle.", "Niente di questa scheda è visibile per il tuo ruolo.");
 		// blocks and widgets of 1.4.0
 		RuntimeText.put("afterCreate", "Shown once the record is created.", "Affiché une fois l'enregistrement créé.", "Visibile dopo la creazione del record.");
 		RuntimeText.put("setupBlock", "Choose this block's settings in the designer.", "Choisissez les réglages de ce bloc dans le designer.", "Scegli le impostazioni di questo blocco nel designer.");

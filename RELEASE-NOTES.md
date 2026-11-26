@@ -1,5 +1,29 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.10.0 (2026-10-12)
+
+- **Who sees what, by role.** By default nothing changes: everyone sees the whole form. A tab, block or field can now be
+  made *visible for* some roles only, or *read only for* some roles (inspector › *Who sees it*, roles picked from EBX's
+  directory or typed). A user who may not see a part does not get it at all: a hidden tab takes its blocks, a panel whose
+  fields are all hidden disappears. Administrators see everything unless the layout says otherwise. This arranges the
+  form only: EBX permissions still protect the data.
+- **Variants of a form.** A layout can hold whole forms for some roles (*Form › + New variant*, or *Profiles and
+  variants › Duplicate as a variant*), in priority order: each user gets the first variant they have a role for, else
+  the standard form. *Profiles and variants* lists them, shows who gets which form and a *Who sees what* table.
+- **Preview as** a role or a user of the directory: in Design mode what they do not see is struck through, in Preview
+  mode it disappears and the canvas switches to the variant they would get.
+- **Arrange my form.** When the layout allows it, every user can arrange the form for themself: order of the tabs, the tab
+  opened first, blocks hidden, folded or pinned to a first tab *My essentials*. A button on the form and an entry of the
+  record's Actions menu open it in EBX's pop-up. The arrangement is laid over the layout, never a copy, so a later change
+  in the designer still reaches everyone; *Always shown* keeps a tab or block out of reach; nothing is hidden while a
+  record is created. Stored in a new table `UserFormPreference` of the module's dataset (the module's model changes: one
+  restart after installing).
+- Tabs now keep a stable `id` in the layout. Format additions: `roles`, `roRoles`, `locked`, `personal`, `adminSeesAll`,
+  `variants` (docs/LAYOUT-FORMAT.md, *Who sees what*).
+- An empty *My essentials* tab says why: every pinned block has a display condition the record does not meet.
+- `build.sh` compiles the module against the runtime it has just built, ahead of any older runtime jar in the server's
+  lib. `tools/test.sh` runs the checks that need no server.
+
 ## 1.9.0 (2026-10-12)
 
 - **New block "Value over time"** (palette › Time): the successive values of one or more fields, read in the table's

@@ -28,7 +28,7 @@ mkdir -p "$root/dist"
 out="$root/ebx-layout-designer/target/classes"
 rm -rf "$out"; mkdir -p "$out"
 find "$root/ebx-layout-designer/src/main/java" -name '*.java' > "$work/module.txt"
-"${bin}javac" --release "$release" -encoding UTF-8 -nowarn -Xlint:none -cp "$lib/*:$work/runtime" -d "$out" @"$work/module.txt"
+"${bin}javac" --release "$release" -encoding UTF-8 -nowarn -Xlint:none -cp "$work/runtime:$lib/*" -d "$out" @"$work/module.txt"
 cp -R "$root/ebx-layout-designer/src/main/resources/." "$out/"
 # version stamp read by ModuleVersion (the About page): git describe from a tag, else VERSION; commit; build time (UTC)
 version="$(git -C "$root" describe --tags --always --match 'v[0-9]*' 2>/dev/null || true)"

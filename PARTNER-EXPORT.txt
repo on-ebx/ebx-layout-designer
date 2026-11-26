@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit 6c2b8f2df9f60c9d82f9e828bd28623ee889598a
-1.9.0: activation as a banner with a step guide (DMA component library, module XSD, manual), the form reports where it is drawn
+Exported from EBX-Layout-Designer commit 437a16ca934e5354061174c4d079865d53387cd2
+1.10.0: release notes dated
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

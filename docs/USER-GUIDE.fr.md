@@ -85,7 +85,7 @@ Un comportement change l'affichage, pas la validation d'EBX : pour bloquer l'enr
 | **Structure du groupe** | la clé étrangère vers la maison mère et l'association des filiales : maison mère, la fiche, ses filiales |
 | **Doublons** | l'état Match and Merge de la fiche (golden, fusionnée, groupe). Sans l'add-on, le bloc le dit |
 | **Texte d'aide** | un paragraphe pour l'utilisateur |
-| **Composant enregistré** | un bloc Java écrit par un développeur (section 8) |
+| **Composant enregistré** | un bloc Java écrit par un développeur (section 9) |
 
 Deux réglages sur chaque bloc : **Afficher seulement si (XPath)**, un prédicat sur la fiche
 (`./Lifecycle/status = 'ACTIVE'`), et **Masquer à la création d'une fiche**.
@@ -160,7 +160,37 @@ langue par défaut. Les libellés du modèle et les messages de validation vienn
 
 Les écrans du designer lui-même sont en français ou en anglais, selon la langue de l'utilisateur.
 
-## 7. Enregistrer, déclarer, utiliser
+## 7. Qui voit quoi : rôles, variantes, fiche personnelle
+
+Par défaut **tout le monde voit toute la fiche**, comme avant la 1.10.0. Rien n'est à régler si ce n'est pas utile ;
+ensuite, trois niveaux, du plus léger au plus complet :
+
+1. **Restreindre une partie.** Sélectionnez un onglet, un bloc ou un champ : la partie *Qui voit* de l'inspecteur a
+   deux listes de rôles, *Visible pour* (vide = tout le monde) et *Lecture seule pour*. Les rôles viennent de l'annuaire
+   d'EBX ; un autre nom se tape dans le champ dessous (annuaire LDAP ou SSO). Un onglet masqué emporte ses blocs, un
+   panneau dont tous les champs sont masqués disparaît. Un champ obligatoire masqué pour un rôle l'empêche de créer une
+   fiche : le designer le signale.
+2. **Une variante pour un rôle.** *Fiche › + Nouvelle variante* (ou *Profils et variantes › Dupliquer en variante*)
+   copie la fiche en cours ; donnez-lui un nom et les rôles qui la reçoivent, puis modifiez-la comme une autre. À
+   l'ouverture, chacun reçoit la première variante dont il a un rôle (l'ordre se règle dans *Profils et variantes*),
+   sinon la fiche standard. Exemple : une fiche « Demande de création » d'un seul onglet pour le demandeur.
+3. **La fiche personnelle.** Cochez *Les utilisateurs peuvent personnaliser leur fiche* dans *Profils et variantes* :
+   un bouton *Personnaliser ma fiche* apparaît en haut de la fiche (et dans le menu Actions de l'enregistrement). Chacun
+   y change l'ordre des onglets, l'onglet ouvert en premier, masque ou replie un bloc, ou l'épingle dans un premier
+   onglet *Mes essentiels*. Ce n'est jamais une copie : une évolution faite ensuite dans le designer arrive chez tout le
+   monde, un nouveau bloc apparaît à sa place. Cochez *Toujours affiché* sur un onglet ou un bloc qui doit rester (ex. :
+   paiements bloqués). Pendant la création d'une fiche, rien n'est masqué ni replié. *Revenir à la fiche standard*
+   efface l'organisation de l'utilisateur.
+
+*Aperçu en tant que* (en haut) montre la fiche d'un rôle ou d'un utilisateur de l'annuaire : en mode *Concevoir*, ce
+qu'il ne voit pas est barré et grisé ; en mode *Aperçu*, il disparaît, et la fiche passe sur la variante qu'il recevrait.
+*Profils et variantes* liste les variantes, *qui reçoit quelle fiche* et le tableau *Qui voit quoi* (un clic sur une
+ligne la sélectionne).
+
+Les administrateurs voient tout (option décochable). **Ce n'est pas de la sécurité** : un champ absent de la fiche reste
+lisible dans la vue tableau, un export ou les API ; ce sont les permissions d'EBX qui protègent la donnée.
+
+## 8. Enregistrer, déclarer, utiliser
 
 - **Enregistrer** écrit la mise en page (JSON) comme nouvelle version dans `LayoutDesigner/FormLayout`. Elle s'affiche à
   la prochaine ouverture d'une fiche, **sans redémarrage**, dès que la table déclare la fiche conçue.
@@ -179,7 +209,7 @@ Les écrans du designer lui-même sont en français ou en anglais, selon la lang
 - **</> Code** : le JSON enregistré, et la même mise en page en classe `UIForm` figée pour un projet qui ne veut pas
   du designer à l'exécution (facultatif).
 
-## 8. Pour les développeurs : composants enregistrés
+## 9. Pour les développeurs : composants enregistrés
 
 Un module peut ajouter son propre bloc. Implémentez `com.on.ebx.layout.runtime.LayoutComponent` (`getLabel(Locale)`,
 `write(UIFormPaneWriter, UIFormContext, JsonNode block, Locale)`) et enregistrez-le une fois au démarrage :
@@ -192,7 +222,7 @@ Il apparaît alors dans la palette sous *Composants enregistrés* ; le runtime o
 du bloc, et le composant écrit à l'intérieur. Le module n'a besoin du jar runtime qu'à la compilation (il est dans
 celui du serveur à l'exécution).
 
-## 9. Limites
+## 10. Limites
 
 - **Modèles DMA** : le designer ne sait pas écrire lui-même la déclaration (déclarez la classe dans l'écran du modèle
   ou avec `set_form_layout`), ni la lire : l'état affiché dans la barre du haut indique alors *Modèle DMA : déclaration à

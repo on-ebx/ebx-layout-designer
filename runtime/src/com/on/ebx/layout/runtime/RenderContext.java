@@ -271,58 +271,7 @@ final class RenderContext
 
 	String blockTitle(final JsonNode pBlock)
 	{
-		final String t = this.text(pBlock.get("title"));
-		if (!t.isEmpty())
-		{
-			return t;
-		}
-		final String type = pBlock.path("type").asText();
-		if ("grid".equals(type) || "timeline".equals(type) || "contacts".equals(type) || "documents".equals(type) || "chart".equals(type) || "pivot".equals(type)
-			|| "aggregates".equals(type) || ("gallery".equals(type) && !pBlock.path("a").asText("").isEmpty()))
-		{
-			return this.label(pBlock.path("a").asText());
-		}
-		if ("history".equals(type))
-		{
-			return RuntimeText.get("historyTitle", this.locale);
-		}
-		if ("workflowTasks".equals(type) || "sourceValues".equals(type) || "translations".equals(type) || "inheritance".equals(type))
-		{
-			return RuntimeText.get(type + "Title", this.locale);
-		}
-		if ("valueHistory".equals(type))
-		{
-			return RuntimeText.get("vhTitle", this.locale);
-		}
-		if ("sitesMap".equals(type))
-		{
-			return RuntimeText.get("smTitle", this.locale);
-		}
-		if ("orgChart".equals(type))
-		{
-			return RuntimeText.get("orgTitle", this.locale);
-		}
-		if ("recordInfo".equals(type))
-		{
-			return RuntimeText.get("recordInfoTitle", this.locale);
-		}
-		if ("changes".equals(type))
-		{
-			return RuntimeText.get("changesTitle", this.locale);
-		}
-		if ("usedBy".equals(type))
-		{
-			return RuntimeText.get("usedByTitle", this.locale);
-		}
-		if ("linked".equals(type))
-		{
-			return this.label(pBlock.path("fk").asText());
-		}
-		if ("stepper".equals(type))
-		{
-			return this.label(pBlock.path("field").asText());
-		}
-		return "";
+		return BlockTitles.of(pBlock, this.locale, this.defaultLocale, this.root);
 	}
 
 	/** Where every field and association lands: the tab, the block, an anchor id. */

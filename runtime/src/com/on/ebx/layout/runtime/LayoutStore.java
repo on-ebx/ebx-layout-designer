@@ -87,6 +87,36 @@ public final class LayoutStore
 		return LayoutStore.parse(pModel.format() + "|" + pTable.format(), row.getString(LayoutPaths.LAYOUT));
 	}
 
+	/** The user's own arrangement of this form (model, table, variant), parsed; null when they have none. */
+	public static JsonNode findPrefs(final Repository pRepository, final String pUser, final SchemaLocation pModel, final Path pTable, final String pVariant)
+	{
+		final Adaptation row = LayoutStore.findPrefsRow(pRepository, pUser, pModel, pTable, pVariant);
+		if (row == null)
+		{
+			return null;
+		}
+		return LayoutStore.parse("prefs|" + pUser + "|" + pModel.format() + "|" + pTable.format() + "|" + pVariant, row.getString(LayoutPaths.PREFS));
+	}
+
+	public static Adaptation findPrefsRow(final Repository pRepository, final String pUser, final SchemaLocation pModel, final Path pTable, final String pVariant)
+	{
+		final Adaptation dataset = LayoutStore.dataset(pRepository);
+		if (dataset == null || pUser == null)
+		{
+			return null;
+		}
+		try
+		{
+			final AdaptationTable table = dataset.getTable(LayoutPaths.USER_PREFS);
+			return table.lookupAdaptationByPrimaryKey(table.computePrimaryKey(new Object[] { pUser, pModel.format(), pTable.format(), pVariant }));
+		}
+		catch (final RuntimeException ex)
+		{
+			// the table appears with the module's model of 1.10.0: an older model has none
+			return null;
+		}
+	}
+
 	public static JsonNode parse(final String pKey, final String pText)
 	{
 		if (pText == null || pText.trim().isEmpty())
