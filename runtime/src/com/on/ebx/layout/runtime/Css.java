@@ -235,22 +235,28 @@ final class Css
 	 */
 	static final String LAZY_JS = "(function(){if(window.ldfLazy)return;window.ldfLazy=1;"
 		+ "function vis(e){if(!e.getClientRects().length)return false;for(var x=e;x&&x.nodeType===1;x=x.parentElement){var s=getComputedStyle(x);if(s.visibility==='hidden'||s.display==='none')return false;}return true;}"
-		+ "function inner(f){try{var d=f.contentDocument,i=d&&d.querySelector('iframe');return i&&i.contentDocument&&i.contentDocument.body?i:null;}catch(x){return null;}}"
-		// the height of what the page really shows: the lowest element that is not a full-height wrapper (EBX's page fills its frame)
-		+ "function bottom(d){var vh=d.documentElement.clientHeight,m=0,a=d.body.getElementsByTagName('*');for(var i=0;i<a.length;i++){var r=a[i].getBoundingClientRect();if(!r.height||r.height>=vh-2)continue;if(r.bottom>m)m=r.bottom;}return m;}"
-		+ "function fit(f){try{var d=f.contentDocument;if(!d||!d.body)return;var i=inner(f),h=i?i.getBoundingClientRect().top+bottom(i.contentDocument):bottom(d);if(h<40)return;h=Math.min(Math.max(Math.round(h)+24,200),1600);"
-		+ "if(Math.abs(h-f.parentNode.clientHeight)>8)f.parentNode.style.height=h+'px';}catch(x){}}"
+		// every document shown in the frame: EBX's own inner frames, and the creation form opened by the "+"
+		+ "function docs(d,out,depth){out.push(d);if(depth>3)return out;var fr=d.getElementsByTagName('iframe');for(var i=0;i<fr.length;i++){try{var c=fr[i].contentDocument;if(c&&c.body)docs(c,out,depth+1);}catch(x){}}return out;}"
+		// how much a scrolling area inside the frame hides: the frame grows by that much
+		+ "function over(ds){var o=0;for(var k=0;k<ds.length;k++){var w=ds[k].defaultView,a=ds[k].body.getElementsByTagName('*');for(var i=0;i<a.length;i++){var el=a[i];if(el.clientHeight<40)continue;var dh=el.scrollHeight-el.clientHeight;if(dh<=4)continue;"
+		+ "var oy=w.getComputedStyle(el).overflowY;if((oy==='auto'||oy==='scroll')&&dh>o)o=dh;}}return o;}"
+		// a record form fills the frame (its footer is anchored to the bottom): never measured by its content, or it grows without end
+		+ "function isForm(ds){for(var k=0;k<ds.length;k++)if(ds[k].getElementById('ebx_WorkspaceFormFooter'))return true;return false;}"
+		+ "function gridBottom(d,depth){var vh=d.documentElement.clientHeight,m=0,a=d.body.getElementsByTagName('*');for(var i=0;i<a.length;i++){var el=a[i],r=el.getBoundingClientRect();if(!r.height)continue;"
+		+ "if(el.tagName==='IFRAME'&&depth<4){try{var cd=el.contentDocument;if(cd&&cd.body){var h=r.top+gridBottom(cd,depth+1);if(h>m)m=h;continue;}}catch(x){}}if(r.height>=vh-2)continue;if(r.bottom>m)m=r.bottom;}return m;}"
+		+ "function target(f){var ds=docs(f.contentDocument,[],0),cur=f.parentNode.clientHeight,o=over(ds);if(o>4)return Math.min(cur+o+8,1600);if(isForm(ds))return cur;"
+		+ "var h=gridBottom(f.contentDocument,0);return h<40?cur:Math.min(Math.max(Math.round(h)+24,200),1600);}"
+		// the frame follows what it shows, at every moment: a grid, then the creation form of its "+", then the grid again
+		+ "function fit(f,e){try{var d=f.contentDocument;if(!d||!d.body)return;var h=target(f);"
+		+ "if(Math.abs(h-f.parentNode.clientHeight)>8){f.parentNode.style.height=h+'px';clearTimeout(f.rc);f.rc=setTimeout(function(){recount(e);},600);}}catch(x){}}"
 		+ "function open(e){var f=document.createElement('iframe');f.src=e.getAttribute('data-src');e.removeAttribute('data-src');e.innerHTML='';e.appendChild(f);"
-		+ "f.addEventListener('load',function(){fit(f);setTimeout(function(){fit(f);watch(f,e);},1200);setTimeout(function(){fit(f);},3000);recount(e);});e.addEventListener('mouseleave',function(){setTimeout(function(){recount(e);},300);});}"
+		+ "f.addEventListener('load',function(){fit(f,e);recount(e);});setInterval(function(){if(vis(e))fit(f,e);},700);e.addEventListener('mouseleave',function(){setTimeout(function(){recount(e);},300);});}"
 		+ "function check(){var l=document.querySelectorAll('.ldf-lazy[data-src]');for(var i=0;i<l.length;i++){if(vis(l[i]))open(l[i]);}}"
 		// counters: after a row is added or removed in the frame, the block's "· n" and the tab's "(n)" follow
 		+ "function recount(e){var u=e.getAttribute('data-count');if(!u)return;fetch(u,{credentials:'same-origin',headers:{Accept:'application/json'}}).then(function(r){return r.ok?r.json():null;}).then(function(j){"
 		+ "if(!j||typeof j.count!=='number')return;var o=+e.getAttribute('data-n')||0,n=j.count;if(n===o)return;e.setAttribute('data-n',n);var sec=e.closest('section');var c=sec&&sec.querySelector('header .ldf-n');if(c)c.textContent='\u00b7 '+n;"
 		+ "var p=e.closest('.ebx_FormPaneWithTabs_Tab');var t=p&&p.id?document.querySelector('#ebx_TabTitle_'+(window.CSS&&CSS.escape?CSS.escape(p.id):p.id)+' a'):null;if(t){var w=document.createTreeWalker(t,NodeFilter.SHOW_TEXT),x,last=null;while((x=w.nextNode()))if(/\\S/.test(x.nodeValue))last=x;"
 		+ "if(last){var m=last.nodeValue.match(/^(.*?)\\s*\\((\\d+)\\)\\s*$/);var base=m?m[1]:last.nodeValue.replace(/\\s+$/,'');var tot=(m?+m[2]:0)+n-o;last.nodeValue=tot>0?base+' ('+tot+')':base;}}}).catch(function(){});}"
-		+ "function watch(f,e){var tm=null,mo=new MutationObserver(function(){clearTimeout(tm);tm=setTimeout(function(){recount(e);fit(f);},700);});"
-		+ "function obs(doc){try{mo.observe(doc.body,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});}catch(x){}}obs(f.contentDocument);"
-		+ "var i=inner(f);if(i){obs(i.contentDocument);i.addEventListener('load',function(){obs(i.contentDocument);fit(f);recount(e);});}}"
 		+ "check();document.addEventListener('click',function(){setTimeout(check,60);setTimeout(check,400);},true);setInterval(check,1200);})();";
 
 	static final String GO_JS = "window.ldfGo=function(id){try{var hidden=function(e){var p=e&&e.closest?e.closest('.ebx_FormPaneWithTabs_Tab'):null;return p&&getComputedStyle(p).visibility==='hidden'?p:null;};"

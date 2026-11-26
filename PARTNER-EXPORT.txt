@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit 0157da52fadb38805fa1d07bde8266f3f7ef4290
-Merge feature/lazy-grid: grids loaded when their tab opens (1.11.0)
+Exported from EBX-Layout-Designer commit 445d247fe79cea8d20819cdd75083f6b1d8cb86f
+1.11.1: the frame of a lazy grid follows the creation form of its "+"
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

@@ -1,5 +1,12 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.11.1 (2026-10-13)
+
+- **The creation form of a loaded-on-opening grid is no longer cut.** In 1.11.0 the frame measured the position of what
+  it showed; a record form fills its frame (its buttons are anchored to the bottom), so the frame kept the height of
+  the grid (about 200 px) and the form opened by the "+" was cut. The frame now grows by what a scrolling area inside it
+  hides, keeps its height while a form is shown, and goes back to the grid's height when the form is closed.
+
 ## 1.11.0 (2026-10-13)
 
 - **A grid can be loaded when its tab is opened** (inspector of a grid block, *Load when its tab is opened*, layout key
