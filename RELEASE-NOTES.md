@@ -1,5 +1,31 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.16.0 (2026-10-14)
+
+- **Explorers: a search page over any table, drawn like a form.** A new service, *Design the explorer* (Actions menu of
+  any table, administrators), draws a page with a search box, facets (values of a list field, flags raised by conditions,
+  ranges of a number, a tree, the user's favorites), tiles that filter in one click, sorts, and one card per record. Every
+  attribute of a card is chosen and set by clicking it: field or computed value, widget (text, pill or coloured dot,
+  amount, gauge bar or ring, stars, relative date, flag of a country, link to the linked record…), colour per value, area
+  of the card, roles; the card also takes an image from a DAMA media field, an edge coloured like its pill, three
+  layouts, and buttons (open, favorite, workflow, service). Variants by role, every text in every locale. The explorer
+  is stored in the new table `ExplorerLayout` (several per table possible) and shown by the service *Explorer*
+  (`ebx-layout-designer@Explorer`, parameter `ldxExplorer`), for a perspective action; a saved change shows at the next
+  opening, no restart. Format: [docs/EXPLORER-FORMAT.md](docs/EXPLORER-FORMAT.md).
+- **Built for volume.** The page never receives the whole table nor a whole list of values: the server keeps one index
+  per dataset and explorer (rebuilt when a table it reads changes), counts, filters, sorts and pages there, and sends one
+  page of cards and, per facet, the most frequent values (10, then 10 more up to 50, then a search). Computed values (a
+  count of linked rows, a value of a linked row, duplicates of a value, the Match and Merge suspects, a value given by a
+  module through `ExplorerValues.register`) are read once per index build, one read per linked table.
+- **EBX permissions in every case.** Each user gets their own view of the index: the records come from a request run
+  with their session (record access rules, model permissions), the fields they may not read are tested per table and
+  per record; a facet, a flag, a tile, a sort, a searched field or a card attribute reading a hidden field is removed for
+  them, counts and tiles only cover what they see, and every AJAX call re-checks the record it names. A workflow button
+  shows only to who may launch the publication.
+- **Favorites** are kept in the new table `ExplorerFavorite`, per user, explorer and dataset.
+- The module's data model gains two tables: **one server restart** is needed after the upgrade (as for any change of the
+  module's model).
+
 ## 1.15.2 (2026-10-14)
 
 - **An image gallery can show whole images.** The *image gallery* block cut every image to a square thumbnail, so a wide

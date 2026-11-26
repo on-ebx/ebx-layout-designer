@@ -41,7 +41,7 @@ public final class DesignerUserService implements UserService<TableViewEntitySel
 	static final String SUBMIT_ID = "ldSubmit";
 	static final String CLOSE_ID = "ldClose";
 	/** Changed at each release, so that browsers fetch the new page script. */
-	static final String ASSET_VERSION = "1.15.2";
+	static final String ASSET_VERSION = "1.16.0";
 
 	private AdaptationTable table;
 	private String recordKey;
@@ -135,6 +135,10 @@ public final class DesignerUserService implements UserService<TableViewEntitySel
 			final com.fasterxml.jackson.databind.node.ObjectNode data = ModelExport.export(repository, this.table, this.record(), pSession.getLocale(), this.draft,
 				activation, this.notice, this.noticeError);
 			data.set("directory", DirectoryRoles.export(repository, pSession, pSession.getLocale()));
+			final com.onwbp.adaptation.Adaptation dataset = this.table.getContainerAdaptation();
+			data.put("explorerDesignerUrl", "/ebx/?branch=" + DesignerUserService.encode(dataset.getHome().getKey().getName()) + "&instance="
+				+ DesignerUserService.encode(dataset.getAdaptationName().getStringName()) + "&xpath=" + DesignerUserService.encode(tablePath.format()) + "&service="
+				+ DesignerUserService.encode(LayoutPaths.MODULE_NAME + "@" + LayoutPaths.EXPLORER_DESIGNER_SERVICE));
 			boot = LayoutStore.json().writeValueAsString(data);
 		}
 		catch (final Exception ex)
@@ -254,6 +258,18 @@ public final class DesignerUserService implements UserService<TableViewEntitySel
 	{
 		final String v = pContext.getParameter(pName);
 		return v == null ? "" : v;
+	}
+
+	static String encode(final String pValue)
+	{
+		try
+		{
+			return java.net.URLEncoder.encode(pValue, "UTF-8").replace("+", "%20");
+		}
+		catch (final java.io.UnsupportedEncodingException ex)
+		{
+			return pValue;
+		}
 	}
 
 	static String esc(final String s)

@@ -22,6 +22,7 @@ PAGES = [
     ('docs/USER-GUIDE.fr.md', 'guide-utilisateur.html', 'fr', 'Guide de l’utilisateur'),
     ('docs/INSTALL.md', 'install.html', 'en', 'Installation'),
     ('docs/LAYOUT-FORMAT.md', 'layout-format.html', 'en', 'Layout format'),
+    ('docs/EXPLORER-FORMAT.md', 'explorer-format.html', 'en', 'Explorer format'),
     ('RELEASE-NOTES.md', 'release-notes.html', 'en', 'Release notes'),
 ]
 LINKS = {os.path.basename(source): page for source, page, _, _ in PAGES}

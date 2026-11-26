@@ -227,3 +227,25 @@ server's at run time).
   record* open the target in a new tab.
 - Previews of the blocks that read an association's rows are indicative in the designer; the form shows the real values.
 - Seen running on EBX 6.3.0-rc2 only, with the locales en-US, fr-FR and it-IT.
+
+## 11. Explorers
+
+An explorer is a search page over one table: a search box, facets, tiles, a sort and one card per record. Open a table,
+then **Actions › Design the explorer** (or *The explorer* in the form designer's top bar).
+
+- **Palette**: the table's fields (with *+ Facet*, *+ Card*, *+ Search*, *+ Tile*; a button already used reads ✓ and
+  removes the field again when clicked), the computed values (a count of each association, the Match and Merge
+  suspects), and the elements (a "Needs attention" facet of flags, a tile, a variant, the actions).
+- **Canvas**: the explorer itself, on up to 200 records of the table. Click an area to set it, or any attribute right on
+  a card to change its widget, its options, its area or who sees it. Drag a field onto an area to add it.
+- **Long lists**: a field with many values never shows its whole list. Facets show the 10 most frequent values, then
+  10 more up to 50, then a search; a colour per value only names the values you pick, every other value takes the
+  default colour; a condition's value is typed with suggestions.
+- **Who sees what**: a facet, a tile, a card attribute or an action can be kept for some roles; a *variant* is another
+  version of the whole explorer for some roles. *Preview as* shows a role's explorer. EBX permissions come on top, on
+  the real page: a user only sees, counts and finds the records and fields EBX lets them read.
+- **Save** stores the explorer; it shows at its next opening. Put it in a perspective with an action on the service
+  *Explorer* of the table, parameter `ldxExplorer` = the explorer's id (the link is in the top bar).
+
+The format is described in [EXPLORER-FORMAT.md](EXPLORER-FORMAT.md).
+

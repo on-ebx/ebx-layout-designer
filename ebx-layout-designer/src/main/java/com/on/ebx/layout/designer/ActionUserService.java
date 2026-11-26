@@ -50,6 +50,8 @@ public final class ActionUserService implements UserService<RecordEntitySelectio
 	private String blockId;
 	private int index = -1;
 	private String perspective;
+	/** Set when the button is one of an explorer's cards (1.16.0) rather than a form's actions block. */
+	private int explorer = -1;
 	/** Set once launched: where the user goes next. */
 	private String next;
 	private String error;
@@ -68,6 +70,14 @@ public final class ActionUserService implements UserService<RecordEntitySelectio
 			catch (final RuntimeException ex)
 			{
 				this.index = -1;
+			}
+			try
+			{
+				this.explorer = Integer.parseInt(String.valueOf(pContext.getParameter(LayoutPaths.EXPLORER_PARAM)).trim());
+			}
+			catch (final RuntimeException ex)
+			{
+				this.explorer = -1;
 			}
 			final String p = pContext.getParameter(LayoutPaths.PERSPECTIVE_PARAM);
 			this.perspective = p == null || !p.matches("[A-Za-z0-9_.-]+") ? null : p;
@@ -263,9 +273,13 @@ public final class ActionUserService implements UserService<RecordEntitySelectio
 		}
 	}
 
-	/** The button of the block, as this user sees the layout; null when there is none. */
+	/** The button of the block (or of the explorer's card), as this user sees the layout; null when there is none. */
 	private JsonNode button(final Session pSession)
 	{
+		if (this.explorer >= 0)
+		{
+			return this.explorerButton(pSession);
+		}
 		if (this.record == null || this.blockId == null || this.blockId.isEmpty() || this.index < 0)
 		{
 			return null;
@@ -297,6 +311,39 @@ public final class ActionUserService implements UserService<RecordEntitySelectio
 			LoggingCategory.getKernel().error("[layout-designer] action " + this.blockId + "/" + this.index + ": " + ex, ex);
 		}
 		return null;
+	}
+
+	/** An explorer card's workflow button, read again from the explorer as this user gets it, on a record they may see. */
+	private JsonNode explorerButton(final Session pSession)
+	{
+		if (this.record == null || this.index < 0)
+		{
+			return null;
+		}
+		try
+		{
+			final com.on.ebx.layout.explorer.ExplorerStore.Row row = com.on.ebx.layout.explorer.ExplorerStore.find(this.record.getHome().getRepository(), this.explorer);
+			final com.onwbp.adaptation.AdaptationTable table = this.record.getContainerTable();
+			if (row == null || row.json == null || !row.active || !row.model.equals(this.record.getContainer().getSchemaLocation().format())
+				|| !row.table.equals(table.getTablePath().format())
+				|| !com.on.ebx.layout.explorer.Views.mayOpen(pSession, this.record.getContainer(), table, row.json)
+				|| pSession.getPermissions().getAdaptationAccessPermission(this.record).isHidden())
+			{
+				return null;
+			}
+			final JsonNode a = com.on.ebx.layout.explorer.Views.spec(row.json, pSession).layout.path("card").path("actions").path(this.index);
+			if (!a.isObject() || a.path("workflow").asText("").trim().isEmpty()
+				|| a.has("cond") && !com.on.ebx.layout.explorer.Cond.test(a.get("cond"), com.on.ebx.layout.explorer.IndexBuilderAccess.lookup(this.record)))
+			{
+				return null;
+			}
+			return a;
+		}
+		catch (final RuntimeException ex)
+		{
+			LoggingCategory.getKernel().error("[layout-designer] explorer " + this.explorer + " action " + this.index + ": " + ex, ex);
+			return null;
+		}
 	}
 
 	private static WorkItemKey firstWorkItem(final WorkflowEngine pEngine, final ProcessLauncherResult pResult)

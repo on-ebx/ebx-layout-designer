@@ -116,6 +116,7 @@ public final class AboutUserService implements UserService<TableViewEntitySelect
 		{
 			AboutUserService.link(h, help + "install.html", Messages.get(pLocale, "about.install"), "en");
 			AboutUserService.link(h, help + "layout-format.html", Messages.get(pLocale, "about.format"), "en");
+			AboutUserService.link(h, help + "explorer-format.html", Messages.get(pLocale, "about.explorerFormat"), "en");
 		}
 		h.append("</ul></div>");
 		return h.toString();

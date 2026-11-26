@@ -76,6 +76,14 @@ values, and hidden when a record is created. Fields take input or display widget
 country, barcode, masked value…) and live behaviours (show if, mandatory if, read only if, fields driven by a
 configuration table). Rows can be collapsible sections. The palette is searchable and grouped by category.
 
+## Explorers (1.16.0)
+
+*Actions › Design the explorer* draws a search page over the table: search, facets (values, flags, ranges, tree,
+favorites), tiles, sorts and cards whose every attribute takes a widget, plus an image from DAMA and actions. The service
+*Explorer* shows it; the server counts, filters and pages over an index per dataset, and each user only sees what EBX
+lets them read. Format: [docs/EXPLORER-FORMAT.md](docs/EXPLORER-FORMAT.md); a complete example:
+[docs/examples/tiers-explorer.json](docs/examples/tiers-explorer.json).
+
 ## Documentation
 
 | Document | For |

@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!--LayoutDesigner: data model of the ebx-layout-designer module. One row of FormLayout per (data model, table):
     the layout drawn in the designer, as JSON, read at each display by com.on.ebx.layout.runtime.ConfigurableForm.
-    UserFormPreference: one user's own arrangement of a form, laid over that layout.-->
+    UserFormPreference: one user's own arrangement of a form, laid over that layout.
+    ExplorerLayout (1.16.0): explorers, search pages over a table; ExplorerFavorite: the records a user starred in one.-->
 <xs:schema xmlns:osd="urn:ebx-schemas:common_1.0" xmlns:fmt="urn:ebx-schemas:format_1.0" xmlns:xs="http://www.w3.org/2001/XMLSchema">
     <xs:import namespace="urn:ebx-schemas:common_1.0" schemaLocation="http://schema.orchestranetworks.com/common_1.0.xsd"/>
     <xs:annotation>
@@ -207,6 +208,195 @@
                                 <xs:simpleType>
                                     <xs:restriction base="xs:dateTime"></xs:restriction>
                                 </xs:simpleType>
+                            </xs:element>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="ExplorerLayout" minOccurs="0" maxOccurs="unbounded">
+                    <xs:annotation>
+                        <xs:documentation xml:lang="en-US">
+                            <osd:label>Explorers</osd:label>
+                            <osd:description>Search pages over a table (facets, tiles, cards), drawn in the Layout Designer and read at each opening of the Explorer service. Several explorers may target the same table.</osd:description>
+                        </xs:documentation>
+                        <xs:documentation xml:lang="fr-FR">
+                            <osd:label>Explorateurs</osd:label>
+                            <osd:description>Pages de recherche sur une table (facettes, tuiles, cartes), dessinées dans le Layout Designer et lues à chaque ouverture du service Explorateur. Plusieurs explorateurs peuvent viser la même table.</osd:description>
+                        </xs:documentation>
+                        <xs:documentation xml:lang="it-IT">
+                            <osd:label>Esploratori</osd:label>
+                            <osd:description>Pagine di ricerca su una tabella (facette, riquadri, schede), disegnate nel Layout Designer.</osd:description>
+                        </xs:documentation>
+                        <xs:appinfo>
+                            <osd:table>
+                                <primaryKeys>/id </primaryKeys>
+                                <defaultLabel>${./label}</defaultLabel>
+                            </osd:table>
+                        </xs:appinfo>
+                    </xs:annotation>
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="id" minOccurs="1" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Id</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Identifiant</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Identificativo</osd:label></xs:documentation>
+                                    <xs:appinfo>
+                                        <osd:autoIncrement/>
+                                    </xs:appinfo>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:int"/>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="label" minOccurs="0" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Label</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Libellé</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Etichetta</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:string"><xs:maxLength value="200"/></xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="model" minOccurs="1" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Data model</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Modèle de données</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Modello di dati</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:string"><xs:maxLength value="1000"/></xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="table" minOccurs="1" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Table</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Table</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Tabella</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:string"><xs:maxLength value="500"/></xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="active" type="xs:boolean" minOccurs="1" maxOccurs="1" default="true">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Active</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Actif</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Attivo</osd:label></xs:documentation>
+                                </xs:annotation>
+                            </xs:element>
+                            <xs:element name="layout" minOccurs="0" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Explorer (JSON)</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Explorateur (JSON)</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Esploratore (JSON)</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="osd:text"/>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="version" type="xs:int" minOccurs="0" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Version</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Version</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Versione</osd:label></xs:documentation>
+                                </xs:annotation>
+                            </xs:element>
+                            <xs:element name="updatedBy" minOccurs="0" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Updated by</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Modifié par</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Modificato da</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:string"><xs:maxLength value="200"/></xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="updatedOn" type="xs:dateTime" minOccurs="0" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Updated on</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Modifié le</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Modificato il</osd:label></xs:documentation>
+                                </xs:annotation>
+                            </xs:element>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="ExplorerFavorite" minOccurs="0" maxOccurs="unbounded">
+                    <xs:annotation>
+                        <xs:documentation xml:lang="en-US">
+                            <osd:label>Explorer favorites</osd:label>
+                            <osd:description>The records a user starred in an explorer. One row per user, explorer, dataspace, dataset and record.</osd:description>
+                        </xs:documentation>
+                        <xs:documentation xml:lang="fr-FR">
+                            <osd:label>Favoris des explorateurs</osd:label>
+                            <osd:description>Les fiches qu'un utilisateur a mises en favori dans un explorateur. Une ligne par utilisateur, explorateur, espace de données, jeu de données et fiche.</osd:description>
+                        </xs:documentation>
+                        <xs:documentation xml:lang="it-IT">
+                            <osd:label>Preferiti degli esploratori</osd:label>
+                        </xs:documentation>
+                        <xs:appinfo>
+                            <osd:table>
+                                <primaryKeys>/user /explorer /dataspace /dataset /record </primaryKeys>
+                                <defaultLabel>${./user} · ${./record}</defaultLabel>
+                            </osd:table>
+                        </xs:appinfo>
+                    </xs:annotation>
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="user" minOccurs="1" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>User</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Utilisateur</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Utente</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:string"><xs:maxLength value="200"/></xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="explorer" type="xs:int" minOccurs="1" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Explorer</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Explorateur</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Esploratore</osd:label></xs:documentation>
+                                </xs:annotation>
+                            </xs:element>
+                            <xs:element name="dataspace" minOccurs="1" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Dataspace</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Espace de données</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Spazio dati</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:string"><xs:maxLength value="200"/></xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="dataset" minOccurs="1" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Dataset</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Jeu de données</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Set di dati</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:string"><xs:maxLength value="200"/></xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="record" minOccurs="1" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Record key</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Clé de la fiche</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Chiave del record</osd:label></xs:documentation>
+                                </xs:annotation>
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:string"><xs:maxLength value="500"/></xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="addedOn" type="xs:dateTime" minOccurs="0" maxOccurs="1">
+                                <xs:annotation>
+                                    <xs:documentation xml:lang="en-US"><osd:label>Added on</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="fr-FR"><osd:label>Ajouté le</osd:label></xs:documentation>
+                                    <xs:documentation xml:lang="it-IT"><osd:label>Aggiunto il</osd:label></xs:documentation>
+                                </xs:annotation>
                             </xs:element>
                         </xs:sequence>
                     </xs:complexType>

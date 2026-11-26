@@ -12,7 +12,7 @@ import com.orchestranetworks.instance.Repository;
  * {@code AssetManager.getDigitalAsset(uuid)}, {@code DigitalAsset.getURL()}, all in the add-on's Javadoc). The add-on
  * is called by reflection so that a form works on an instance without it.
  */
-final class Media
+public final class Media
 {
 	static final class Asset
 	{
@@ -36,6 +36,13 @@ final class Media
 
 	private Media()
 	{
+	}
+
+	/** For the explorer cards (1.16.0): the URL and the name of the asset a media value points to, or null. */
+	public static String[] urlAndName(final Adaptation pRow, final Object pValue, final Locale pLocale)
+	{
+		final Asset a = Media.of(pRow, pValue, pLocale);
+		return a == null ? null : new String[] { a.url, a.name };
 	}
 
 	/** The asset a value points to, or null when the value is empty or unreadable. */

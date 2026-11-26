@@ -241,3 +241,31 @@ celui du serveur à l'exécution).
   `kernel.log`.
 - Une mise en page par table et par modèle : tous les datasets du modèle la partagent.
 - Vu tourner sur EBX 6.3.0-rc2 uniquement, avec les langues en-US, fr-FR et it-IT.
+
+## 11. Les explorateurs
+
+Un explorateur est une page de recherche sur une table : une recherche, des facettes, des tuiles, un tri et une carte
+par fiche. Ouvrez une table, puis **Actions › Concevoir l’explorateur** (ou *L’explorateur* dans la barre du designer de
+fiche).
+
+- **Palette** : les champs de la table (avec *+ Facette*, *+ Carte*, *+ Recherche*, *+ Tuile* ; un bouton déjà utilisé
+  affiche ✓ et retire le champ quand on clique dessus), les valeurs calculées (le nombre de lignes de chaque
+  association, les suspects de Match and Merge) et les éléments (une facette « À surveiller » de drapeaux, une tuile, une
+  variante, les actions).
+- **Canevas** : l’explorateur lui-même, sur jusqu’à 200 fiches de la table. Cliquez une zone pour la régler, ou
+  directement un attribut sur une carte pour changer son widget, ses options, sa zone ou qui le voit. Glissez un champ
+  sur une zone pour l’ajouter.
+- **Longues listes** : un champ à nombreuses valeurs n’affiche jamais toute sa liste. Les facettes montrent les 10
+  valeurs les plus fréquentes, puis 10 de plus jusqu’à 50, puis une recherche ; une couleur par valeur ne nomme que les
+  valeurs choisies, toutes les autres prennent la couleur par défaut ; la valeur d’une condition se saisit avec des
+  suggestions.
+- **Qui voit quoi** : une facette, une tuile, un attribut de carte ou une action peut être réservé à des rôles ; une
+  *variante* est une autre version de tout l’explorateur pour des rôles. *Aperçu en tant que* montre l’explorateur d’un
+  rôle. Les droits EBX s’ajoutent, sur la vraie page : un utilisateur ne voit, ne compte et ne trouve que les fiches et les
+  champs qu’EBX lui laisse lire.
+- **Enregistrer** stocke l’explorateur ; il s’affiche à sa prochaine ouverture. Mettez-le dans une perspective avec une
+  action sur le service *Explorateur* de la table, paramètre `ldxExplorer` = l’identifiant de l’explorateur (le lien est
+  dans la barre du haut).
+
+Le format est décrit dans [EXPLORER-FORMAT.md](EXPLORER-FORMAT.md) (en anglais).
+

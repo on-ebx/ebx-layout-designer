@@ -1,0 +1,926 @@
+{
+  "format": "ebx-layout-designer/explorer",
+  "version": 1,
+  "title": {
+    "fr-FR": "Fournisseurs",
+    "en-US": "Suppliers"
+  },
+  "openTo": [],
+  "derived": {
+    "etab": {
+      "type": "count",
+      "association": "/etablissements"
+    },
+    "contacts": {
+      "type": "count",
+      "association": "/contacts"
+    },
+    "ribOk": {
+      "type": "count",
+      "association": "/coordonneesBancaires",
+      "where": {
+        "field": "/statutValidation",
+        "in": [
+          "VALIDE"
+        ]
+      }
+    },
+    "ribTodo": {
+      "type": "count",
+      "association": "/coordonneesBancaires",
+      "where": {
+        "field": "/statutValidation",
+        "notIn": [
+          "VALIDE"
+        ]
+      }
+    },
+    "ville": {
+      "type": "lookup",
+      "association": "/adresses",
+      "field": "/ville",
+      "prefer": {
+        "field": "/type",
+        "in": [
+          "SIEGE"
+        ]
+      }
+    },
+    "cp": {
+      "type": "lookup",
+      "association": "/adresses",
+      "field": "/codePostal",
+      "prefer": {
+        "field": "/type",
+        "in": [
+          "SIEGE"
+        ]
+      }
+    },
+    "suspects": {
+      "type": "suspects"
+    },
+    "sirenTwins": {
+      "type": "sameValue",
+      "field": "/siren"
+    },
+    "france": {
+      "type": "test",
+      "when": {
+        "any": [
+          {
+            "field": "/pays",
+            "empty": true
+          },
+          {
+            "field": "/pays",
+            "in": [
+              "FR"
+            ]
+          }
+        ]
+      }
+    },
+    "company": {
+      "type": "test",
+      "when": {
+        "field": "/typeTiers",
+        "notIn": [
+          "PARTICULIER"
+        ]
+      }
+    },
+    "ident": {
+      "type": "firstOf",
+      "items": [
+        {
+          "field": "/siren",
+          "prefix": "SIREN ",
+          "when": {
+            "derived": "france",
+            "in": [
+              true
+            ]
+          }
+        },
+        {
+          "field": "/tvaIntraSaisie",
+          "prefix": "TVA "
+        },
+        {
+          "field": "/identifiantNational"
+        },
+        {
+          "field": "/lei",
+          "prefix": "LEI "
+        },
+        {
+          "field": "/duns",
+          "prefix": "DUNS "
+        }
+      ]
+    },
+    "emi": {
+      "type": "case",
+      "cases": [
+        {
+          "when": {
+            "any": [
+              {
+                "field": "/typeTiers",
+                "in": [
+                  "GROUPE"
+                ]
+              },
+              {
+                "derived": "company",
+                "in": [
+                  false
+                ]
+              }
+            ]
+          },
+          "value": null
+        },
+        {
+          "when": {
+            "derived": "france",
+            "in": [
+              false
+            ]
+          },
+          "value": "HORS"
+        },
+        {
+          "when": {
+            "field": "/facturationElectronique/categorieEntreprise",
+            "in": [
+              "GE",
+              "ETI"
+            ]
+          },
+          "value": "2026"
+        },
+        {
+          "when": {
+            "field": "/facturationElectronique/categorieEntreprise",
+            "in": [
+              "PME",
+              "MICRO"
+            ]
+          },
+          "value": "2027"
+        }
+      ],
+      "else": "NC"
+    }
+  },
+  "variants": [
+    {
+      "id": "std",
+      "name": {
+        "fr-FR": "Standard",
+        "en-US": "Standard"
+      },
+      "roles": [],
+      "layout": {
+        "search": {
+          "fields": [
+            "/raisonSociale",
+            "/nomCommercial",
+            "/siren",
+            "/siretSiege",
+            "/tvaIntra",
+            "/tvaIntraSaisie",
+            "/identifiantNational",
+            "/lei",
+            "/duns",
+            "/codeNaf",
+            "/sourceId",
+            "/commercial/acheteurResponsable",
+            "/facturationElectronique/plateforme",
+            "/pays",
+            "/groupeParent",
+            "/commercial/familleAchat",
+            "derived:ville",
+            "derived:cp"
+          ],
+          "placeholder": {
+            "fr-FR": "Raison sociale, SIREN, TVA, LEI, ville, pays…",
+            "en-US": "Name, SIREN, VAT, LEI, city, country…"
+          }
+        },
+        "facets": [
+          {
+            "id": "flag",
+            "kind": "flags",
+            "title": {
+              "fr-FR": "À surveiller",
+              "en-US": "Needs attention"
+            },
+            "flags": [
+              {
+                "id": "SUSP",
+                "tone": "warn",
+                "label": {
+                  "fr-FR": "Suspect",
+                  "en-US": "Suspect"
+                },
+                "when": {
+                  "derived": "suspects",
+                  "filled": true
+                }
+              },
+              {
+                "id": "DUP",
+                "tone": "warn",
+                "label": {
+                  "fr-FR": "Même SIREN",
+                  "en-US": "Same SIREN"
+                },
+                "when": {
+                  "derived": "sirenTwins",
+                  "gt": 1
+                }
+              },
+              {
+                "id": "BLOCK",
+                "tone": "bad",
+                "label": {
+                  "fr-FR": "Paiements bloqués",
+                  "en-US": "Payments blocked"
+                },
+                "when": {
+                  "field": "/paiementBloque",
+                  "in": [
+                    true
+                  ]
+                }
+              },
+              {
+                "id": "SANC",
+                "tone": "bad",
+                "label": {
+                  "fr-FR": "Gel des avoirs ?",
+                  "en-US": "Asset freeze?"
+                },
+                "when": {
+                  "field": "/conformite/etatSanctions",
+                  "in": [
+                    "A_EXAMINER",
+                    "CONFIRMEE"
+                  ]
+                }
+              },
+              {
+                "id": "EINV",
+                "tone": "warn",
+                "label": {
+                  "fr-FR": "E-facture à régulariser",
+                  "en-US": "E-invoicing to settle"
+                },
+                "when": {
+                  "all": [
+                    {
+                      "field": "/typeTiers",
+                      "notIn": [
+                        "GROUPE"
+                      ]
+                    },
+                    {
+                      "derived": "company",
+                      "in": [
+                        true
+                      ]
+                    },
+                    {
+                      "derived": "france",
+                      "in": [
+                        true
+                      ]
+                    },
+                    {
+                      "field": "/statut",
+                      "in": [
+                        "ACTIF"
+                      ]
+                    },
+                    {
+                      "any": [
+                        {
+                          "field": "/facturationElectronique/statutAnnuaire",
+                          "notIn": [
+                            "INSCRIT"
+                          ]
+                        },
+                        {
+                          "derived": "emi",
+                          "in": [
+                            "NC"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "SIRENE",
+                "tone": "warn",
+                "label": {
+                  "fr-FR": "Sirene à vérifier",
+                  "en-US": "Sirene to check"
+                },
+                "when": {
+                  "all": [
+                    {
+                      "derived": "france",
+                      "in": [
+                        true
+                      ]
+                    },
+                    {
+                      "derived": "company",
+                      "in": [
+                        true
+                      ]
+                    },
+                    {
+                      "field": "/conformite/etatSirene",
+                      "notIn": [
+                        "ACTIF"
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "VIES",
+                "tone": "warn",
+                "label": {
+                  "fr-FR": "TVA à vérifier (VIES)",
+                  "en-US": "VAT to check (VIES)"
+                },
+                "when": {
+                  "all": [
+                    {
+                      "derived": "france",
+                      "in": [
+                        false
+                      ]
+                    },
+                    {
+                      "field": "/pays",
+                      "in": [
+                        "AT",
+                        "BE",
+                        "BG",
+                        "CY",
+                        "CZ",
+                        "DE",
+                        "DK",
+                        "EE",
+                        "ES",
+                        "FI",
+                        "FR",
+                        "GR",
+                        "HR",
+                        "HU",
+                        "IE",
+                        "IT",
+                        "LT",
+                        "LU",
+                        "LV",
+                        "MT",
+                        "NL",
+                        "PL",
+                        "PT",
+                        "RO",
+                        "SE",
+                        "SI",
+                        "SK"
+                      ]
+                    },
+                    {
+                      "field": "/conformite/etatVies",
+                      "notIn": [
+                        "VALIDE"
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "NOID",
+                "tone": "bad",
+                "label": {
+                  "fr-FR": "Identifiant manquant",
+                  "en-US": "No identifier"
+                },
+                "when": {
+                  "all": [
+                    {
+                      "derived": "company",
+                      "in": [
+                        true
+                      ]
+                    },
+                    {
+                      "derived": "ident",
+                      "empty": true
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "RIB",
+                "tone": "warn",
+                "label": {
+                  "fr-FR": "RIB à valider",
+                  "en-US": "Bank account"
+                },
+                "when": {
+                  "all": [
+                    {
+                      "field": "/typeTiers",
+                      "notIn": [
+                        "GROUPE"
+                      ]
+                    },
+                    {
+                      "derived": "company",
+                      "in": [
+                        true
+                      ]
+                    },
+                    {
+                      "any": [
+                        {
+                          "derived": "ribTodo",
+                          "gt": 0
+                        },
+                        {
+                          "derived": "ribOk",
+                          "eq": 0
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "QUAL",
+                "tone": "bad",
+                "label": {
+                  "fr-FR": "À compléter",
+                  "en-US": "To complete"
+                },
+                "when": {
+                  "all": [
+                    {
+                      "field": "/typeTiers",
+                      "notIn": [
+                        "GROUPE"
+                      ]
+                    },
+                    {
+                      "any": [
+                        {
+                          "field": "/scoreQualite",
+                          "lt": 70
+                        },
+                        {
+                          "field": "/scoreQualite",
+                          "empty": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "emi",
+            "kind": "field",
+            "field": "derived:emi",
+            "title": {
+              "fr-FR": "Doit émettre des factures électroniques",
+              "en-US": "Must issue e-invoices"
+            }
+          },
+          {
+            "id": "pays",
+            "kind": "field",
+            "field": "/pays",
+            "title": {
+              "fr-FR": "Pays",
+              "en-US": "Country"
+            }
+          },
+          {
+            "id": "st",
+            "kind": "field",
+            "field": "/statut",
+            "title": {
+              "fr-FR": "Statut",
+              "en-US": "Status"
+            }
+          },
+          {
+            "id": "fam",
+            "kind": "tree",
+            "field": "/commercial/familleAchat",
+            "parent": "/parent",
+            "title": {
+              "fr-FR": "Famille d'achats",
+              "en-US": "Purchasing family"
+            },
+            "open": false
+          },
+          {
+            "id": "type",
+            "kind": "field",
+            "field": "/typeTiers",
+            "title": {
+              "fr-FR": "Type de tiers",
+              "en-US": "Partner type"
+            },
+            "widget": "chips"
+          },
+          {
+            "id": "src",
+            "kind": "field",
+            "field": "/sourceSysteme",
+            "title": {
+              "fr-FR": "Système source",
+              "en-US": "Source system"
+            }
+          },
+          {
+            "id": "sir",
+            "kind": "field",
+            "field": "/conformite/etatSirene",
+            "title": {
+              "fr-FR": "État Sirene",
+              "en-US": "Sirene status"
+            }
+          },
+          {
+            "id": "af",
+            "kind": "field",
+            "field": "/conformite/controleAntiFraude",
+            "title": {
+              "fr-FR": "Contrôle anti-fraude",
+              "en-US": "Anti-fraud check"
+            }
+          },
+          {
+            "id": "einv",
+            "kind": "field",
+            "field": "/facturationElectronique/statutAnnuaire",
+            "title": {
+              "fr-FR": "Annuaire de la facturation électronique",
+              "en-US": "E-invoicing directory"
+            }
+          },
+          {
+            "id": "band",
+            "kind": "ranges",
+            "field": "/scoreQualite",
+            "title": {
+              "fr-FR": "Score qualité",
+              "en-US": "Quality score"
+            },
+            "ranges": [
+              {
+                "code": "hi",
+                "min": 80,
+                "label": {
+                  "fr-FR": "80 et plus",
+                  "en-US": "80 and above"
+                }
+              },
+              {
+                "code": "mid",
+                "min": 50,
+                "max": 80,
+                "label": {
+                  "fr-FR": "De 50 à 79",
+                  "en-US": "50 to 79"
+                }
+              },
+              {
+                "code": "lo",
+                "max": 50,
+                "label": {
+                  "fr-FR": "Moins de 50",
+                  "en-US": "Below 50"
+                }
+              }
+            ]
+          },
+          {
+            "id": "fav",
+            "kind": "favorites"
+          }
+        ],
+        "tiles": [
+          {
+            "id": "actifs",
+            "label": {
+              "fr-FR": "Fournisseurs actifs",
+              "en-US": "Active suppliers"
+            },
+            "set": {
+              "st": [
+                "ACTIF"
+              ],
+              "type": [
+                "FILIALE",
+                "INDEPENDANT"
+              ]
+            }
+          },
+          {
+            "id": "valid",
+            "label": {
+              "fr-FR": "En cours de validation",
+              "en-US": "Under approval"
+            },
+            "tone": "info",
+            "set": {
+              "st": [
+                "EN_VALIDATION"
+              ]
+            }
+          },
+          {
+            "id": "dup",
+            "label": {
+              "fr-FR": "Doublons potentiels",
+              "en-US": "Possible duplicates"
+            },
+            "tone": "warn",
+            "when": {
+              "any": [
+                {
+                  "derived": "suspects",
+                  "filled": true
+                },
+                {
+                  "derived": "sirenTwins",
+                  "gt": 1
+                }
+              ]
+            }
+          },
+          {
+            "id": "block",
+            "label": {
+              "fr-FR": "Paiements bloqués",
+              "en-US": "Payments blocked"
+            },
+            "tone": "bad",
+            "flag": "BLOCK"
+          },
+          {
+            "id": "rib",
+            "label": {
+              "fr-FR": "RIB à valider",
+              "en-US": "Bank accounts to validate"
+            },
+            "tone": "warn",
+            "flag": "RIB"
+          },
+          {
+            "id": "einv",
+            "label": {
+              "fr-FR": "Facturation électronique à régulariser",
+              "en-US": "E-invoicing to settle"
+            },
+            "tone": "warn",
+            "flag": "EINV"
+          },
+          {
+            "id": "qual",
+            "label": {
+              "fr-FR": "Fiches à compléter",
+              "en-US": "Records to complete"
+            },
+            "tone": "bad",
+            "flag": "QUAL"
+          },
+          {
+            "id": "groupes",
+            "label": {
+              "fr-FR": "Groupes et holdings",
+              "en-US": "Groups and holdings"
+            },
+            "set": {
+              "type": [
+                "GROUPE"
+              ]
+            }
+          }
+        ],
+        "sorts": [
+          {
+            "field": "/raisonSociale",
+            "label": {
+              "fr-FR": "Raison sociale",
+              "en-US": "Name"
+            }
+          },
+          {
+            "field": "/scoreQualite",
+            "dir": "asc",
+            "label": {
+              "fr-FR": "Score le plus bas d'abord",
+              "en-US": "Lowest score first"
+            }
+          },
+          {
+            "field": "/commercial/montantAnnuelEstime",
+            "dir": "desc",
+            "label": {
+              "fr-FR": "Volume d'achat décroissant",
+              "en-US": "Largest spend first"
+            }
+          }
+        ],
+        "pageSize": 48,
+        "card": {
+          "layout": "vertical",
+          "minWidth": 280,
+          "edge": "pill",
+          "title": "/raisonSociale",
+          "overline": [
+            {
+              "field": "/typeTiers",
+              "widget": "text"
+            },
+            {
+              "field": "/sourceSysteme",
+              "widget": "text"
+            }
+          ],
+          "pill": {
+            "field": "/statut",
+            "colors": {
+              "ACTIF": "ok",
+              "EN_VALIDATION": "info",
+              "BLOQUE": "bad",
+              "BROUILLON": "muted",
+              "INACTIF": "muted"
+            },
+            "default": "muted"
+          },
+          "subtitle": [
+            {
+              "derived": "ident",
+              "widget": "bold"
+            },
+            {
+              "derived": "cp",
+              "widget": "text"
+            },
+            {
+              "derived": "ville",
+              "widget": "text"
+            },
+            {
+              "field": "/codeNaf",
+              "widget": "text",
+              "options": {
+                "prefix": "NAF "
+              }
+            }
+          ],
+          "lines": [
+            {
+              "derived": "suspects",
+              "widget": "link",
+              "label": {
+                "fr-FR": "Suspect de",
+                "en-US": "Suspect of"
+              }
+            },
+            {
+              "field": "/motifBlocage",
+              "widget": "text",
+              "label": {
+                "fr-FR": "Paiements bloqués",
+                "en-US": "Payments blocked"
+              }
+            },
+            {
+              "field": "/groupeParent",
+              "widget": "link",
+              "label": {
+                "fr-FR": "Groupe",
+                "en-US": "Group"
+              }
+            },
+            {
+              "field": "/commercial/montantAnnuelEstime",
+              "widget": "money",
+              "options": {
+                "unit": "€",
+                "compact": true
+              },
+              "label": {
+                "fr-FR": "Dépense annuelle",
+                "en-US": "Annual spend"
+              }
+            }
+          ],
+          "tags": [
+            {
+              "field": "/commercial/familleAchat",
+              "widget": "tag"
+            },
+            {
+              "flags": "flag",
+              "options": {
+                "none": {
+                  "fr-FR": "Fiche conforme",
+                  "en-US": "Record compliant"
+                }
+              }
+            }
+          ],
+          "kpis": [
+            {
+              "derived": "etab",
+              "widget": "num",
+              "label": {
+                "fr-FR": "établ.",
+                "en-US": "sites"
+              }
+            },
+            {
+              "derived": "contacts",
+              "widget": "num",
+              "label": {
+                "fr-FR": "contacts",
+                "en-US": "contacts"
+              }
+            },
+            {
+              "derived": "ribOk",
+              "widget": "num",
+              "label": {
+                "fr-FR": "RIB validés",
+                "en-US": "bank OK"
+              }
+            }
+          ],
+          "gauge": {
+            "field": "/scoreQualite",
+            "widget": "bar",
+            "max": 100,
+            "green": 80,
+            "amber": 50,
+            "label": {
+              "fr-FR": "Qualité",
+              "en-US": "Quality"
+            }
+          },
+          "actions": [
+            {
+              "action": "open"
+            },
+            {
+              "workflow": "FournisseursMiseAJourTiers",
+              "var": "tiersXPath",
+              "single": true,
+              "label": {
+                "fr-FR": "Mettre à jour",
+                "en-US": "Update"
+              }
+            },
+            {
+              "workflow": "FournisseursChangementRIB",
+              "var": "tiersXPath",
+              "single": true,
+              "label": {
+                "fr-FR": "Changer le RIB",
+                "en-US": "Change bank details"
+              },
+              "cond": {
+                "field": "/typeTiers",
+                "notIn": [
+                  "GROUPE"
+                ]
+              }
+            },
+            {
+              "action": "favorite"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

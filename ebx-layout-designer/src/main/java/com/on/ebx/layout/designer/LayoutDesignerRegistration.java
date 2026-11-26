@@ -8,7 +8,7 @@ import com.orchestranetworks.module.ModuleServiceRegistrationContext;
 import com.orchestranetworks.service.LoggingCategory;
 import com.orchestranetworks.service.OperationException;
 
-/** Registers the module: its dataset at repository startup, the "Design the record form", "Record form layouts", "About" and "Arrange my form" services. */
+/** Registers the module: its dataset at repository startup, the "Design the record form", "Record form layouts", "About", "Arrange my form", "Explorer" and "Design the explorer" services. */
 @WebListener
 public final class LayoutDesignerRegistration extends ModuleRegistrationListener
 {
@@ -30,5 +30,7 @@ public final class LayoutDesignerRegistration extends ModuleRegistrationListener
 		pContext.registerUserService(new PersonalizeServiceDeclaration(pContext.getModuleName()));
 		pContext.registerUserService(new GridServiceDeclaration(pContext.getModuleName()));
 		pContext.registerUserService(new ActionServiceDeclaration(pContext.getModuleName()));
+		pContext.registerUserService(new ExplorerServiceDeclaration(pContext.getModuleName()));
+		pContext.registerUserService(new ExplorerDesignerServiceDeclaration(pContext.getModuleName()));
 	}
 }

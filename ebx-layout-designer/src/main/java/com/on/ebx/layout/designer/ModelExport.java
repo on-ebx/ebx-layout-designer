@@ -207,7 +207,7 @@ final class ModelExport
 		return boot;
 	}
 
-	private static void walk(final SchemaNode pNode, final String pGroup, final List<Locale> pLocales, final Locale pUserLocale, final Adaptation pRecord,
+	static void walk(final SchemaNode pNode, final String pGroup, final List<Locale> pLocales, final Locale pUserLocale, final Adaptation pRecord,
 		final ValueContext pValues, final ArrayNode pFields, final ArrayNode pGroups, final ArrayNode pAssocs, final ObjectNode pValuesOut, final Adaptation pDataset)
 	{
 		for (final SchemaNode child : pNode.getNodeChildren())

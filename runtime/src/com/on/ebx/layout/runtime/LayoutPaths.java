@@ -45,6 +45,21 @@ public final class LayoutPaths
 	public static final String ACTION_PARAM = "ldfAction";
 	public static final String PERSPECTIVE_PARAM = "ldfPerspective";
 
+	/** Explorers (1.16.0): one row per explorer, several per table possible; key {@code /id}. */
+	public static final Path EXPLORER_LAYOUT = Path.parse("/root/ExplorerLayout");
+	/** A user's starred records in an explorer; key: user, explorer, dataspace, dataset, record. */
+	public static final Path EXPLORER_FAVORITE = Path.parse("/root/ExplorerFavorite");
+	public static final Path FAV_EXPLORER = Path.parse("./explorer");
+	public static final Path FAV_DATASPACE = Path.parse("./dataspace");
+	public static final Path FAV_DATASET = Path.parse("./dataset");
+	public static final Path FAV_RECORD = Path.parse("./record");
+	public static final Path FAV_ADDED_ON = Path.parse("./addedOn");
+	/** The module service that shows an explorer, and the one that designs it. */
+	public static final String EXPLORER_SERVICE = "Explorer";
+	public static final String EXPLORER_DESIGNER_SERVICE = "ExplorerDesigner";
+	/** Web component parameter: the explorer id. */
+	public static final String EXPLORER_PARAM = "ldxExplorer";
+
 	/** The class a data model declares as its record form to use a layout of this designer. */
 	public static final String FORM_CLASS = "com.on.ebx.layout.runtime.ConfigurableForm";
 
