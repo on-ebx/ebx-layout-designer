@@ -131,7 +131,7 @@ record (`a`, its path); a field of its target table is a path of that table (`/a
 | Block | Keys |
 |---|---|
 | `timeline` | `a`, `date` (date field of the rows, most recent first), `titleField` (default: the row's label), `detail`, `color: {field, map: {value: tone}}`, `max` (10) |
-| `history` | `fields` (paths followed; empty: all), `max` (8), `author` (true). Reads `AdaptationTable.getHistory()`: history must be activated on the table, else the block says so |
+| `history` | `fields` (paths followed; empty: all), `max` (8), `author` (true), `creationDetails` (false: a creation shows who and when only, since 1.6.1). Reads `AdaptationTable.getHistory()`: history must be activated on the table, else the block says so |
 | `completeness` | `fields: [{p, weight}]` (empty: every field placed on the form), `threshold` (80, %), `listMissing` (true, with "Go to field") |
 | `stepper` | `field` (status), `steps` (codes in order; empty: the enumeration's values), `exits` (codes shown in red outside the steps), `labels: {code: text}` (optional) |
 | `checklist` | `items: [{label, when, go}]`; `when` is `{"filled": path}`, a condition `{"field", "in"…}` or `{"xpath": "./Price > 0"}`; `go` (optional) the field opened by "Go to field" |

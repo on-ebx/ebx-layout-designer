@@ -1,5 +1,10 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.6.1 (2026-10-09)
+
+- **Change history**: a creation now shows who and when only, not every value of the new record (they are the form
+  itself). *List the values at creation* (`creationDetails`) brings the old display back.
+
 ## 1.6.0 (2026-10-09)
 
 - **New block "Changes in this request"** (palette › Quality): in a child dataspace (a workflow's work dataspace), what

@@ -198,6 +198,7 @@ const BL = {
  history:{cat:'time', l:['Historique des modifications','Change history'], d:['Qui a changé quoi et quand (table historisée).','Who changed what and when (historized table).'], tags:'audit traçabilité versions trail',
    def:{fields:[], max:8, author:true},
    spec:[{k:'fields', key:'fields', l:['Champs suivis (vide : tous)','Fields followed (empty: all)']}, {k:'num', key:'max', def:8, l:['Nombre d’entrées','Entries']}, {k:'bool', key:'author', def:true, l:['Afficher l’auteur','Show the author']},
+     {k:'bool', key:'creationDetails', def:false, l:['Détailler les valeurs à la création','List the values at creation']},
      {k:'hint', l:['Lit l’historique d’EBX (AdaptationTable.getHistory) : l’historisation doit être activée sur la table.','Reads EBX’s history (AdaptationTable.getHistory): history must be activated on the table.']}]},
  completeness:{cat:'quality', l:['Complétude','Completeness'], d:['Le pourcentage de champs renseignés et les manquants, avec « Aller au champ ».','The share of filled fields and the missing ones, with “Go to field”.'], tags:'qualité remplissage score quality',
    def:{fields:[], threshold:80, listMissing:true},

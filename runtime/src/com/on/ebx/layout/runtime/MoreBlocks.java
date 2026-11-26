@@ -241,7 +241,13 @@ final class MoreBlocks
 				}
 			}
 			final String opValue = op == null ? "" : Values.key(r.get(op));
-			final String kind = "C".equals(opValue) || previous == null ? MoreBlocks.t("histCreated", rc) : "D".equals(opValue) ? MoreBlocks.t("histDeleted", rc) : MoreBlocks.t("histChanged", rc);
+			final boolean creation = "C".equals(opValue) || previous == null;
+			final String kind = creation ? MoreBlocks.t("histCreated", rc) : "D".equals(opValue) ? MoreBlocks.t("histDeleted", rc) : MoreBlocks.t("histChanged", rc);
+			// a creation only says who and when: its values are the form itself ("creationDetails" lists them)
+			if (creation && !b.path("creationDetails").asBoolean(false))
+			{
+				changes.clear();
+			}
 			if (changes.isEmpty() && previous != null && !"D".equals(opValue))
 			{
 				previous = r;
