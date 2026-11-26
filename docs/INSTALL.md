@@ -61,7 +61,7 @@ A layout is used only once the table declares the runtime class as its record fo
 </osd:table>
 ```
 
-- **Model packaged in a module** (an XSD file): the designer's *Declaration in the model* tab writes this line itself,
+- **Model packaged in a module** (an XSD file): the designer's *Activation* panel writes this line itself,
   keeps a copy of the XSD next to it (`.bak-<time>-layout-designer`) and remembers the class it replaced, to put it back
   with *Deactivate*. EBX reads the XSD at start: **restart once**. The module's folder must be reachable from the
   server (a Tomcat context in `conf/Catalina/localhost` or an exploded war in `webapps`).

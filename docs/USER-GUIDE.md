@@ -22,11 +22,10 @@ you save it.
 
 | Area | What it holds |
 |---|---|
-| Top bar | *Preview with* (the record shown in the preview), *Language* (the locale of the preview and of the texts you type), *Translations*, *Design* / *Preview* mode, *Width* (test a narrow screen), *Undo*, *Save* |
+| Top bar | *Preview with* (the record shown in the preview), *Language* (the locale of the preview and of the texts you type), *Translations*, *Design* / *Preview* mode, *Width* (test a narrow screen), *Help*, the **state of the form** as the model declares it (*Declared in the model*, *The table uses another form*, *Not used by the table*; *DMA model: check the declaration*), *Activation*, *</> Code*, *Undo*, *Save* |
 | Palette (left) | the table's **fields** by group (search by label or path; a placed field is marked), its **associations**, the **blocks**, the **registered components** |
 | Form (centre) | the record form as it will look, with the chosen record's real values |
-| Inspector (right) | the settings of what you clicked: tab, row, block or field |
-| Bottom | *What the designer produces*: the saved JSON, the declaration in the model, an optional frozen Java class |
+| Inspector (right) | the settings of what you clicked: tab, row, block or field, or the activation of the form. Under 1280 px wide it opens as a drawer on the right while something is selected |
 
 ## 3. Building the form
 
@@ -95,13 +94,13 @@ The designer's own screens are in French or English, after the user's locale.
 
 - **Save** writes the layout (JSON) as a new version in `LayoutDesigner/FormLayout`. It shows at the next opening of a
   record, **no restart**, as soon as the table declares the designed form.
-- **Declaration in the model** (bottom tab):
+- **Activation** (*Activation* in the top bar; the state next to it says whether the table uses the form):
   - model packaged in a module: *Declare the designed form on this table* writes the `recordForm` line in the XSD,
     with a backup; **restart the server once**. *Put the previous form back* undoes it (restart again);
   - DMA model: declare `com.on.ebx.layout.runtime.ConfigurableForm` as the table's form in the model screen (or with
     the `data-model` MCP operation `set_form_layout`) and republish; no restart.
-- **Frozen Java class**: the same layout written as a plain `UIForm` class, for a project that does not want the
-  designer at run time. Optional.
+- **</> Code**: the saved JSON, and the same layout as a frozen `UIForm` class for a project that does not want the
+  designer at run time (optional).
 
 ## 8. For developers: registered components
 
@@ -118,8 +117,9 @@ server's at run time).
 
 ## 9. Limitations (1.0.0)
 
-- **DMA models**: the designer cannot write the declaration and does not detect it; its *Declaration* tab keeps showing
-  the DMA instructions even once the table is declared. Check the form itself.
+- **DMA models**: the designer cannot write the declaration itself (declare the class in the model screen or with
+  `set_form_layout`), nor read it: the state in the top bar then says *DMA model: check the declaration*. The state of a
+  module model comes from its XSD file; a declaration applies after the next restart.
 - **Go to field** needs a message attached to a field. A rule declared on the table (a constraint across several
   fields) reports on the record as a whole: the message shows, without a location or a link. An action button tied to
   a field therefore never shows for such a rule.

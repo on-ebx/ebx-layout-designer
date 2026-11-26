@@ -327,3 +327,14 @@
 .ld-app .ld-h-table th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding:8px 10px 8px 0}
 .ld-app .ld-h-table td{border-bottom:1px solid var(--line-2);padding:8px 10px 8px 0;vertical-align:top}
 .ld-app .mono{font-family:var(--mono)}
+/* where the form stands, next to Save: active, declared but not reloaded, not used */
+.ld-app .status.use-active{background:var(--ok-soft);color:var(--ok-ink)}
+.ld-app .status.use-restart,.ld-app .status.use-off,.ld-app .status.use-other{background:var(--note-soft);color:var(--note-ink)}
+.ld-app .status.use-unknown{background:var(--line-2);color:var(--muted)}
+/* "</> Code": the saved JSON and the frozen Java class, in a dialog instead of a block at the bottom of the page */
+.ld-app .ld-dlg{width:min(980px,calc(100vw - 32px));max-height:calc(100vh - 48px);border:1px solid var(--line);border-radius:12px;padding:0;background:var(--surface);color:inherit;box-shadow:0 20px 60px rgba(23,32,51,.3)}
+.ld-app .ld-dlg::backdrop{background:rgba(23,32,51,.35)}
+.ld-app .ld-dlg-hd{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line-2)}
+.ld-app .ld-dlg-hd h2{margin:0;font-size:15px}
+.ld-app .ld-dlg-bd{display:flex;flex-direction:column;gap:10px;padding:16px;overflow:auto;max-height:calc(100vh - 140px)}
+.ld-app .ld-dlg-bd .code{max-height:calc(100vh - 300px)}

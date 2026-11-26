@@ -24,7 +24,7 @@ A data model uses a designed form once its table declares the runtime class:
 </osd:table>
 ```
 
-The designer writes that line itself for a model packaged in a module (tab *Declaration in the model*, with a copy of
+The designer writes that line itself for a model packaged in a module (*Activation* in the top bar, with a copy of
 the XSD next to it and the previous class kept to put it back). EBX reads it at the next start: **one restart, once**.
 For a DMA model, declare the class in the model screen and republish. Without an active layout the standard EBX form
 is shown.

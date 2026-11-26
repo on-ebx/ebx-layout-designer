@@ -23,11 +23,10 @@ association. C'est un brouillon tant que vous ne l'enregistrez pas.
 
 | Zone | Contenu |
 |---|---|
-| Barre du haut | *Aperçu avec* (la fiche montrée dans l'aperçu), *Langue* (celle de l'aperçu et des textes saisis), *Traductions*, mode *Concevoir* / *Aperçu*, *Largeur* (tester un écran étroit), *Annuler*, *Enregistrer* |
+| Barre du haut | *Aperçu avec* (la fiche montrée dans l'aperçu), *Langue* (celle de l'aperçu et des textes saisis), *Traductions*, mode *Concevoir* / *Aperçu*, *Largeur* (tester un écran étroit), *Aide*, l'**état de la fiche** tel que le modèle le déclare (*Déclarée dans le modèle*, *La table utilise une autre fiche*, *Non utilisée par la table* ; *Modèle DMA : déclaration à vérifier*), *Activation*, *</> Code*, *Annuler*, *Enregistrer* |
 | Palette (gauche) | les **champs** de la table par groupe (recherche par libellé ou chemin ; un champ placé est marqué), ses **associations**, les **blocs**, les **composants enregistrés** |
 | Fiche (centre) | la fiche telle qu'elle s'affichera, avec les vraies valeurs de l'enregistrement choisi |
-| Inspecteur (droite) | les réglages de ce que vous avez cliqué : onglet, ligne, bloc ou champ |
-| Bas de page | *Ce que le designer produit* : le JSON enregistré, la déclaration dans le modèle, une classe Java figée facultative |
+| Inspecteur (droite) | les réglages de ce que vous avez cliqué : onglet, ligne, bloc ou champ, ou l'activation de la fiche. Sous 1 280 px de large, il s'ouvre en panneau latéral à droite tant qu'un élément est sélectionné |
 
 ## 3. Construire la fiche
 
@@ -99,14 +98,14 @@ Les écrans du designer lui-même sont en français ou en anglais, selon la lang
 
 - **Enregistrer** écrit la mise en page (JSON) comme nouvelle version dans `LayoutDesigner/FormLayout`. Elle s'affiche à
   la prochaine ouverture d'une fiche, **sans redémarrage**, dès que la table déclare la fiche conçue.
-- **Déclaration dans le modèle** (onglet du bas) :
+- **Activation** (*Activation* dans la barre du haut ; l'état affiché à côté dit si la table utilise la fiche) :
   - modèle packagé dans un module : *Déclarer la fiche conçue sur cette table* écrit la ligne `recordForm` dans le XSD,
     avec une copie de sauvegarde ; **redémarrez le serveur une fois**. *Remettre la fiche précédente* l'annule
     (nouveau redémarrage) ;
   - modèle DMA : déclarez `com.on.ebx.layout.runtime.ConfigurableForm` comme formulaire de la table dans l'écran du
     modèle (ou avec l'opération MCP `set_form_layout` du serveur `data-model`) et republiez ; pas de redémarrage.
-- **Classe Java figée** : la même mise en page écrite en classe `UIForm` ordinaire, pour un projet qui ne veut pas du
-  designer à l'exécution. Facultatif.
+- **</> Code** : le JSON enregistré, et la même mise en page en classe `UIForm` figée pour un projet qui ne veut pas
+  du designer à l'exécution (facultatif).
 
 ## 8. Pour les développeurs : composants enregistrés
 
@@ -123,8 +122,9 @@ celui du serveur à l'exécution).
 
 ## 9. Limites (1.0.0)
 
-- **Modèles DMA** : le designer ne sait pas écrire la déclaration et ne la détecte pas ; son onglet *Déclaration*
-  continue d'afficher les instructions DMA même quand la table est déclarée. Vérifiez sur la fiche elle-même.
+- **Modèles DMA** : le designer ne sait pas écrire lui-même la déclaration (déclarez la classe dans l'écran du modèle
+  ou avec `set_form_layout`), ni la lire : l'état affiché dans la barre du haut indique alors *Modèle DMA : déclaration à
+  vérifier*. Pour un modèle de module, l'état vient de son fichier XSD ; une déclaration s'applique au redémarrage suivant.
 - **Aller au champ** suppose un message rattaché à un champ. Une règle posée sur la table (une contrainte sur plusieurs
   champs) porte sur la fiche entière : le message s'affiche, sans emplacement ni lien. Un bouton d'action lié à un
   champ n'apparaît donc jamais pour une telle règle.

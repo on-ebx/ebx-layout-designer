@@ -1,5 +1,15 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.2.0 (2026-10-07)
+
+- **State of the form in the top bar**, next to Save, as the model declares it: *Declared in the model*, *The table uses
+  another form*, *Not used by the table*; for a DMA model, *DMA model: check the declaration* (no public API tells it).
+- **Activation** button: opens the activation in the inspector (declare the designed form, put the previous one back, the
+  DMA instructions), highlighted when the form is not used.
+- **</> Code** button: the saved JSON and the frozen Java class in a dialog. The block at the bottom of the page is gone.
+- Public EBX Java API only: every class the module uses is in the published Javadoc of EBX or of the Match and Merge
+  add-on.
+
 ## 1.1.1 (2026-10-07)
 
 - Designer on a screen under 1280 px wide: the inspector (the settings of the selected tab, row, block or field) opens

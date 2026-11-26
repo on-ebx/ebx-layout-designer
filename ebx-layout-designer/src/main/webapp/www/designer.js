@@ -18,7 +18,16 @@ function L(fr, en, it){ const o = {}; LOCALES.forEach(l => { const k = l.slice(0
 
 /* the designer's own words */
 const C = {
- title:['Designer de fiche','Form designer'], help:['Aide','Help'], closeInsp:['Fermer','Close'], preview:['Aperçu avec','Preview with'], language:['Langue','Language'], texts:['Textes','Texts'],
+ title:['Designer de fiche','Form designer'], help:['Aide','Help'],
+ useActive:['Déclarée dans le modèle','Declared in the model'], useRestart:['Déclarée · redémarrage requis','Declared · restart needed'],
+ useOff:['Non utilisée par la table','Not used by the table'], useUnknown:['Modèle DMA : déclaration à vérifier','DMA model: check the declaration'],
+ useOther:['La table utilise une autre fiche','The table uses another form'],
+ activation:['Activation','Activation'], code:['</> Code','</> Code'], deployTitle:['Activation de la fiche','Activating the form'],
+ deployActive:['Le modèle déclare cette fiche. Elle s’applique dès que le serveur a redémarré après la déclaration ; ensuite, chaque enregistrement s’affiche à la prochaine ouverture d’une fiche.','The model declares this form. It applies once the server has restarted after the declaration; from then on, every save shows at the next opening of a record.'],
+ deployRestart:['La déclaration est écrite dans le modèle, mais EBX ne l’a pas encore relue : redémarrez le serveur une fois.','The declaration is written in the model, but EBX has not read it yet: restart the server once.'],
+ deployOff:['La table n’utilise pas encore cette mise en page : les enregistrements ne changent rien à la fiche tant qu’elle n’est pas déclarée.','The table does not use this layout yet: saving changes nothing on the form until it is declared.'],
+ deployUnknown:['Pour un modèle DMA, la déclaration se fait et se vérifie dans l’écran du modèle (ou avec set_form_layout) : ouvrez ensuite un enregistrement pour voir la fiche.','For a DMA model, the declaration is made and checked in the model screen (or with set_form_layout): then open a record to see the form.'],
+ closeDlg:['Fermer','Close'], codeTitle:['Ce que le designer produit','What the designer produces'], closeInsp:['Fermer','Close'], preview:['Aperçu avec','Preview with'], language:['Langue','Language'], texts:['Textes','Texts'],
  translations:['Traductions','Translations'], todo:['{0} à faire','{0} to do'], complete:['complètes','complete'], mode:['Mode','Mode'], design:['Concevoir','Design'],
  previewMode:['Aperçu','Preview'], width:['Largeur','Width'], undo:['Annuler','Undo'], save:['Enregistrer','Save'], saved:['Enregistré','Saved'],
  dirty:['Modifié, non enregistré','Changed, not saved'], draft:['Brouillon (non enregistré)','Draft (not saved)'], generated:['Mise en page de départ, générée depuis le modèle','Starting layout, built from the model'],
@@ -391,6 +400,8 @@ function renderInspector(){
   if (!sel){
     h += `<div class="empty-insp"><p style="margin:0">${esc(c('help1'))}</p><ol><li>${esc(c('help2'))}</li><li>${esc(c('help3'))}</li><li>${esc(c('help4'))}</li><li>${esc(c('help5'))}</li></ol>
       <div class="info">${esc(c('helpLoc', LOCALES.join(', ')))}</div><div class="info">${esc(c('helpRules'))}</div></div>`;
+  } else if (sel.k === 'deploy'){
+    h += deployHtml();
   } else if (sel.k === 'i18n'){
     const texts = allTexts(); const miss = missingByLocale();
     h += `<div class="insp"><span class="kind">${esc(c('translations'))}</span><h3>${esc(c('trTitle'))}</h3><p class="hint">${esc(c('trHint', LOCALES.join(', '), DEF))}</p>
@@ -491,26 +502,41 @@ function javaExport(){
   Ls.push('}');
   return Ls.join('\n');
 }
-function renderOutput(){
-  ['json','xsd','java'].forEach(k => $('#ld-o-' + k).setAttribute('aria-pressed', otab === k));
-  const ac = B.activation, st = B.stored;
-  const storedLine = st.exists ? `${esc(c('stored'))} ${st.version} · ${esc(st.updatedOn || '')} ${st.updatedBy ? esc(c('by')) + ' ' + esc(st.updatedBy) : ''}` : esc(c('notStored'));
-  if (otab === 'xsd'){
-    $('#ld-code').hidden = true; $('#ld-copy').hidden = true;
-    let h = `<div class="act"><div class="${ac.declared ? 'notice' : 'explain'}">${esc(ac.declared ? c('declared') : c('notDeclared'))}</div>
-      <div class="kv"><span>${esc(c('currentForm'))}</span><code>${esc(ac.currentForm || c('none2'))}</code><span>${esc(c('file'))}</span><code>${esc(ac.file || '—')}</code>${st.previousForm ? `<span>${esc(c('previousForm'))}</span><code>${esc(st.previousForm)}</code>` : ''}<span>FormLayout</span><span>${storedLine}</span></div>`;
-    if (ac.file){
-      h += `<div class="row-btns">${!ac.declared ? `<button type="button" class="btn primary small" data-submit="activate">${esc(c('activate'))}</button>` : `<button type="button" class="btn small ghost" data-submit="deactivate">${esc(c('deactivate'))}</button>`}</div><p class="hint">${esc(c('restart'))}</p>`;
-    } else if (ac.reason === 'dma') h += `<p class="hint">${esc(c('dma', ac.formClass))}</p>`;
-    else h += `<p class="hint">${esc(c('noFile', ac.reason, ac.formClass))}</p>`;
-    $('#ld-outx').innerHTML = h + '</div>';
-    $('#ld-how').innerHTML = `<p>${esc(c('jsonHow'))}</p>`;
-    return;
-  }
-  $('#ld-code').hidden = false; $('#ld-copy').hidden = false; $('#ld-outx').innerHTML = '';
-  $('#ld-code').textContent = otab === 'json' ? JSON.stringify(toLayout(), null, 2) : javaExport();
-  $('#ld-how').innerHTML = `<p>${esc(otab === 'json' ? c('jsonHow') : c('javaHow'))}</p><p class="hint">${storedLine}</p>`;
+/* where the form stands, as the model's XSD says (no public API tells which form the running schema uses):
+   declared, another class declared, nothing declared; unknown for a DMA model */
+function useState(){
+  const ac = B.activation;
+  if (!ac.file) return 'unknown';
+  if (ac.declared) return 'active';
+  return ac.currentForm ? 'other' : 'off';
 }
+function renderUse(){
+  const u = useState(), el = $('#ld-use');
+  el.className = 'status use-' + u;
+  el.textContent = c({active:'useActive', restart:'useRestart', off:'useOff', other:'useOther', unknown:'useUnknown'}[u]);
+  $('#ld-deploy').classList.toggle('primary', u === 'off' || u === 'other');
+  $('#ld-deploy').classList.toggle('ghost', !(u === 'off' || u === 'other'));
+  $('#ld-deploy').setAttribute('aria-pressed', !!(sel && sel.k === 'deploy'));
+}
+function deployHtml(){
+  const ac = B.activation, st = B.stored, u = useState();
+  const storedLine = st.exists ? `${esc(c('stored'))} ${st.version} · ${esc(st.updatedOn || '')} ${st.updatedBy ? esc(c('by')) + ' ' + esc(st.updatedBy) : ''}` : esc(c('notStored'));
+  let h = `<div class="insp act"><span class="kind">${esc(c('activation'))}</span><h3>${esc(c('deployTitle'))}</h3>
+    <div class="${u === 'active' ? 'notice' : 'explain'}">${esc(c(u === 'active' ? 'deployActive' : u === 'restart' ? 'deployRestart' : u === 'unknown' ? 'deployUnknown' : 'deployOff'))}</div>
+    <div class="kv"><span>${esc(c('currentForm'))}</span><code>${esc(ac.currentForm || (ac.file ? c('none2') : '—'))}</code><span>${esc(c('file'))}</span><code>${esc(ac.file || '—')}</code>${st.previousForm ? `<span>${esc(c('previousForm'))}</span><code>${esc(st.previousForm)}</code>` : ''}<span>FormLayout</span><span>${storedLine}</span></div>`;
+  if (ac.file){
+    h += `<div class="row-btns">${!ac.declared ? `<button type="button" class="btn primary small" data-submit="activate">${esc(c('activate'))}</button>` : `<button type="button" class="btn small ghost" data-submit="deactivate">${esc(c('deactivate'))}</button>`}</div><p class="hint">${esc(c('restart'))}</p>`;
+  } else if (ac.reason === 'dma'){ if (u !== 'active') h += `<p class="hint">${esc(c('dma', ac.formClass))}</p>`; }
+  else h += `<p class="hint">${esc(c('noFile', ac.reason, ac.formClass))}</p>`;
+  return h + `<p class="hint">${esc(c('jsonHow'))}</p></div>`;
+}
+function renderCode(){
+  const d = $('#ld-dlg'); if (!d || !d.open) return;
+  ['json','java'].forEach(k => $('#ld-o-' + k).setAttribute('aria-pressed', otab === k));
+  $('#ld-code').textContent = otab === 'json' ? JSON.stringify(toLayout(), null, 2) : javaExport();
+  $('#ld-how').innerHTML = `<p>${esc(otab === 'json' ? c('jsonHow') : c('javaHow'))}</p>`;
+}
+function renderOutput(){ renderUse(); renderCode(); }
 function renderStatus(){
   const s = $('#ld-status'); s.className = 'status ' + (dirty ? 'dirty' : 'saved'); s.textContent = dirty ? c(B.draft && !history.length ? 'draft' : 'dirty') : c('saved');
   $('#ld-undo').disabled = !history.length;
@@ -700,7 +726,10 @@ root.addEventListener('click', e => {
   if (t.closest('#ld-w-narrow')){ narrow = true; return renderAll(); }
   if (t.closest('#ld-i18n')){ sel = sel && sel.k === 'i18n' ? null : {k:'i18n'}; explain = ''; return renderAll(); }
   for (const k of ['fields','assoc','blocks']) if (t.closest('#ld-pt-' + k)){ ptab = k; return renderPalette(); }
-  for (const k of ['json','xsd','java']) if (t.closest('#ld-o-' + k)){ otab = k; return renderOutput(); }
+  for (const k of ['json','java']) if (t.closest('#ld-o-' + k)){ otab = k; return renderCode(); }
+  if (t.closest('#ld-deploy')){ sel = sel && sel.k === 'deploy' ? null : {k:'deploy'}; explain = ''; return renderAll(); }
+  if (t.closest('#ld-codebtn')){ const d = $('#ld-dlg'); if (d.showModal) d.showModal(); else d.setAttribute('open', ''); return renderCode(); }
+  if (t.closest('#ld-dlg-close')){ $('#ld-dlg').close ? $('#ld-dlg').close() : $('#ld-dlg').removeAttribute('open'); return; }
   if (t.closest('#ld-undo')){ const s = history.pop(); if (s){ const o = JSON.parse(s); S = o.S; cur = o.cur; sel = null; dirty = history.length > 0; commit(c('explUndo')); } return; }
   if (t.closest('#ld-save')) return submit('save');
   const sb = t.closest('[data-submit]'); if (sb) return submit(sb.dataset.submit);
@@ -779,15 +808,15 @@ root.innerHTML = `<div class="wrap">
     <div class="pick"><label>${esc(c('texts'))}</label><button type="button" class="btn ghost" id="ld-i18n" aria-pressed="false">${esc(c('translations'))}</button></div>
     <div class="pick"><label>${esc(c('mode'))}</label><div class="seg"><button type="button" id="ld-m-design" aria-pressed="true">${esc(c('design'))}</button><button type="button" id="ld-m-preview" aria-pressed="false">${esc(c('previewMode'))}</button></div></div>
     <div class="pick"><label>${esc(c('width'))}</label><div class="seg"><button type="button" id="ld-w-wide" aria-pressed="true">1 440 px</button><button type="button" id="ld-w-narrow" aria-pressed="false">890 px</button></div></div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${B.helpUrl ? `<a class="btn ghost" href="${esc(B.helpUrl)}" target="_blank" rel="noopener">${esc(c('help'))}</a>` : ''}<span class="status saved" id="ld-status"></span><button type="button" class="btn ghost" id="ld-undo" disabled>${esc(c('undo'))}</button><button type="button" class="btn primary" id="ld-save">${esc(c('save'))}</button></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${B.helpUrl ? `<a class="btn ghost" href="${esc(B.helpUrl)}" target="_blank" rel="noopener">${esc(c('help'))}</a>` : ''}<span class="status" id="ld-use" role="status"></span><button type="button" class="btn ghost" id="ld-deploy">${esc(c('activation'))}</button><button type="button" class="btn ghost" id="ld-codebtn">${esc(c('code'))}</button><span class="status saved" id="ld-status"></span><button type="button" class="btn ghost" id="ld-undo" disabled>${esc(c('undo'))}</button><button type="button" class="btn primary" id="ld-save">${esc(c('save'))}</button></div>
   </header>
   <div class="bench">
     <aside class="side palette"><div class="side-hd"><h2>${esc(c('palette'))}</h2><div class="ptabs" role="tablist"><button type="button" role="tab" id="ld-pt-fields">${esc(c('fields'))}</button><button type="button" role="tab" id="ld-pt-assoc">${esc(c('assocs'))}</button><button type="button" role="tab" id="ld-pt-blocks">${esc(c('blocks'))}</button></div><input type="search" class="search" id="ld-psearch" placeholder="${esc(c('search'))}"></div><div class="side-bd" id="ld-palette"></div></aside>
     <section class="canvas-wrap"><div class="canvas-bar" id="ld-cbar"></div><div class="canvas design" id="ld-canvas"></div></section>
     <aside class="side inspector" aria-label="${esc(c('selection'))}"><div class="side-hd"><div class="insp-hd"><h2>${esc(c('selection'))}</h2><button type="button" class="btn small ghost insp-close" id="ld-insp-close">${esc(c('closeInsp'))}</button></div></div><div class="side-bd" id="ld-insp"></div></aside>
   </div>
-  <section class="out"><div class="out-hd"><h2>${esc(c('outTitle'))}</h2><div class="seg"><button type="button" id="ld-o-json" aria-pressed="true">${esc(c('outJson'))}</button><button type="button" id="ld-o-xsd" aria-pressed="false">${esc(c('outXsd'))}</button><button type="button" id="ld-o-java" aria-pressed="false">${esc(c('outJava'))}</button></div></div>
-    <div class="out-bd"><div style="display:flex;flex-direction:column;gap:8px;min-width:0"><div id="ld-outx"></div><pre class="code" id="ld-code"></pre><div><button type="button" class="btn small ghost" id="ld-copy">${esc(c('copy'))}</button></div></div><div class="how" id="ld-how"></div></div></section>
+  <dialog class="ld-dlg" id="ld-dlg" aria-labelledby="ld-dlg-t"><div class="ld-dlg-hd"><h2 id="ld-dlg-t">${esc(c('codeTitle'))}</h2><div class="seg"><button type="button" id="ld-o-json" aria-pressed="true">${esc(c('outJson'))}</button><button type="button" id="ld-o-java" aria-pressed="false">${esc(c('outJava'))}</button></div><button type="button" class="btn small ghost" id="ld-dlg-close">${esc(c('closeDlg'))}</button></div>
+    <div class="ld-dlg-bd"><pre class="code" id="ld-code"></pre><div class="how" id="ld-how"></div><div><button type="button" class="btn small ghost" id="ld-copy">${esc(c('copy'))}</button></div></div></dialog>
 </div>`;
 ['ld-m-design','ld-m-preview','ld-w-wide','ld-w-narrow'].forEach(id => {
   const obs = () => { $('#ld-m-design').setAttribute('aria-pressed', mode === 'design'); $('#ld-m-preview').setAttribute('aria-pressed', mode === 'preview'); $('#ld-w-wide').setAttribute('aria-pressed', !narrow); $('#ld-w-narrow').setAttribute('aria-pressed', narrow); };
