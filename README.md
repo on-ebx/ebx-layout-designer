@@ -56,9 +56,20 @@ Open a table, then **Actions › Design the record form** (or the web component
 | Group structure | parent foreign key and the association of children |
 | Duplicates | Match and Merge state and group (read by reflection: works without the add-on) |
 | Help text | a localized paragraph |
+| Opening hours | open now, the week, the next exceptional days (associations and fields chosen in the inspector) |
+| Timeline, change history | an association's rows on a timeline; who changed what and when (historized table) |
+| Completeness, checklist | share of filled fields with weights; points ticked by a condition |
+| Lifecycle steps, validity period | the steps of a status field; upcoming / in force / ending / expired |
+| Breakdown chart, association totals, matrix | an association's rows grouped (bars or ring), summed or crossed on two fields |
+| Linked record, contacts, hierarchy | fields of a foreign key's target; people as cards; breadcrumb of a parent key |
+| Image gallery, documents | media (Digital Asset Manager public API) or URL fields; files with type and date |
+| Links and actions, formatted address | buttons to addresses built from the record; an address laid out by country |
 | Registered component | a Java `LayoutComponent` registered by name with `LayoutComponents.register` |
 
-Every block can be shown only when an XPath predicate is true on the record, and hidden when a record is created.
+Every block can be shown only when an XPath predicate is true on the record, or live while another field has some
+values, and hidden when a record is created. Fields take input or display widgets (amount, unit, stars, relative date,
+country, barcode, masked value…) and live behaviours (show if, mandatory if, read only if, fields driven by a
+configuration table). Rows can be collapsible sections. The palette is searchable and grouped by category.
 
 ## Documentation
 

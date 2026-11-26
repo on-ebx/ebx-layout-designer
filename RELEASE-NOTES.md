@@ -1,5 +1,22 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.4.0 (2026-10-08)
+
+- **Component library**: the palette's blocks are grouped by category and searchable (name, description, keywords);
+  the widget list of a field offers only what suits its type, in *Input* and *Display* groups. Every setting of the new
+  components is made in the inspector, nothing is fixed in the code.
+- **16 new blocks**: timeline, change history, completeness, lifecycle steps, checklist, breakdown chart (bars or
+  ring), association totals, matrix, linked record, contacts, image gallery, documents, links and actions, validity
+  period, formatted address, hierarchy.
+- **20 display widgets**: pill coloured by value, amount, value with unit, percentage bar, stars, relative date,
+  duration, country, phone, e-mail, web address, colour, EAN / GTIN barcode, copyable identifier, tags, masked value,
+  link to the record, thumbnail, GPS coordinates, yes / no icon.
+- **Behaviours**, live while the user types: show a block or a field only for some values of another field, a mandatory
+  asterisk that follows a value, read only by value or role, and the fields of a panel driven by a configuration table
+  (family → attributes). Documented EBX APIs only (`ebx_form_getValue`, `setActionOnAfterValueChanged`).
+- **Collapsible sections**: a row can be drawn as a section with a title, open or collapsed.
+- Formats in `docs/LAYOUT-FORMAT.md`. Layouts of 1.3.0 are read unchanged.
+
 ## 1.3.0 (2026-10-08)
 
 - **Opening hours** block (`"type": "hours"`): open now in the record's time zone, the current week one card per day

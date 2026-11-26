@@ -23,7 +23,7 @@ you save it.
 | Area | What it holds |
 |---|---|
 | Top bar | *Preview with* (the record shown in the preview), *Language* (the locale of the preview and of the texts you type), *Translations*, *Design* / *Preview* mode, *Width* (test a narrow screen), *Help*, the **state of the form** as the model declares it (*Declared in the model*, *The table uses another form*, *Not used by the table*; *DMA model: check the declaration*), *Activation*, *</> Code*, *Undo*, *Save* |
-| Palette (left) | the table's **fields** by group (search by label or path; a placed field is marked), its **associations**, the **blocks**, the **registered components** |
+| Palette (left) | the table's **fields** by group (search by label or path; a placed field is marked), its **associations**, the **blocks** by category (search on name, description and keywords), the **registered components** |
 | Form (centre) | the record form as it will look, with the chosen record's real values |
 | Inspector (right) | the settings of what you clicked: tab, row, block or field, or the activation of the form. Under 1280 px wide it opens as a drawer on the right while something is selected |
 
@@ -42,9 +42,27 @@ you save it.
 
 ### Widgets of a field
 
-Text, single-line text, text area, number, date, check box, Yes / No (radio), drop-down list, list without "Create"
-(foreign key), radio buttons. Read-only display forms: highlighted figure, pill, link, code (fixed font). EBX's own
-widget is used when nothing is chosen.
+The list offers only the widgets that suit the field's type, in two groups.
+
+- **Input**: text, single-line text, text area, number, date, check box, Yes / No (radio), drop-down list, list without
+  "Create" (foreign key), radio buttons. EBX's own widget is used when nothing is chosen.
+- **Display (read only)**: highlighted figure, pill, link, code, and since 1.4.0 pill coloured by value, amount with
+  currency, value with unit, percentage bar, star rating, relative date ("in 12 days"), duration, country (name and
+  flag), phone and e-mail (with Copy), web address, colour, EAN / GTIN barcode (bars and check digit), copyable
+  identifier, tags, masked value (some roles may show it all), link to the record of a foreign key, thumbnail, GPS
+  coordinates, yes / no as an icon. Their settings (currency, unit, colours per value…) appear under the list. Choosing
+  one ticks *Read only*: a display widget is used when the field is read only, an editable field keeps EBX's input.
+
+### Behaviours of a field
+
+Under *Behaviours* in the field's inspector:
+
+- **Show only if (live)**: the field appears or hides while the user types in another field, without saving
+  (`Family is one of Wipers`, `Opt-in is filled`…); its value can be kept or cleared when it hides;
+- **Mandatory if (live asterisk)**: the asterisk follows a value;
+- **Read only if**: for some values of a field, and/or for some roles, except for others (computed when the form opens).
+
+A behaviour changes what is shown, not what EBX validates: to block saving, add a rule to the model.
 
 ## 4. Blocks
 
@@ -62,8 +80,37 @@ widget is used when nothing is chosen.
 | **Help text** | a paragraph for the user |
 | **Registered component** | a Java block written by a developer (section 8) |
 
-Two settings on every block: **Show only if (XPath)**, a predicate on the record (`./Lifecycle/status = 'ACTIVE'`),
-and **Hide when creating a record**.
+Since 1.4.0:
+
+| Block | What it shows |
+|---|---|
+| **Timeline** | the rows of an association on a timeline, most recent first, coloured by a field |
+| **Change history** | who changed what and when, for the chosen fields (history must be activated on the table) |
+| **Completeness** | the share of filled fields (each with a weight), the missing ones with *Go to field* |
+| **Lifecycle (steps)** | the steps of a status field, the current one highlighted, exit steps in red |
+| **Checklist** | points ticked by a condition: a field filled, a value, or an XPath predicate |
+| **Breakdown (chart)** | an association's rows grouped by a field, counted, summed or averaged, as bars or a ring |
+| **Association totals** | sum, average, minimum, maximum or count over an association's rows, as a number, an amount or a percentage |
+| **Matrix** | an association's rows crossed on two fields (availability by country and channel) |
+| **Linked record** | chosen fields of the record a foreign key points to, with a link to open it |
+| **Contacts** | the people of an association as cards, e-mail and phone with Copy, the main contact first |
+| **Image gallery** | images of media or URL fields, of the record or of an association |
+| **Documents** | files of an association: name, type, date (red once an expiry date is past), link |
+| **Links and actions** | buttons to an address built from the record's values (`https://shop.example.com/p/${./Sku}`) |
+| **Validity period** | upcoming, in force, ending soon or expired, with the days left |
+| **Formatted address** | the address fields laid out after the country, with a map link |
+| **Hierarchy** | the breadcrumb of a parent key over several levels, and the children |
+
+Settings on every block: **Show only if (live)**, a condition on another field evaluated while the user types (on a
+panel, the hidden fields' values can be cleared); **Show only if (XPath, when opened)**, a predicate on the record
+(`./Lifecycle/status = 'ACTIVE'`); **Hide when creating a record**.
+
+A **panel** can also take its fields from a **configuration table** of the dataset: *Fields driven by a configuration
+table* names the table, the field of the record that drives (a family), and the table's columns for the family, the
+attribute (path or field name) and, optionally, *mandatory*. A field the table lists for a family shows only for that
+family, live; a field it never lists always shows.
+
+A **row** can be a **collapsible section** (row inspector): a title, open or collapsed when the form opens.
 
 ## 5. The validation report block
 
@@ -116,7 +163,7 @@ It then appears in the palette under *Registered components*; the runtime opens 
 note, and the component writes inside it. The module needs the runtime jar on its compile classpath only (it is on the
 server's at run time).
 
-## 9. Limitations (1.0.0)
+## 9. Limitations
 
 - **DMA models**: the designer cannot write the declaration itself (declare the class in the model screen or with
   `set_form_layout`), nor read it: the state in the top bar then says *DMA model: check the declaration*. The state of a
@@ -128,4 +175,8 @@ server's at run time).
 - The **map** is OpenStreetMap only (an iframe): it needs the user's browser to reach openstreetmap.org.
 - A **condition** that cannot be evaluated (a wrong XPath) shows the block and logs a warning in `kernel.log`.
 - One layout per table and model: every dataset of the model shares it.
+- **Behaviours** run in the browser and change only what is shown: EBX's validation is unchanged.
+- The **change history** block needs history activated on the table; *Linked record*, *Hierarchy* and *Link to the
+  record* open the target in a new tab.
+- Previews of the blocks that read an association's rows are indicative in the designer; the form shows the real values.
 - Seen running on EBX 6.3.0-rc2 only, with the locales en-US, fr-FR and it-IT.

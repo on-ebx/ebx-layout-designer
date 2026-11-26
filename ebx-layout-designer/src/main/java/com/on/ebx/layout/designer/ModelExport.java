@@ -64,7 +64,10 @@ final class ModelExport
 		final ArrayNode assocs = boot.putArray("assocs");
 		final ObjectNode values = boot.putObject("values");
 		final ValueContext vc = pRecord == null ? null : pRecord.createValueContext();
-		ModelExport.walk(pTable.getTableOccurrenceRootNode(), null, locales, pUserLocale, pRecord, vc, fields, groups, assocs, values);
+		ModelExport.walk(pTable.getTableOccurrenceRootNode(), null, locales, pUserLocale, pRecord, vc, fields, groups, assocs, values, dataset);
+		// the dataset's tables and their fields, for a block that reads a configuration table
+		final ArrayNode tables = boot.putArray("tables");
+		ModelExport.tables(dataset.getSchemaNode(), locales, tables);
 
 		// the record shown in the preview, and the first records to choose another one
 		final ObjectNode record = boot.putObject("record");
@@ -186,7 +189,7 @@ final class ModelExport
 	}
 
 	private static void walk(final SchemaNode pNode, final String pGroup, final List<Locale> pLocales, final Locale pUserLocale, final Adaptation pRecord,
-		final ValueContext pValues, final ArrayNode pFields, final ArrayNode pGroups, final ArrayNode pAssocs, final ObjectNode pValuesOut)
+		final ValueContext pValues, final ArrayNode pFields, final ArrayNode pGroups, final ArrayNode pAssocs, final ObjectNode pValuesOut, final Adaptation pDataset)
 	{
 		for (final SchemaNode child : pNode.getNodeChildren())
 		{
@@ -200,7 +203,7 @@ final class ModelExport
 				final ObjectNode a = pAssocs.addObject();
 				a.put("p", path);
 				a.set("lab", ModelExport.labels(child, pLocales));
-				ModelExport.associationPreview(child, pRecord, pUserLocale, pLocales, a);
+				ModelExport.associationPreview(child, pRecord, pDataset, pUserLocale, pLocales, a);
 				continue;
 			}
 			final String kind = ModelExport.kind(child);
@@ -209,7 +212,7 @@ final class ModelExport
 				final ObjectNode g = pGroups.addObject();
 				g.put("p", path);
 				g.set("lab", ModelExport.labels(child, pLocales));
-				ModelExport.walk(child, path, pLocales, pUserLocale, pRecord, pValues, pFields, pGroups, pAssocs, pValuesOut);
+				ModelExport.walk(child, path, pLocales, pUserLocale, pRecord, pValues, pFields, pGroups, pAssocs, pValuesOut, pDataset);
 				continue;
 			}
 			final ObjectNode f = pFields.addObject();
@@ -228,6 +231,20 @@ final class ModelExport
 			{
 				f.put("fn", true);
 			}
+			ModelExport.enumeration(child, pValues, pLocales, f);
+			if ("fk".equals(kind))
+			{
+				try
+				{
+					final SchemaNode target = child.getFacetOnTableReference().getTableNode();
+					f.put("target", target.getPathInSchema().format());
+					f.set("tf", ModelExport.flatFields(target.getTableOccurrenceRootNode(), pLocales));
+				}
+				catch (final RuntimeException ex)
+				{
+					// a target that cannot be resolved
+				}
+			}
 			if (pRecord != null)
 			{
 				try
@@ -241,6 +258,22 @@ final class ModelExport
 						{
 							pValuesOut.put(path + "#n", ((Number) v).doubleValue());
 						}
+						if (v instanceof Date)
+						{
+							pValuesOut.put(path + "#d", new java.text.SimpleDateFormat("yyyy-MM-dd").format((Date) v));
+						}
+						if (v instanceof java.util.List)
+						{
+							final ArrayNode l = pValuesOut.putArray(path + "#l");
+							for (final Object o : (java.util.List<?>) v)
+							{
+								l.add(o == null ? "" : child.displayOccurrence(o, true, pValues, pUserLocale));
+							}
+						}
+						else if (!(v instanceof Date))
+						{
+							pValuesOut.put(path + "#k", v instanceof BigDecimal ? ((BigDecimal) v).stripTrailingZeros().toPlainString() : String.valueOf(v));
+						}
 					}
 				}
 				catch (final RuntimeException ex)
@@ -251,10 +284,28 @@ final class ModelExport
 		}
 	}
 
-	private static void associationPreview(final SchemaNode pAssoc, final Adaptation pRecord, final Locale pUserLocale, final List<Locale> pLocales, final ObjectNode pOut)
+	private static void associationPreview(final SchemaNode pAssoc, final Adaptation pRecord, final Adaptation pDataset, final Locale pUserLocale, final List<Locale> pLocales, final ObjectNode pOut)
 	{
 		final ArrayNode rows = pOut.putArray("rows");
-		final ArrayNode targetFields = pOut.putArray("fields");
+		if (pAssoc.getAssociationLink() != null)
+		{
+			try
+			{
+				final AdaptationTable target = pAssoc.getAssociationLink().getTargetTable(pRecord != null ? pRecord : pDataset);
+				if (target != null)
+				{
+					pOut.set("fields", ModelExport.flatFields(target.getTableOccurrenceRootNode(), pLocales));
+				}
+			}
+			catch (final RuntimeException ex)
+			{
+				// target not reachable
+			}
+		}
+		if (!pOut.has("fields"))
+		{
+			pOut.putArray("fields");
+		}
 		if (pRecord == null || pAssoc.getAssociationLink() == null)
 		{
 			pOut.put("n", 0);
@@ -276,23 +327,125 @@ final class ModelExport
 			{
 				result.close();
 			}
-			final AdaptationTable target = pAssoc.getAssociationLink().getTargetTable(pRecord);
-			if (target != null)
+
+		}
+		catch (final RuntimeException ex)
+		{
+			pOut.put("n", 0);
+		}
+	}
+
+	/** The terminal fields of a record structure, groups flattened (label prefixed by the group), with their kind. */
+	static ArrayNode flatFields(final SchemaNode pRoot, final List<Locale> pLocales)
+	{
+		final ArrayNode out = ModelExport.JSON.createArrayNode();
+		ModelExport.flat(pRoot, pLocales, out, null);
+		return out;
+	}
+
+	private static void flat(final SchemaNode pNode, final List<Locale> pLocales, final ArrayNode pOut, final ObjectNode pPrefix)
+	{
+		for (final SchemaNode f : pNode.getNodeChildren())
+		{
+			if (f.isAssociationNode() || ModelExport.hidden(f) || pOut.size() > 300)
 			{
-				for (final SchemaNode f : target.getTableOccurrenceRootNode().getNodeChildren())
+				continue;
+			}
+			final String kind = ModelExport.kind(f);
+			final ObjectNode lab = ModelExport.labels(f, pLocales);
+			if (pPrefix != null)
+			{
+				for (final Locale l : pLocales)
 				{
-					if (f.isTerminalValue() && !f.isAssociationNode() && !ModelExport.hidden(f))
+					final String tag = l.toLanguageTag();
+					lab.put(tag, pPrefix.path(tag).asText("") + " › " + lab.path(tag).asText(""));
+				}
+			}
+			if (kind == null && f.isComplex() && f.getMaxOccurs() == 1)
+			{
+				ModelExport.flat(f, pLocales, pOut, lab);
+				continue;
+			}
+			final ObjectNode o = pOut.addObject();
+			o.put("p", LayoutPaths.stored(f.getPathInAdaptation()));
+			o.put("t", kind == null ? "list" : kind);
+			o.set("lab", lab);
+		}
+	}
+
+	/** The values an enumeration offers (static, or computed for the record), with their labels; at most 80. */
+	private static void enumeration(final SchemaNode pNode, final ValueContext pValues, final List<Locale> pLocales, final ObjectNode pOut)
+	{
+		if (pNode.getFacetEnumeration() == null || pNode.getFacetOnTableReference() != null)
+		{
+			return;
+		}
+		try
+		{
+			List<?> values = null;
+			if (pNode.getFacetEnumeration().isEnumerationStatic())
+			{
+				values = pNode.getFacetEnumeration().getValues();
+			}
+			else if (pValues != null)
+			{
+				values = pNode.getEnumerationList(pValues);
+			}
+			if (values == null)
+			{
+				return;
+			}
+			final ArrayNode out = pOut.putArray("vals");
+			for (final Object v : values)
+			{
+				if (out.size() >= 80)
+				{
+					break;
+				}
+				final ObjectNode o = out.addObject();
+				o.put("v", String.valueOf(v));
+				final ObjectNode lab = o.putObject("lab");
+				for (final Locale l : pLocales)
+				{
+					String shown;
+					try
 					{
-						final ObjectNode o = targetFields.addObject();
-						o.put("p", LayoutPaths.stored(f.getPathInAdaptation()));
-						o.set("lab", ModelExport.labels(f, pLocales));
+						shown = pNode.displayOccurrence(v, true, pValues, l);
 					}
+					catch (final RuntimeException ex)
+					{
+						shown = null;
+					}
+					lab.put(l.toLanguageTag(), shown == null ? String.valueOf(v) : shown);
 				}
 			}
 		}
 		catch (final RuntimeException ex)
 		{
-			pOut.put("n", 0);
+			// an enumeration that cannot be listed here
+		}
+	}
+
+	/** The tables of the dataset, with their fields (a behaviour may read a configuration table). */
+	private static void tables(final SchemaNode pNode, final List<Locale> pLocales, final ArrayNode pOut)
+	{
+		for (final SchemaNode c : pNode.getNodeChildren())
+		{
+			if (pOut.size() >= 80)
+			{
+				return;
+			}
+			if (c.isTableNode())
+			{
+				final ObjectNode o = pOut.addObject();
+				o.put("p", c.getPathInSchema().format());
+				o.set("lab", ModelExport.labels(c, pLocales));
+				o.set("fields", ModelExport.flatFields(c.getTableOccurrenceRootNode(), pLocales));
+			}
+			else if (!c.isTerminalValue())
+			{
+				ModelExport.tables(c, pLocales, pOut);
+			}
 		}
 	}
 

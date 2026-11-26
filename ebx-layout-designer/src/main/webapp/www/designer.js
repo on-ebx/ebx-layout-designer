@@ -114,7 +114,20 @@ const C = {
  tStr:['texte','text'], tText:['texte long','long text'], tInt:['entier','integer'], tDec:['décimal','decimal'], tDate:['date','date'], tDt:['date-heure','date-time'], tBool:['oui/non','yes/no'], tFk:['clé étr.','foreign key'], tEnum:['liste','list'], tMedia:['média','media'], tList:['multiple','multiple'],
  ctxTab:['Onglet {0} · libellé','Tab {0} · label'], ctxTitle:['titre','title'], ctxNote:['note','note'], ctxBtn:['bouton','button'], ctxText:['texte','text'], ctxAct:['bouton d’action {0}','action button {0}'], ctxField:['Champ « {0} » · libellé','Field “{0}” · label'],
  noRecord:['Aucun enregistrement dans cette table : l’aperçu est vide.','No record in this table: the preview is empty.'], recordOf:['{0} sur {1}','{0} of {1}'],
- creating:['Nouvelle fiche (création)','New record (creation)']
+ creating:['Nouvelle fiche (création)','New record (creation)'],
+ setupBlock:['Choisissez les réglages de ce bloc dans l’inspecteur.','Choose this block’s settings in the inspector.'], histChanged:['Modification','Changed'], histCreated:['Création','Created'],
+ missingL:['Manquants','Missing'], openRecord:['Ouvrir la fiche','Open the record'], noDates:['Pas encore de dates.','No dates yet.'], noAddress:['Pas encore d’adresse.','No address yet.'],
+ valUpcoming:['À venir','Upcoming'], valActive:['En vigueur','In force'], valEnding:['Bientôt échu','Ending soon'], valExpired:['Expiré','Expired'], copy:['Copier','Copy'],
+ codesPh:['valeurs séparées par des virgules','values separated by commas'], weight:['Poids','Weight'], addValue:['+ une valeur (Entrée)','+ a value (Enter)'], checkedWhen:['Coché quand','Ticked when'],
+ behaviours:['Comportements','Behaviours'], famTitle:['Champs pilotés par une table de configuration','Fields driven by a configuration table'],
+ famHint:['Un champ que la table cite pour une famille ne s’affiche que pour cette famille (obligatoire si la colonne le dit) ; un champ qu’elle ne cite jamais reste toujours affiché. En direct, sans enregistrer.','A field the table lists for a family shows only for that family (mandatory when the column says so); a field it never lists always shows. Live, without saving.'],
+ behHint:['Un comportement change l’affichage, pas la validation d’EBX : pour bloquer l’enregistrement, ajoutez une règle au modèle.','A behaviour changes the display, not EBX’s validation: to block saving, add a rule to the model.'],
+ wInput:['Saisie','Input'], wDisplay:['Affichage (lecture seule)','Display (read only)'], noSetting:['Pas de réglage.','No setting.'],
+ displayHint:['Widget d’affichage : utilisé quand le champ est en lecture seule ; sinon la fiche garde la saisie d’EBX.','Display widget: used when the field is read only; otherwise the form keeps EBX’s input.'],
+ explDisplayRo:['Widget d’affichage : le champ est passé en lecture seule.','Display widget: the field is now read only.'], sectionTitle:['Section','Section'],
+ liveIf:['si {0} (en direct)','if {0} (live)'], famTag:['piloté par une table','driven by a table'], condX:['Afficher seulement si (XPath, à l’ouverture)','Show only if (XPath, when opened)'],
+ newTag:['nouveau','new'], noBlockMatch:['Aucun bloc ne correspond.','No block matches.'],
+ wbHint:['Widgets d’affichage et comportements se règlent dans l’inspecteur d’un champ ou d’un panneau.','Display widgets and behaviours are set in the inspector of a field or a panel.']
 };
 const c = (k, ...a) => { let s = (C[k] || [k,k])[UI]; a.forEach((v,i) => { s = s.split('{'+i+'}').join(v); }); return s; };
 
@@ -147,7 +160,308 @@ const BLOCKS = {
  panel:{l:'kPanel', d:'dPanel'}, hero:{l:'kHero', d:'dHero', full:1}, facts:{l:'kFacts', d:'dFacts', full:1}, validation:{l:'kValidation', d:'dValidation', full:1},
  grid:{l:'kGrid', d:''}, map:{l:'kMap', d:'dMap'}, hours:{l:'kHours', d:'dHours'}, tree:{l:'kTree', d:'dTree'}, duplicates:{l:'kDup', d:'dDup'}, note:{l:'kNote', d:'dNote'}, custom:{l:'kCustom', d:''}
 };
-const bl = t => c(BLOCKS[t].l);
+const bl = t => BLOCKS[t].ll ? cl(BLOCKS[t].ll) : c(BLOCKS[t].l);
+const bd = t => BLOCKS[t].dd ? cl(BLOCKS[t].dd) : BLOCKS[t].d ? c(BLOCKS[t].d) : '';
+
+/* ======================= component library (1.4.0) =======================
+   Blocks, display widgets and behaviours are described by a spec: the inspector is generated from it, the palette
+   lists the blocks by category and the search reads labels, descriptions and keywords. */
+const cl = x => typeof x === 'string' ? c(x) : (x[UI] || x[1] || x[0]);
+const CATS = {structure:['Structure','Structure'], identity:['Identité','Identity'], kpi:['Indicateurs','Indicators'], quality:['Qualité','Quality'], relations:['Relations','Relations'],
+  location:['Localisation','Location'], time:['Temps','Time'], media:['Médias','Media'], actions:['Actions','Actions'], ext:['Extension','Extension']};
+const TONES = [['ok',['Vert','Green']],['warn',['Orange','Orange']],['bad',['Rouge','Red']],['accent',['Violet','Purple']],['info',['Bleu','Blue']],['muted',['Gris','Grey']]];
+const NUMS = ['int','dec'];
+const getP = (o, path) => path.split('.').reduce((x, k) => x == null ? undefined : x[k], o);
+function setP(o, path, v){
+  const ks = path.split('.'); let x = o;
+  for (let i = 0; i < ks.length - 1; i++){ if (x[ks[i]] == null || typeof x[ks[i]] !== 'object') x[ks[i]] = /^\d+$/.test(ks[i + 1]) ? [] : {}; x = x[ks[i]]; }
+  const last = ks[ks.length - 1];
+  if (v === undefined || v === '' || (Array.isArray(v) && !v.length && !/^(steps|exits|items|fields|lines)$/.test(last))) { if (Array.isArray(x)) x.splice(+last, 1); else delete x[last]; }
+  else x[last] = v;
+}
+const valsOf = p => p && F[p] ? (F[p].t === 'bool' ? [{v:'true', lab:L('Oui','Yes','Sì')}, {v:'false', lab:L('Non','No','No')}] : F[p].vals || []) : [];
+const tFieldsOf = a => (A[a] || {}).fields || [];
+const tableOf = p => (B.tables || []).find(t => t.p === p);
+
+/* ---------- block specs ---------- */
+const BL = {
+ timeline:{cat:'time', l:['Frise chronologique','Timeline'], d:['Les lignes d’une association sur une frise, la plus récente en haut.','The rows of an association on a timeline, most recent first.'], tags:'événements interactions historique events dates',
+   def:{a:'', date:'', titleField:'', detail:'', color:{field:'', map:{}}, max:10},
+   spec:[{k:'assoc', key:'a'}, {k:'tfield', key:'date', of:'a', types:['date','dt'], l:['Champ date','Date field']}, {k:'tfield', key:'titleField', of:'a', l:['Champ titre (vide : libellé de la ligne)','Title field (empty: the row label)']},
+     {k:'tfield', key:'detail', of:'a', l:['Champ détail','Detail field']}, {k:'tfield', key:'color.field', of:'a', l:['Couleur selon','Colour by']}, {k:'tones', key:'color.map', l:['Couleurs par valeur','Colours by value'], when:b => b.color && b.color.field},
+     {k:'num', key:'max', def:10, l:['Nombre affiché','Rows shown']}]},
+ history:{cat:'time', l:['Historique des modifications','Change history'], d:['Qui a changé quoi et quand (table historisée).','Who changed what and when (historized table).'], tags:'audit traçabilité versions trail',
+   def:{fields:[], max:8, author:true},
+   spec:[{k:'fields', key:'fields', l:['Champs suivis (vide : tous)','Fields followed (empty: all)']}, {k:'num', key:'max', def:8, l:['Nombre d’entrées','Entries']}, {k:'bool', key:'author', def:true, l:['Afficher l’auteur','Show the author']},
+     {k:'hint', l:['Lit l’historique d’EBX (AdaptationTable.getHistory) : l’historisation doit être activée sur la table.','Reads EBX’s history (AdaptationTable.getHistory): history must be activated on the table.']}]},
+ completeness:{cat:'quality', l:['Complétude','Completeness'], d:['Le pourcentage de champs renseignés et les manquants, avec « Aller au champ ».','The share of filled fields and the missing ones, with “Go to field”.'], tags:'qualité remplissage score quality',
+   def:{fields:[], threshold:80, listMissing:true},
+   spec:[{k:'wfields', key:'fields', l:['Champs comptés et leur poids (vide : les champs de la fiche)','Fields counted and their weight (empty: the fields of the form)']}, {k:'num', key:'threshold', def:80, l:['Seuil d’alerte (%)','Alert threshold (%)']},
+     {k:'bool', key:'listMissing', def:true, l:['Lister les manquants','List the missing ones']}]},
+ stepper:{cat:'kpi', l:['Cycle de vie (étapes)','Lifecycle (steps)'], d:['Les étapes d’un champ statut, l’étape courante mise en avant.','The steps of a status field, the current one highlighted.'], tags:'statut workflow avancement status',
+   def:{field:'', steps:[], exits:[]},
+   spec:[{k:'field', key:'field', l:['Champ statut','Status field'], types:['enum','str','fk','int']}, {k:'codes', key:'steps', of:'field', l:['Étapes, dans l’ordre (vide : les valeurs de la liste)','Steps, in order (empty: the list’s values)']},
+     {k:'codes', key:'exits', of:'field', l:['Étapes de sortie (en rouge)','Exit steps (in red)']}]},
+ checklist:{cat:'quality', l:['Liste de contrôle','Checklist'], d:['Des points à vérifier, cochés selon une condition sur la fiche.','Points to check, ticked by a condition on the record.'], tags:'contrôle conformité prêt readiness',
+   def:{items:[]},
+   spec:[{k:'items', key:'items', l:['Éléments','Items'], add:['+ Élément','+ Item'], tpl:{label:{}, when:{filled:''}}, item:[{k:'loc', key:'label', l:['Libellé','Label']}, {k:'when', key:'when'}]}]},
+ chart:{cat:'kpi', l:['Répartition (graphique)','Breakdown (chart)'], d:['Les lignes d’une association regroupées par un champ, en barres ou en anneau.','The rows of an association grouped by a field, as bars or a ring.'], tags:'graphique ventes chart donut',
+   def:{a:'', by:'', measure:{fn:'count', field:''}, shape:'bars', top:6},
+   spec:[{k:'assoc', key:'a'}, {k:'tfield', key:'by', of:'a', l:['Regrouper par','Group by']}, {k:'choice', key:'measure.fn', def:'count', l:['Mesure','Measure'], opts:[['count',['Nombre de lignes','Row count']],['sum',['Somme','Sum']],['avg',['Moyenne','Average']]]},
+     {k:'tfield', key:'measure.field', of:'a', types:NUMS, l:['Champ mesuré','Measured field'], when:b => b.measure && b.measure.fn !== 'count'}, {k:'choice', key:'shape', def:'bars', l:['Forme','Shape'], opts:[['bars',['Barres','Bars']],['donut',['Anneau','Ring']]]},
+     {k:'num', key:'top', def:6, l:['Afficher les premiers','Show the first']}]},
+ aggregates:{cat:'kpi', l:['Totaux d’une association','Association totals'], d:['Somme, moyenne, minimum ou maximum d’un champ sur les lignes d’une association.','Sum, average, minimum or maximum of a field over an association’s rows.'], tags:'somme moyenne total stock sum',
+   def:{a:'', items:[]},
+   spec:[{k:'assoc', key:'a'}, {k:'items', key:'items', l:['Valeurs','Values'], add:['+ Valeur','+ Value'], tpl:{label:{}, fn:'sum', field:'', format:'number'}, item:[{k:'loc', key:'label', l:['Libellé','Label']},
+     {k:'choice', key:'fn', def:'sum', l:['Calcul','Function'], opts:[['sum',['Somme','Sum']],['avg',['Moyenne','Average']],['min',['Minimum','Minimum']],['max',['Maximum','Maximum']],['count',['Nombre de lignes','Row count']]]},
+     {k:'tfield', key:'field', of:'@a', types:NUMS, l:['Champ','Field']}, {k:'choice', key:'format', def:'number', l:['Format','Format'], opts:[['number',['Nombre','Number']],['money',['Montant','Amount']],['percent',['Pourcentage','Percentage']]]},
+     {k:'str', key:'currency', l:['Devise (EUR, USD…)','Currency (EUR, USD…)'], when:i => i.format === 'money'}]}]},
+ pivot:{cat:'relations', l:['Matrice (tableau croisé)','Matrix (cross table)'], d:['Les lignes d’une association croisées sur deux champs.','An association’s rows crossed on two fields.'], tags:'disponibilité canaux pays croisement availability',
+   def:{a:'', rows:'', cols:'', value:{}},
+   spec:[{k:'assoc', key:'a'}, {k:'tfield', key:'rows', of:'a', l:['Lignes','Rows']}, {k:'tfield', key:'cols', of:'a', l:['Colonnes','Columns']}, {k:'tfield', key:'value.field', of:'a', l:['Valeur (vide : une coche si la ligne existe)','Value (empty: a tick when the row exists)']}]},
+ linked:{cat:'relations', l:['Fiche liée (aperçu)','Linked record (preview)'], d:['Les champs choisis de l’enregistrement visé par une clé étrangère, avec un lien pour l’ouvrir.','Chosen fields of the record a foreign key points to, with a link to open it.'], tags:'fournisseur marque référence supplier',
+   def:{fk:'', fields:[], open:true},
+   spec:[{k:'field', key:'fk', types:['fk'], l:['Clé étrangère','Foreign key']}, {k:'fkfields', key:'fields', of:'fk', l:['Champs affichés','Fields shown']}, {k:'bool', key:'open', def:true, l:['Lien « Ouvrir la fiche »','“Open the record” link']}]},
+ contacts:{cat:'relations', l:['Contacts','Contacts'], d:['Les personnes d’une association en cartes, avec e-mail et téléphone.','The people of an association as cards, with e-mail and phone.'], tags:'personnes interlocuteurs people',
+   def:{a:'', name:'', role:'', email:'', phone:'', main:''},
+   spec:[{k:'assoc', key:'a'}, {k:'tfield', key:'name', of:'a', l:['Nom (vide : libellé de la ligne)','Name (empty: the row label)']}, {k:'tfield', key:'role', of:'a', l:['Fonction','Role']},
+     {k:'tfield', key:'email', of:'a', l:['E-mail','E-mail']}, {k:'tfield', key:'phone', of:'a', l:['Téléphone','Phone']}, {k:'tfield', key:'main', of:'a', types:['bool'], l:['Contact principal (oui/non)','Main contact (yes/no)']}]},
+ gallery:{cat:'media', l:['Galerie d’images','Image gallery'], d:['Les images de champs média ou d’adresse, ou d’une association.','Images of media or URL fields, or of an association.'], tags:'photos visuels dama images',
+   def:{a:'', media:'', caption:'', fields:[], perRow:4},
+   spec:[{k:'assoc', key:'a', none:true, l:['Association des images (facultatif)','Association of the images (optional)']}, {k:'tfield', key:'media', of:'a', types:['media','str'], l:['Champ média ou URL','Media or URL field'], when:b => b.a},
+     {k:'tfield', key:'caption', of:'a', l:['Légende','Caption'], when:b => b.a}, {k:'fields', key:'fields', types:['media','str','list'], l:['Ou champs de la fiche','Or fields of the record']}, {k:'num', key:'perRow', def:4, l:['Vignettes par ligne','Thumbnails per row']},
+     {k:'hint', l:['Un champ média du Digital Asset Manager (API publique de l’add-on) ou un texte contenant une adresse d’image.','A Digital Asset Manager media field (the add-on’s public API) or a text holding an image address.']}]},
+ documents:{cat:'media', l:['Documents','Documents'], d:['Fiches techniques, certificats : nom, type, date, lien.','Data sheets, certificates: name, type, date, link.'], tags:'pièces jointes pdf certificats files',
+   def:{a:'', file:'', name:'', docType:'', date:'', expiry:false},
+   spec:[{k:'assoc', key:'a'}, {k:'tfield', key:'file', of:'a', types:['media','str'], l:['Fichier (média ou URL)','File (media or URL)']}, {k:'tfield', key:'name', of:'a', l:['Nom (vide : celui du fichier)','Name (empty: the file’s)']},
+     {k:'tfield', key:'docType', of:'a', l:['Type','Type']}, {k:'tfield', key:'date', of:'a', types:['date','dt'], l:['Date','Date']}, {k:'bool', key:'expiry', def:false, l:['La date est une échéance (rouge une fois passée)','The date is an expiry (red once past)']}]},
+ links:{cat:'actions', l:['Liens et actions','Links and actions'], d:['Des boutons vers une adresse construite avec les valeurs de la fiche.','Buttons to an address built from the record’s values.'], tags:'boutons url lien web',
+   def:{items:[]},
+   spec:[{k:'items', key:'items', l:['Boutons','Buttons'], add:['+ Bouton','+ Button'], tpl:{label:{}, url:''}, item:[{k:'loc', key:'label', l:['Libellé','Label']}, {k:'str', key:'url', l:['Adresse : ${./chemin} insère une valeur','Address: ${./path} inserts a value'], ph:'https://shop.example.com/p/${./Sku}'},
+     {k:'bool', key:'sameTab', def:false, l:['Dans le même onglet','In the same tab']}]},
+     {k:'hint', l:['Une valeur vide masque le bouton. Une adresse /ebx/?… ouvre un composant web d’EBX (documenté).','An empty value hides the button. An /ebx/?… address opens an EBX web component (documented).']}]},
+ validity:{cat:'time', l:['Période de validité','Validity period'], d:['Début et fin : à venir, en vigueur, bientôt échu ou expiré.','Start and end: upcoming, in force, ending soon or expired.'], tags:'contrat prix promotion dates expiry',
+   def:{from:'', to:'', warnDays:30},
+   spec:[{k:'field', key:'from', types:['date','dt'], l:['Début','Start']}, {k:'field', key:'to', types:['date','dt'], l:['Fin','End']}, {k:'num', key:'warnDays', def:30, l:['Alerte avant la fin (jours)','Alert before the end (days)']}]},
+ address:{cat:'location', l:['Adresse formatée','Formatted address'], d:['Les champs d’adresse mis en forme selon le pays, avec un lien vers la carte.','Address fields laid out after the country, with a map link.'], tags:'adresse postale postal',
+   def:{lines:[], zip:'', city:'', region:'', country:'', format:'auto', mapLink:true},
+   spec:[{k:'fields', key:'lines', l:['Lignes de rue','Street lines']}, {k:'field', key:'zip', l:['Code postal','Postcode']}, {k:'field', key:'city', l:['Ville','City']}, {k:'field', key:'region', l:['Région, état','Region, state']},
+     {k:'field', key:'country', l:['Pays','Country']}, {k:'choice', key:'format', def:'auto', l:['Mise en forme','Layout'], opts:[['auto',['Selon le pays','By country']],['zipFirst',['Code postal puis ville','Postcode then city']],['cityFirst',['Ville, région code','City, region code']],['zipAfter',['Ville puis code (UK)','City then code (UK)']]]},
+     {k:'bool', key:'mapLink', def:true, l:['Lien vers la carte','Map link']}]},
+ hierarchy:{cat:'relations', l:['Arborescence','Hierarchy'], d:['Le chemin dans une hiérarchie (fil d’Ariane) et les enfants.','The path in a hierarchy (breadcrumb) and the children.'], tags:'catégories classification arbre tree breadcrumb',
+   def:{parent:'', up:'', label:'', depth:6, children:''},
+   spec:[{k:'field', key:'parent', types:['fk'], l:['Clé vers le parent','Key to the parent']}, {k:'fkfield', key:'up', of:'parent', types:['fk'], l:['Parent du parent (si la cible est une autre table)','Parent of the parent (when the target is another table)']},
+     {k:'fkfield', key:'label', of:'parent', l:['Libellé (vide : celui de la fiche)','Label (empty: the record’s)']}, {k:'num', key:'depth', def:6, l:['Profondeur','Depth']}, {k:'assoc', key:'children', none:true, l:['Enfants (association, facultatif)','Children (association, optional)']}]}
+};
+/* the blocks of 1.0–1.3 keep their own inspector; they get a category and keywords for the palette */
+const OLD = {panel:['structure','champs formulaire groupe fields form'], hero:['identity','entête titre résumé header'], facts:['kpi','kpi valeurs values'], validation:['quality','erreurs avertissements contrôle errors'],
+  map:['location','gps plan carte'], tree:['relations','parent filiales group'], hours:['time','magasin horaires semaine store'], duplicates:['quality','mame golden fusion'], note:['structure','aide consigne help']};
+Object.keys(OLD).forEach(k => { BLOCKS[k].cat = OLD[k][0]; BLOCKS[k].tags = OLD[k][1]; });
+Object.keys(BL).forEach(k => { BLOCKS[k] = {l:'', d:'', cat:BL[k].cat, tags:BL[k].tags, spec:BL[k].spec, def:BL[k].def, ll:BL[k].l, dd:BL[k].d}; });
+
+/* ---------- display widgets of a field ---------- */
+const WG = {
+ badgeMap:{t:['enum','str','bool','fk'], l:['Pastille colorée par valeur','Pill coloured by value'], spec:[{k:'tones', key:'colors', of:'@p', l:['Couleurs par valeur','Colours by value']}, {k:'choice', key:'defaultTone', def:'muted', l:['Couleur par défaut','Default colour'], opts:TONES}]},
+ money:{t:NUMS, l:['Montant avec devise','Amount with currency'], spec:[{k:'str', key:'currency', l:['Devise (EUR, USD…)','Currency (EUR, USD…)']}, {k:'field', key:'currencyField', types:['str','enum','fk'], l:['Ou champ devise','Or currency field']}, {k:'num', key:'decimals', l:['Décimales','Decimals']}]},
+ unit:{t:NUMS, l:['Valeur avec unité','Value with unit'], spec:[{k:'str', key:'unit', l:['Unité (cm, kg…)','Unit (cm, kg…)']}, {k:'field', key:'unitField', types:['str','enum','fk'], l:['Ou champ unité','Or unit field']}, {k:'num', key:'decimals', l:['Décimales','Decimals']}]},
+ percent:{t:NUMS, l:['Pourcentage en barre','Percentage bar'], spec:[{k:'choice', key:'scale', def:100, num:true, l:['Échelle','Scale'], opts:[[100,['0 – 100','0 – 100']],[1,['0 – 1','0 – 1']]]}, {k:'num', key:'thresholds.0', def:50, l:['Rouge en dessous de','Red below']}, {k:'num', key:'thresholds.1', def:80, l:['Orange en dessous de','Orange below']}]},
+ stars:{t:NUMS, l:['Note en étoiles','Star rating'], spec:[{k:'num', key:'max', def:5, l:['Maximum','Maximum']}]},
+ relativeDate:{t:['date','dt'], l:['Date relative','Relative date'], spec:[{k:'num', key:'warnDays', def:0, l:['Alerte à moins de (jours, 0 = sans couleur)','Alert within (days, 0 = no colour)']}]},
+ duration:{t:NUMS, l:['Durée','Duration'], spec:[{k:'choice', key:'unit', def:'day', l:['Unité du champ','Unit of the field'], opts:[['minute',['Minutes','Minutes']],['hour',['Heures','Hours']],['day',['Jours','Days']],['month',['Mois','Months']],['year',['Années','Years']]]}]},
+ country:{t:['str','enum','fk'], l:['Pays','Country'], spec:[{k:'choice', key:'show', def:'both', l:['Afficher','Show'], opts:[['both',['Nom et code','Name and code']],['name',['Nom','Name']],['code',['Code','Code']]]}, {k:'bool', key:'flag', def:true, l:['Drapeau','Flag']}]},
+ phone:{t:['str'], l:['Téléphone','Phone'], spec:[]},
+ email:{t:['str'], l:['E-mail','E-mail'], spec:[]},
+ url:{t:['str'], l:['Adresse web','Web address'], spec:[{k:'choice', key:'show', def:'domain', l:['Afficher','Show'], opts:[['domain',['Le domaine','The domain']],['full',['L’adresse complète','The full address']]]}]},
+ color:{t:['str','enum'], l:['Couleur','Colour'], spec:[{k:'bool', key:'showCode', def:true, l:['Afficher le code','Show the code']}]},
+ barcode:{t:['str','int','dec'], l:['Code-barres EAN / GTIN','EAN / GTIN barcode'], spec:[{k:'bool', key:'checkDigit', def:true, l:['Contrôler la clé','Verify the check digit']}]},
+ copyId:{t:['str','int','dec','fk'], l:['Identifiant copiable','Copyable identifier'], spec:[]},
+ tags:{t:['list','enum'], l:['Puces','Tags'], spec:[{k:'num', key:'max', def:6, l:['Au-delà, « + n »','Beyond, “+ n”']}, {k:'tones', key:'colors', of:'@p', l:['Couleurs par valeur','Colours by value']}]},
+ masked:{t:['str'], l:['Valeur masquée','Masked value'], spec:[{k:'num', key:'visible', def:4, l:['Caractères visibles à la fin','Visible characters at the end']}, {k:'codes', key:'revealRoles', l:['Rôles autorisés à tout afficher','Roles allowed to show all']}]},
+ recordLink:{t:['fk'], l:['Lien vers la fiche','Link to the record'], spec:[{k:'bool', key:'sameTab', def:false, l:['Dans le même onglet','In the same tab']}]},
+ thumbnail:{t:['str','media'], l:['Vignette','Thumbnail'], spec:[{k:'choice', key:'size', def:'small', l:['Taille','Size'], opts:[['small',['Petite','Small']],['medium',['Moyenne','Medium']],['large',['Grande','Large']]]}]},
+ geo:{t:['dec','str'], l:['Coordonnées GPS','GPS coordinates'], spec:[{k:'field', key:'lng', types:['dec','str'], l:['Champ longitude','Longitude field']}, {k:'choice', key:'format', def:'decimal', l:['Format','Format'], opts:[['decimal',['Décimal','Decimal']],['dms',['Degrés, minutes, secondes','Degrees, minutes, seconds']]]}]},
+ boolIcon:{t:['bool'], l:['Oui / Non en icône','Yes / No as an icon'], spec:[{k:'loc', key:'labels.true', l:['Libellé si oui','Label when yes']}, {k:'loc', key:'labels.false', l:['Libellé si non','Label when no']}]}
+};
+const isDisplayW = w => !!WG[w] || ['fig','badge','link','mono'].includes(w);
+
+/* ---------- behaviours ---------- */
+const CONDOPS = [['in',['est l’une des valeurs','is one of']],['notIn',['n’est aucune des valeurs','is none of']],['filled',['est renseigné','is filled']],['empty',['est vide','is empty']]];
+const condOp = q => !q ? 'in' : q.filled ? 'filled' : q.empty ? 'empty' : q.notIn ? 'notIn' : 'in';
+function condHtml(path, q, label, extra){
+  const op = condOp(q), f = q && q.field || '';
+  const vals = valsOf(f), cur = (q && (q[op] || [])) || [];
+  return `<div class="fld"><span class="l">${esc(cl(label))}</span><div class="rule"><select data-sk="${path}.field" data-scond="1" aria-label="${esc(c('field'))}">${fieldOpts(f)}</select>
+    ${f ? `<select data-sop="${path}" aria-label="op">${CONDOPS.map(([k, l]) => opt(k, op, cl(l))).join('')}</select>` : ''}
+    ${f && (op === 'in' || op === 'notIn') ? (vals.length ? `<div class="chips">${vals.map(v => `<button type="button" class="chip${cur.some(x => String(x).toLowerCase() === v.v.toLowerCase()) ? ' on' : ''}" data-scode="${path}.${op}|${esc(v.v)}">${esc(T(v.lab))}</button>`).join('')}</div>` : '')
+      + `<input type="text" class="mono" data-sk="${path}.${op}" data-sv="codes" value="${esc(cur.join(', '))}" placeholder="${esc(c('codesPh'))}" aria-label="${esc(c('values'))}">` : ''}${extra || ''}</div></div>`;
+}
+
+/* ---------- the generic inspector ---------- */
+function ctlHtml(s, o, base){
+  if (s.k === 'hint') return `<div class="info">${esc(cl(s.l))}</div>`;
+  const key = base + s.key, v = getP(o, s.key), lbl = s.l ? cl(s.l) : '';
+  const id = 'ld-s-' + key.replace(/[^A-Za-z0-9]/g, '_');
+  const sel = (opts, extraFirst) => `<div class="fld"><label for="${id}">${esc(lbl)}</label><select id="${id}" data-sk="${key}"${s.num ? ' data-sv="num"' : ''}>${extraFirst === false ? '' : '<option value="">—</option>'}${opts}</select></div>`;
+  const ofA = s.of && s.of.charAt(0) === '@' ? S.blocks[sel_.id] && S.blocks[sel_.id][s.of.slice(1)] : o[s.of];
+  const typeOk = f => !s.types || s.types.includes(f.t);
+  switch (s.k){
+    case 'hint': return `<div class="info">${esc(lbl)}</div>`;
+    case 'assoc': return `<div class="fld"><label for="${id}">${esc(lbl || c('assoc'))}</label><select id="${id}" data-sk="${key}"><option value="">—</option>${B.assocs.map(a => opt(a.p, v, lab(a.p))).join('')}</select></div>`;
+    case 'field': return sel(B.fields.filter(typeOk).map(f => opt(f.p, v, lab(f.p) + '  ' + f.p)).join(''));
+    case 'tfield': return ofA ? sel(tFieldsOf(ofA).filter(typeOk).map(f => opt(f.p, v, T(f.lab) + '  ' + f.p)).join('')) : '';
+    case 'fkfield': { const fk = F[o[s.of]]; return fk && fk.tf ? sel(fk.tf.filter(typeOk).map(f => opt(f.p, v, T(f.lab) + '  ' + f.p)).join('')) : ''; }
+    case 'fkfields': { const fk = F[o[s.of]]; if (!fk || !fk.tf) return ''; const cur = v || [];
+      return `<div class="fld"><span class="l">${esc(lbl)}</span><div class="list-mini">${fk.tf.map(f => `<label><input type="checkbox" data-sarr="${key}|${esc(f.p)}"${cur.includes(f.p) ? ' checked' : ''}> ${esc(T(f.lab))}</label>`).join('')}</div></div>`; }
+    case 'tfields': { if (!ofA) return ''; const cur = v || [];
+      return `<div class="fld"><span class="l">${esc(lbl)}</span><div class="list-mini">${tFieldsOf(ofA).map(f => `<label><input type="checkbox" data-sarr="${key}|${esc(f.p)}"${cur.includes(f.p) ? ' checked' : ''}> ${esc(T(f.lab))}</label>`).join('')}</div></div>`; }
+    case 'fields': { const cur = v || [];
+      return `<div class="fld"><span class="l">${esc(lbl)}</span><div class="list-mini">${cur.map((p, i) => `<label style="justify-content:space-between"><span>${esc(lab(p))}</span><button type="button" class="btn small ghost" data-sdel="${key}|${i}" style="height:22px">${esc(c('del'))}</button></label>`).join('')}<select data-spush="${key}" aria-label="${esc(c('add'))}"><option value="">${esc(c('add'))}</option>${B.fields.filter(typeOk).map(f => opt(f.p, '', lab(f.p) + '  ' + f.p)).join('')}</select></div></div>`; }
+    case 'wfields': { const cur = v || [];
+      return `<div class="fld"><span class="l">${esc(lbl)}</span><div class="list-mini">${cur.map((f, i) => `<label style="justify-content:space-between;gap:6px"><span style="flex:1">${esc(lab(f.p))}</span><input type="number" min="0" max="10" style="width:52px" data-sk="${key}.${i}.weight" data-sv="num" value="${f.weight == null ? 1 : f.weight}" aria-label="${esc(c('weight'))}"><button type="button" class="btn small ghost" data-sdel="${key}|${i}" style="height:22px">${esc(c('del'))}</button></label>`).join('')}<select data-spushw="${key}" aria-label="${esc(c('add'))}"><option value="">${esc(c('add'))}</option>${B.fields.map(f => opt(f.p, '', lab(f.p) + '  ' + f.p)).join('')}</select></div></div>`; }
+    case 'num': return `<div class="fld"><label for="${id}">${esc(lbl)}</label><input type="number" id="${id}" data-sk="${key}" data-sv="num" value="${v == null ? (s.def == null ? '' : s.def) : v}"></div>`;
+    case 'bool': return `<label class="chk"><input type="checkbox" data-sk="${key}" data-sv="bool"${(v == null ? s.def : v) ? ' checked' : ''}> ${esc(lbl)}</label>`;
+    case 'choice': { const cv = v == null ? s.def : v; return `<div class="fld"><span class="l">${esc(lbl)}</span><div class="seg wrap">${s.opts.map(([k, l]) => `<button type="button" data-schoice="${key}|${k}"${s.num ? ' data-num="1"' : ''} aria-pressed="${String(cv) === String(k)}">${esc(cl(l))}</button>`).join('')}</div></div>`; }
+    case 'str': return `<div class="fld"><label for="${id}">${esc(lbl)}</label><input type="text" class="mono" id="${id}" data-sk="${key}" value="${esc(v || '')}" placeholder="${esc(s.ph || '')}"></div>`;
+    case 'codes': { const cur = v || []; const vals = valsOf(o[s.of]);
+      return `<div class="fld"><span class="l">${esc(lbl)}</span>${vals.length ? `<div class="chips">${vals.map(x => `<button type="button" class="chip${cur.includes(x.v) ? ' on' : ''}" data-scode="${key}|${esc(x.v)}">${esc(T(x.lab))}</button>`).join('')}</div>` : ''}<input type="text" class="mono" data-sk="${key}" data-sv="codes" value="${esc(cur.join(', '))}" placeholder="${esc(c('codesPh'))}"></div>`; }
+    case 'tones': { const cur = v || {}; const src = s.of === '@p' ? valsOf(o.p) : valsOf(o[s.of]);
+      const keys = [...new Set([...src.map(x => x.v), ...Object.keys(cur)])];
+      return `<div class="fld"><span class="l">${esc(lbl)}</span><div class="kv tones">${keys.map(k => { const x = src.find(y => y.v === k); return `<span>${esc(x ? T(x.lab) : k)}</span><select data-stone="${key}|${esc(k)}" aria-label="${esc(k)}"><option value="">—</option>${TONES.map(([t, l]) => opt(t, cur[k], cl(l))).join('')}</select>`; }).join('')}</div><input type="text" class="mono" data-stadd="${key}" placeholder="${esc(c('addValue'))}"></div>`; }
+    case 'loc': return locField('spec.' + key, lbl, v);
+    case 'when': { const w = v || {}; const kind = w.xpath != null ? 'xpath' : w.field != null ? 'value' : 'filled';
+      return `<div class="fld"><span class="l">${esc(c('checkedWhen'))}</span><div class="seg wrap">${[['filled',['Champ renseigné','Field filled']],['value',['Valeur d’un champ','Value of a field']],['xpath',['XPath','XPath']]].map(([k, l]) => `<button type="button" data-swhen="${key}|${k}" aria-pressed="${kind === k}">${esc(cl(l))}</button>`).join('')}</div>
+        ${kind === 'filled' ? `<select data-sk="${key}.filled" aria-label="${esc(c('field'))}">${fieldOpts(w.filled)}</select>` : kind === 'xpath' ? `<input type="text" class="mono" data-sk="${key}.xpath" value="${esc(w.xpath || '')}" placeholder="./Price > 0">` : condHtml(key, w, ['Condition','Condition'])}</div>`; }
+    case 'items': { const arr = v || [];
+      return `<div class="fld"><span class="l">${esc(lbl)} (${arr.length})</span><div class="rules">${arr.map((it, i) => `<div class="rule">${s.item.filter(x => !x.when || x.when(it)).map(x => ctlHtml(x, it, key + '.' + i + '.')).join('')}<button type="button" class="btn small ghost" data-sdel="${key}|${i}" style="align-self:flex-end">${esc(c('del'))}</button></div>`).join('')}</div><button type="button" class="btn small" data-sadd="${key}" data-tpl="${esc(JSON.stringify(s.tpl || {}))}" style="align-self:flex-start">${esc(cl(s.add || ['+ Ajouter','+ Add']))}</button></div>`; }
+    case 'table': return sel((B.tables || []).map(t => opt(t.p, v, T(t.lab) + '  ' + t.p)).join(''));
+    case 'col': { const t = tableOf(o[s.of]); return t ? sel(t.fields.filter(typeOk).map(f => opt(f.p, v, T(f.lab) + '  ' + f.p)).join('')) : ''; }
+  }
+  return '';
+}
+let sel_ = {};
+function specHtml(spec, o, base){ sel_ = sel || {}; return spec.filter(s => !s.when || s.when(o)).map(s => ctlHtml(s, o, base || '')).join(''); }
+/* the object the generic inspector edits: the selected block, field or row */
+function specBase(){
+  if (!sel) return null;
+  if (sel.k === 'block') return S.blocks[sel.id];
+  if (sel.k === 'field') return S.blocks[sel.b] && S.blocks[sel.b].fields[sel.i];
+  if (sel.k === 'row'){ const Lr = locRow(sel.id); return Lr && Lr.r; }
+  return null;
+}
+/* behaviours of a block (live "show if") and of a panel (fields driven by a configuration table) */
+function behaviourBlockHtml(b){
+  let h = `<h3 class="sub">${esc(c('behaviours'))}</h3>` + condHtml('showIf', b.showIf, ['Afficher seulement si (en direct)','Show only if (live)']);
+  if (b.showIf && b.type === 'panel') h += ctlHtml({k:'choice', key:'onHide', def:'keep', l:['Valeurs des champs cachés','Values of hidden fields'], opts:[['keep',['Gardées','Kept']],['clear',['Vidées','Cleared']]]}, b, '');
+  if (b.type === 'panel'){
+    const by = b.attributesBy || {};
+    h += `<div class="fld"><span class="l">${esc(c('famTitle'))}</span><div class="rule">` + specHtml([{k:'table', key:'attributesBy.table', l:['Table de configuration','Configuration table']}, {k:'field', key:'attributesBy.key', l:['Champ de la fiche qui pilote (la famille)','Field of the record that drives (the family)']}], b)
+      + (by.table ? specHtml([{k:'col', key:'familyCol', of:'table', l:['Colonne famille','Family column']}, {k:'col', key:'attributeCol', of:'table', l:['Colonne attribut (chemin ou nom du champ)','Attribute column (path or field name)']},
+        {k:'col', key:'mandatoryCol', of:'table', types:['bool'], l:['Colonne obligatoire (facultatif)','Mandatory column (optional)']}, {k:'bool', key:'hideEmpty', def:true, l:['Cacher le panneau sans champ','Hide the panel with no field']}], by, 'attributesBy.') : '')
+      + `</div><p class="hint">${esc(c('famHint'))}</p></div>`;
+  }
+  return h;
+}
+function behaviourFieldHtml(f){
+  return `<h3 class="sub">${esc(c('behaviours'))}</h3>` + condHtml('showIf', f.showIf, ['Afficher seulement si (en direct)','Show only if (live)'],
+      f.showIf ? ctlHtml({k:'choice', key:'onHide', def:'keep', l:['Valeur une fois caché','Value once hidden'], opts:[['keep',['Gardée','Kept']],['clear',['Vidée','Cleared']]]}, f, '') : '')
+    + condHtml('mandatoryIf', f.mandatoryIf, ['Obligatoire si (astérisque en direct)','Mandatory if (live asterisk)'])
+    + condHtml('readOnlyIf', f.readOnlyIf, ['Lecture seule si','Read only if'], ctlHtml({k:'codes', key:'readOnlyIf.roles', l:['… ou pour les rôles','… or for the roles']}, f, '') + ctlHtml({k:'codes', key:'readOnlyIf.exceptRoles', l:['Sauf pour les rôles','Except for the roles']}, f, ''))
+    + `<p class="hint">${esc(c('behHint'))}</p>`;
+}
+
+/* ---------- previews of the 1.4.0 blocks: real values of the previewed record where the page has them, else indicative ---------- */
+const vk = p => creating || !p ? '' : (V[p + '#k'] != null ? String(V[p + '#k']) : '');
+const vd = p => creating || !p ? null : V[p + '#d'] ? new Date(V[p + '#d'] + 'T00:00:00') : null;
+const tfl = (a, p) => { const f = tFieldsOf(a).find(x => x.p === p); return f ? T(f.lab) : p; };
+const indicative = () => `<div class="more">${esc(c('ohPreview'))}</div>`;
+const setupNote = () => `<div class="note-b">${esc(c('setupBlock'))}</div>`;
+const dayDiff = d => Math.round((d - new Date(new Date().toDateString())) / 864e5);
+function previewMore(b){
+  const a = A[b.a], rows = creating || !a ? [] : (a.rows || []);
+  switch (b.type){
+    case 'timeline': if (!b.a || !b.date) return setupNote();
+      return rows.length ? `<ol class="tl">${rows.slice(0, b.max || 10).map((r, i) => `<li${i === 0 ? ' class="t-accent"' : ''}><span class="d">${esc(tfl(b.a, b.date))}</span><b>${esc(r)}</b>${b.detail ? `<span class="s">${esc(tfl(b.a, b.detail))}</span>` : ''}</li>`).join('')}</ol>${indicative()}` : `<div class="note-b">${esc(u('noRow'))}</div>`;
+    case 'history': return `<ol class="tl"><li><span class="d">2026-10-02 · admin</span><b>${esc(c('histChanged'))}</b><span class="s">${esc((b.fields && b.fields[0]) ? lab(b.fields[0]) : '…')} : 10 → 12</span></li><li><span class="d">2026-09-14 · admin</span><b>${esc(c('histCreated'))}</b></li></ol>${indicative()}`;
+    case 'completeness': {
+      const list = (b.fields || []).length ? b.fields.map(f => f.p || f) : [...placedFields()];
+      if (!list.length) return setupNote();
+      let tot = 0, ok = 0; const miss = [];
+      list.forEach((p, i) => { const w = (b.fields || [])[i] && b.fields[i].weight != null ? b.fields[i].weight : 1; tot += w; if (val(p)) ok += w; else miss.push(p); });
+      const pct = tot ? Math.round(100 * ok / tot) : 0, th = b.threshold == null ? 80 : b.threshold;
+      return `<div class="cpx ${pct >= th ? 't-ok' : pct >= th / 2 ? 't-warn' : 't-bad'}"><b>${pct} %</b><span class="barx"><i style="width:${pct}%"></i></span></div>${b.listMissing !== false && miss.length ? `<div class="more">${esc(c('missingL'))} : ${miss.slice(0, 8).map(p => esc(lab(p))).join(', ')}${miss.length > 8 ? '…' : ''}</div>` : ''}`; }
+    case 'stepper': { if (!b.field) return setupNote();
+      const steps = (b.steps || []).length ? b.steps : valsOf(b.field).map(x => x.v).filter(x => !(b.exits || []).includes(x));
+      const cur = vk(b.field), at = steps.findIndex(s => s.toLowerCase() === cur.toLowerCase());
+      const lbl = s => { const x = valsOf(b.field).find(y => y.v === s); return x ? T(x.lab) : s; };
+      return `<ol class="stepx">${steps.map((s, i) => `<li class="${i < at ? 'done' : i === at ? 'on' : ''}"><i>${i < at ? '✓' : i + 1}</i>${esc(lbl(s))}</li>`).join('')}</ol>${at < 0 && cur ? `<span class="w-badge ${(b.exits || []).includes(cur) ? 't-bad' : ''}">${esc(val(b.field))}</span>` : ''}`; }
+    case 'checklist': { if (!(b.items || []).length) return setupNote();
+      const done = it => { const w = it.when || {}; if (w.filled != null) return !!val(w.filled); if (!w.field || creating) return null; const v = vk(w.field).toLowerCase(), has = l => (l || []).some(x => String(x).toLowerCase() === v);
+        return w.empty ? !v : w.notIn ? !has(w.notIn) : w.in ? has(w.in) : !!v; };
+      const n = b.items.filter(it => done(it)).length;
+      return `<div class="more"><b>${n} / ${b.items.length}</b></div><ul class="ckx">${b.items.map(it => { const d = done(it); return `<li class="${d ? 'done' : ''}"><i>${d ? '✓' : d === null ? '?' : ''}</i>${tx(it.label) || '…'}</li>`; }).join('')}</ul>`; }
+    case 'chart': { if (!b.a || !b.by) return setupNote();
+      const items = rows.length ? rows.slice(0, b.top || 6) : ['A', 'B', 'C'];
+      return (b.shape === 'donut' ? `<div class="donutx"><span></span><ul>${items.map(r => `<li>${esc(r)}</li>`).join('')}</ul></div>` : `<div class="barsx">${items.map((r, i) => `<span>${esc(r)}</span><span class="barx"><i style="width:${100 - i * 14}%"></i></span>`).join('')}</div>`) + indicative(); }
+    case 'aggregates': if (!b.a || !(b.items || []).length) return setupNote();
+      return `<div class="facts">${b.items.map(it => `<div class="fact"><b>—</b><span>${hasText(it.label) ? tx(it.label) : esc(cl({sum:['Somme','Sum'],avg:['Moyenne','Average'],min:['Minimum','Minimum'],max:['Maximum','Maximum'],count:['Lignes','Rows']}[it.fn || 'sum']) + (it.field ? ' · ' + tfl(b.a, it.field) : ''))}</span></div>`).join('')}</div>${indicative()}`;
+    case 'pivot': if (!b.a || !b.rows || !b.cols) return setupNote();
+      return `<div class="gtab"><table><thead><tr><th></th><th>${esc(tfl(b.a, b.cols))} 1</th><th>${esc(tfl(b.a, b.cols))} 2</th></tr></thead><tbody>${(rows.length ? rows.slice(0, 4) : ['…']).map(r => `<tr><th>${esc(r)}</th><td>✓</td><td>·</td></tr>`).join('')}</tbody></table></div>${indicative()}`;
+    case 'linked': { if (!b.fk) return setupNote(); const fk = F[b.fk] || {};
+      return `<b>${esc(val(b.fk) || '—')}</b>${(b.fields || []).map(p => { const f = (fk.tf || []).find(x => x.p === p); return `<div class="fr"><div class="fl">${esc(f ? T(f.lab) : p)}</div><div class="fv"><div class="w-ro">…</div></div></div>`; }).join('')}${b.open !== false ? `<div style="margin-top:6px"><span class="pbtn">${esc(c('openRecord'))}</span></div>` : ''}`; }
+    case 'contacts': if (!b.a) return setupNote();
+      return rows.length ? `<div class="cards">${rows.slice(0, 6).map(r => `<div class="cardx"><div class="t"><b>${esc(r)}</b></div>${b.role ? `<div class="s">${esc(tfl(b.a, b.role))}</div>` : ''}${b.email ? `<div class="s">✉ ${esc(tfl(b.a, b.email))}</div>` : ''}</div>`).join('')}</div>` : `<div class="note-b">${esc(u('noRow'))}</div>`;
+    case 'gallery': if (!b.a && !(b.fields || []).length) return setupNote();
+      return `<div class="galx" style="grid-template-columns:repeat(${Math.max(1, Math.min(8, b.perRow || 4))},1fr)">${(rows.length ? rows : ['', '', '', '']).slice(0, (b.perRow || 4) * 2).map(r => `<span title="${esc(r)}"></span>`).join('')}</div>${indicative()}`;
+    case 'documents': if (!b.a || !b.file) return setupNote();
+      return rows.length ? rows.map(r => `<div class="docx"><span class="file">PDF</span><b>${esc(r)}</b></div>`).join('') : `<div class="note-b">${esc(u('noRow'))}</div>`;
+    case 'links': if (!(b.items || []).length) return setupNote();
+      return `<div style="display:flex;gap:8px;flex-wrap:wrap">${b.items.map((it, i) => `<span class="pbtn${i === 0 ? ' solid' : ''}">${tx(it.label) || '…'}</span>`).join('')}</div>`;
+    case 'validity': { if (!b.from && !b.to) return setupNote();
+      const f = vd(b.from), t = vd(b.to), warn = b.warnDays == null ? 30 : b.warnDays;
+      if (!f && !t) return `<div class="note-b">${esc(c('noDates'))}</div>`;
+      const n = new Date(new Date().toDateString());
+      const st = f && n < f ? ['valUpcoming','t-info'] : t && n > t ? ['valExpired','t-bad'] : t && dayDiff(t) <= warn ? ['valEnding','t-warn'] : ['valActive','t-ok'];
+      return `<span class="w-badge ${st[1]}">${esc(c(st[0]))}</span> <span class="more">${esc(val(b.from) || '…')} → ${esc(val(b.to) || '…')}</span>`; }
+    case 'address': { const ls = (b.lines || []).map(val).filter(Boolean); const zc = [val(b.zip), val(b.city)].filter(Boolean).join(' ');
+      if (zc) ls.push(zc); if (val(b.region)) ls.push(val(b.region)); if (val(b.country)) ls.push(val(b.country));
+      return ls.length ? `<address class="addrx">${ls.map(esc).join('<br>')}</address>` : !b.city && !(b.lines || []).length ? setupNote() : `<div class="note-b">${esc(c('noAddress'))}</div>`; }
+    case 'hierarchy': if (!b.parent) return setupNote();
+      return `<div class="crumbx"><a href="#" data-noop="1">…</a> › <a href="#" data-noop="1">${esc(val(b.parent) || '—')}</a> › <b>${esc(creating ? u('newRecord') : B.record.label || '')}</b></div>`;
+  }
+  return '';
+}
+/* preview of a display widget of a field, from the record's value */
+function previewWidget(w, f, v){
+  const fd = F[f.p] || {};
+  if (!v && w !== 'boolIcon') return `<div class="w-ro empty">—</div>`;
+  switch (w){
+    case 'badgeMap': { const t = (f.colors || {})[vk(f.p)] || f.defaultTone || 'muted'; return `<span class="w-badge t-${t}">${esc(v)}</span>`; }
+    case 'money': return `<div class="w-fig">${esc(V[f.p + '#n'] != null ? new Intl.NumberFormat(lang, f.currency ? {style:'currency', currency:f.currency} : {}).format(V[f.p + '#n']) : v)}</div>`;
+    case 'unit': return `<div class="w-ro">${esc(v)} <span class="more">${esc(f.unitField ? val(f.unitField) : f.unit || '')}</span></div>`;
+    case 'percent': { const n = V[f.p + '#n'] || 0, p = Math.max(0, Math.min(100, f.scale === 1 ? n * 100 : n)), th = f.thresholds || [50, 80]; return `<span class="pctx ${p < th[0] ? 't-bad' : p < (th[1] || 80) ? 't-warn' : 't-ok'}"><span class="barx"><i style="width:${p}%"></i></span><b>${Math.round(p)} %</b></span>`; }
+    case 'stars': { const m = f.max || 5, n = Math.max(0, Math.min(m, V[f.p + '#n'] || 0)); return `<span class="starsx" style="--v:${100 * n / m}%">${'★'.repeat(m)}</span> <span class="more">${n} / ${m}</span>`; }
+    case 'relativeDate': { const d = vd(f.p); if (!d) return `<div class="w-ro">${esc(v)}</div>`; const n = dayDiff(d), wd = f.warnDays || 0;
+      const t = !wd ? 'muted' : n < 0 ? 'bad' : n <= wd ? 'warn' : 'ok';
+      return `<span class="w-badge t-${t}" title="${esc(v)}">${esc(new Intl.RelativeTimeFormat(lang, {numeric:'auto'}).format(Math.abs(n) < 60 ? n : Math.abs(n) < 730 ? Math.round(n / 30.44) : Math.round(n / 365.25), Math.abs(n) < 60 ? 'day' : Math.abs(n) < 730 ? 'month' : 'year'))}</span>`; }
+    case 'country': { const k = vk(f.p).toUpperCase(); let nm = ''; try { nm = k.length === 2 ? new Intl.DisplayNames([lang], {type:'region'}).of(k) : ''; } catch (_){ nm = ''; }
+      const fl = k.length === 2 && f.flag !== false ? String.fromCodePoint(...[...k].map(ch => 0x1F1E6 + ch.charCodeAt(0) - 65)) + ' ' : '';
+      return `<div class="w-ro">${esc(fl + (nm ? (f.show === 'code' ? k : f.show === 'name' ? nm : nm + ' (' + k + ')') : v))}</div>`; }
+    case 'phone': case 'email': return `<div class="w-ro"><a class="w-link" href="#" data-noop="1">${esc(v)}</a> <span class="cpb">${esc(c('copy'))}</span></div>`;
+    case 'url': return `<div class="w-ro"><a class="w-link" href="#" data-noop="1">${esc(f.show === 'full' ? v : v.replace(/^https?:\/\//i, '').replace(/^www\./, '').replace(/[/?#].*$/, ''))} ↗</a></div>`;
+    case 'color': return `<div class="w-ro"><span class="swx" style="background:${esc(/^#[0-9a-f]{3,6}$|^[a-z]{3,20}$/i.test(vk(f.p)) ? vk(f.p) : 'transparent')}"></span>${f.showCode !== false ? esc(v) : ''}</div>`;
+    case 'barcode': return `<div class="w-ro"><span class="bcx"></span><span class="mono">${esc(v)}</span></div>`;
+    case 'copyId': return `<div class="w-ro"><span class="mono">${esc(v)}</span> <span class="cpb">${esc(c('copy'))}</span></div>`;
+    case 'tags': { const l = V[f.p + '#l'] || String(v).split(/,\s*/); const m = f.max || 6; return `<div class="w-ro">${l.slice(0, m).map(x => `<span class="w-badge">${esc(x)}</span>`).join(' ')}${l.length > m ? ` <span class="w-badge">+ ${l.length - m}</span>` : ''}</div>`; }
+    case 'masked': { const s = String(vk(f.p) || v), n = f.visible == null ? 4 : f.visible; return `<div class="w-ro mono">${esc('•'.repeat(Math.max(0, s.length - n)) + s.slice(Math.max(0, s.length - n)))}</div>`; }
+    case 'recordLink': return `<a class="w-link chipx" href="#" data-noop="1">${esc(v)} ↗</a>`;
+    case 'thumbnail': return `<div class="w-img" style="width:${f.size === 'large' ? 90 : f.size === 'medium' ? 64 : 40}px;height:${f.size === 'large' ? 90 : f.size === 'medium' ? 64 : 40}px"></div>`;
+    case 'geo': return `<div class="w-ro"><a class="w-link" href="#" data-noop="1">${esc(v)}${f.lng ? ', ' + esc(val(f.lng)) : ''} ↗</a></div>`;
+    case 'boolIcon': { const on = vk(f.p) === 'true'; const lb = (f.labels || {})[on ? 'true' : 'false']; return `<span class="bix ${on ? 't-ok' : 't-muted'}"><i>${on ? '✓' : '✕'}</i>${hasText(lb) ? tx(lb) : esc(v || '—')}</span>`; }
+    case 'duration': return `<div class="w-ro">${esc(v)} <span class="more">${esc(f.unit || 'day')}</span></div>`;
+  }
+  return `<div class="w-ro">${esc(v)}</div>`;
+}
+
 
 /* ======================= state ======================= */
 let seq = 0; const nid = p => p + Date.now().toString(36) + (++seq);
@@ -156,7 +470,7 @@ function fromLayout(Lt){
   ((Lt && Lt.tabs) || []).forEach(t => {
     const tab = {id:nid('t'), label:t.label || {}, count:(t.count || []).slice(), rows:[]};
     (t.rows || []).forEach(r => {
-      const row = {id:nid('r'), cols:r.columns === 2 ? 2 : 1, ratio:r.ratio || '11', c:[]};
+      const row = {id:nid('r'), cols:r.columns === 2 ? 2 : 1, ratio:r.ratio || '11', c:[], section:r.section};
       (r.blocks || []).forEach(col => { const ids = []; (col || []).forEach(b => { const id = b.id && !S.blocks[b.id] ? b.id : nid('b'); S.blocks[id] = Object.assign({}, b, {id}); ids.push(id); }); row.c.push(ids); });
       while (row.c.length < row.cols) row.c.push([]);
       if (row.c.length > row.cols) row.c = [row.c.flat()];
@@ -169,7 +483,7 @@ function fromLayout(Lt){
 }
 function toLayout(){
   return {format:'ebx-form-layout/1', model:B.model.location, table:B.model.table, locales:LOCALES,
-    tabs:S.tabs.map(t => ({label:t.label, count:t.count, rows:t.rows.map(r => ({columns:r.cols, ratio:r.cols===2?(r.ratio||'11'):undefined, blocks:r.c.map(col => col.map(id => S.blocks[id]).filter(Boolean))}))}))};
+    tabs:S.tabs.map(t => ({label:t.label, count:t.count, rows:t.rows.map(r => ({columns:r.cols, ratio:r.cols===2?(r.ratio||'11'):undefined, section:r.section && r.section.on ? r.section : undefined, blocks:r.c.map(col => col.map(id => S.blocks[id]).filter(Boolean))}))}))};
 }
 let S = fromLayout(B.layout);
 let cur = S.tabs[0].id, sel = null, mode = 'design', narrow = false, ptab = 'fields', otab = 'json', creating = false, onlyMissing = true;
@@ -203,17 +517,24 @@ function whereIs(node){
   for (const {t, b} of blocks){ if (b.type === 'panel'){ const i = (b.fields || []).findIndex(f => f.p.startsWith(node + '/')); if (i >= 0) return {t, b, i}; } }
   return null;
 }
-const blockName = b => hasText(b.title) ? T(b.title) : b.type === 'grid' ? lab(b.a) : bl(b.type);
+const defTitle = b => ['grid','timeline','contacts','documents','chart','pivot','aggregates'].includes(b.type) || (b.type === 'gallery' && b.a) ? (b.a ? lab(b.a) : '') : b.type === 'linked' && b.fk ? lab(b.fk) : b.type === 'stepper' && b.field ? lab(b.field) : '';
+const blockName = b => hasText(b.title) ? T(b.title) : defTitle(b) || bl(b.type);
 
+const isLoc = v => !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length > 0 && Object.keys(v).every(k => LOCALES.includes(k) && typeof v[k] === 'string');
+const CTXK = {title:'ctxTitle', note:'ctxNote', addBtn:'ctxBtn', text:'ctxText', excTitle:'ohExcTitle'};
 function allTexts(){
   const out = [];
+  const walk = (o, name, go, depth) => { if (!o || typeof o !== 'object' || depth > 6) return;
+    Object.keys(o).forEach(k => { const v = o[k];
+      if (isLoc(v)){ if (hasText(v)) out.push({ctx:`${name} · ${CTXK[k] ? c(CTXK[k]) : k}`, o, p:k, go}); }
+      else if (v && typeof v === 'object' && k !== 'fields') walk(v, name, go, depth + 1); }); };
   S.tabs.forEach((t, ti) => {
     out.push({ctx:c('ctxTab', ti+1), o:t, p:'label', go:{k:'tab', id:t.id}});
-    t.rows.forEach(r => r.c.forEach(col => col.forEach(id => { const b = S.blocks[id]; if (!b) return; const nm = `${bl(b.type)} « ${blockName(b)} »`;
-      ['title','note','addBtn','text','excTitle'].forEach(p => { if (hasText(b[p])) out.push({ctx:`${nm} · ${c({title:'ctxTitle',note:'ctxNote',addBtn:'ctxBtn',text:'ctxText',excTitle:'ohExcTitle'}[p])}`, o:b, p, go:{k:'block', id}}); });
-      (b.actions || []).forEach((a, i) => { if (hasText(a.btn)) out.push({ctx:`${nm} · ${c('ctxAct', i+1)}`, o:a, p:'btn', go:{k:'block', id}}); });
-      (b.fields || []).forEach((f, i) => { if (hasText(f.label)) out.push({ctx:c('ctxField', lab(f.p)), o:f, p:'label', go:{k:'field', b:id, i}}); });
-    })));
+    t.rows.forEach((r, ri) => { if (r.section && hasText(r.section.title)) out.push({ctx:`${c('row')} ${ri + 1} · ${c('sectionTitle')}`, o:r.section, p:'title', go:{k:'row', id:r.id}});
+      r.c.forEach(col => col.forEach(id => { const b = S.blocks[id]; if (!b) return; const nm = `${bl(b.type)} « ${blockName(b)} »`;
+        walk(b, nm, {k:'block', id}, 0);
+        (b.fields || []).forEach((f, i) => { if (f && typeof f === 'object') walk(f, c('ctxField', lab(f.p)).replace(/ · .*$/, ''), b.type === 'panel' ? {k:'field', b:id, i} : {k:'block', id}, 0); });
+      })); });
   });
   return out;
 }
@@ -228,9 +549,12 @@ function widgetsFor(t){
     enum:[['select','wSelect'],['radio','wRadio'],['badge','wBadge'],['ro','wRo']], media:[['image','wImage'],['ro','wRo']], list:[['ro','wRo']]})[t] || [['line','wLine'],['ro','wRo']];
 }
 const defaultWidget = t => widgetsFor(t)[0][0];
+const displayWidgetsFor = t => Object.keys(WG).filter(k => WG[k].t.includes(t)).map(k => [k, WG[k].l]);
 function renderWidget(f, blk){
-  const fd = F[f.p] || {t:'str'}; const w = (f.ro || blk.ro || fd.fn) && (f.w == null || ['line','select','nocreate','area'].includes(f.w)) ? 'ro' : (f.w || defaultWidget(fd.t));
+  const fd = F[f.p] || {t:'str'}; const roF = f.ro || blk.ro || fd.fn;
+  const w = roF && (f.w == null || ['line','select','nocreate','area'].includes(f.w)) ? 'ro' : WG[f.w] && !roF ? defaultWidget(fd.t) : (f.w || defaultWidget(fd.t));
   const v = val(f.p);
+  if (WG[w]) return previewWidget(w, f, v);
   if (w === 'ro') return v ? `<div class="w-ro">${esc(v)}</div>` : `<div class="w-ro empty">—</div>`;
   if (w === 'mono') return f.ro || blk.ro ? `<div class="w-ro mono">${esc(v) || '—'}</div>` : `<div class="w-in mono"><span>${esc(v)}</span></div>`;
   if (w === 'link') return v ? `<a class="w-link" href="#" data-noop="1">${esc(v)}</a>` : `<div class="w-ro empty">—</div>`;
@@ -246,7 +570,7 @@ function renderWidget(f, blk){
 }
 function head(b, extra){
   const n = b.type === 'grid' && A[b.a] ? A[b.a].n : null;
-  const title = hasText(b.title) ? tx(b.title) : (b.type === 'grid' ? esc(lab(b.a)) : '');
+  const title = hasText(b.title) ? tx(b.title) : esc(defTitle(b));
   const note = hasText(b.note) ? `<p>${tx(b.note)}</p>` : '';
   if (!title && !note && !extra) return '';
   return `<header><div><h4>${title}${n != null && title && !creating ? ` <span class="n">· ${n}</span>` : ''}</h4>${note}</div>${extra || ''}</header>`;
@@ -278,7 +602,7 @@ function renderValidation(b){
   return `<div class="vrep"><div class="vhd"><h4>${tx(b.title)}${all.length ? ` · ${all.length}` : ''}</h4><div class="vcs">${counts}</div></div>${body}</div>`;
 }
 function renderBlock(b){
-  const tag = `<div class="btag"><span draggable="true" data-drag="block" data-id="${b.id}">${esc(bl(b.type))}${b.type === 'custom' ? ' · ' + esc(b.cls) : ''}</span>${b.cond ? `<span class="cond" title="${esc(b.cond)}">${esc(c('cond2', b.cond))}</span>` : ''}${b.hideCreate ? `<span class="cond">${esc(c('hiddenCreate'))}</span>` : ''}</div>`;
+  const tag = `<div class="btag"><span draggable="true" data-drag="block" data-id="${b.id}">${esc(bl(b.type))}${b.type === 'custom' ? ' · ' + esc(b.cls) : ''}</span>${b.showIf && b.showIf.field ? `<span class="cond">${esc(c('liveIf', lab(b.showIf.field)))}</span>` : ''}${b.attributesBy && b.attributesBy.table ? `<span class="cond">${esc(c('famTag'))}</span>` : ''}${b.cond ? `<span class="cond" title="${esc(b.cond)}">${esc(c('cond2', b.cond))}</span>` : ''}${b.hideCreate ? `<span class="cond">${esc(c('hiddenCreate'))}</span>` : ''}</div>`;
   const selc = sel && sel.k === 'block' && sel.id === b.id ? ' sel' : '';
   if (creating && b.hideCreate && mode === 'preview') return '';
   const flashc = flash && flash.b === b.id && flash.i == null ? ' flash' : '';
@@ -325,6 +649,7 @@ function renderBlock(b){
     case 'duplicates': inner = `<div class="panel">${head(b)}<div class="dup"><span class="w-badge ok">Golden</span><span class="w-badge">${esc(u('mame'))}</span></div></div>`; break;
     case 'note': inner = `<div class="note-b">${tx(b.text)}</div>`; break;
     case 'custom': inner = `<div class="panel${flashc}">${head(b)}<div class="note-b">${esc(u('component', b.cls))}</div></div>`; break;
+    default: if (BL[b.type]) inner = `<div class="panel${flashc}">${head(b)}${previewMore(b)}</div>`;
   }
   return `<div class="blk${selc}" data-item="block" data-id="${b.id}" data-type="${b.type}">${tag}${inner}</div>`;
 }
@@ -336,7 +661,8 @@ function renderCanvas(){
   t.rows.forEach((r, ri) => {
     rows += `<div class="rowgap" data-drop="rowgap" data-ri="${ri}"></div>`;
     const cls = r.cols === 2 ? `c2 ${r.ratio === '21' ? 'r21' : r.ratio === '12' ? 'r12' : ''}` : '';
-    rows += `<div class="frow ${cls}${sel && sel.k === 'row' && sel.id === r.id ? ' sel' : ''}" data-row="${r.id}"><div class="rowtag"><button type="button" data-rowsel="${r.id}">${esc(c('row'))} · ${r.cols} ${esc(c(r.cols > 1 ? 'cols' : 'col'))}</button></div>`
+    if (r.section && r.section.on) rows += `<div class="secx${r.section.collapsed ? ' shut' : ''}" data-rowsel="${r.id}">${r.section.collapsed ? '▸' : '▾'} ${tx(r.section.title) || esc(c('sectionTitle'))}</div>`;
+    rows += `<div class="frow ${cls}${r.section && r.section.on ? ' insec' : ''}${sel && sel.k === 'row' && sel.id === r.id ? ' sel' : ''}" data-row="${r.id}"><div class="rowtag"><button type="button" data-rowsel="${r.id}">${esc(c('row'))} · ${r.cols} ${esc(c(r.cols > 1 ? 'cols' : 'col'))}</button></div>`
       + r.c.map((col, ci) => `<div class="col${col.length ? '' : ' isempty'}" data-drop="col" data-ri="${ri}" data-ci="${ci}" data-empty="${esc(c('dropHere'))}">${col.map(id => S.blocks[id] ? renderBlock(S.blocks[id]) : '').join('')}</div>`).join('') + `</div>`;
   });
   rows += `<div class="rowgap" data-drop="rowgap" data-ri="${t.rows.length}"></div>`;
@@ -371,8 +697,18 @@ function renderPalette(){
       h += `<button type="button" class="pitem${pa.has(a.p) ? ' placed' : ''}" draggable="true" data-drag="newblock" data-type="grid" data-a="${esc(a.p)}"><span class="tx"><b>${esc(lab(a.p))}</b><small>${esc(a.p)}</small></span><span class="ty">${esc(pa.has(a.p) ? c('placed') : String(a.n))}</span></button>`; });
     h += `<p class="hint">${esc(c('assocHint'))}</p>`;
   } else {
-    Object.keys(BLOCKS).filter(k => k !== 'grid' && k !== 'custom' && m(bl(k) + ' ' + c(BLOCKS[k].d))).forEach(k => {
-      h += `<button type="button" class="pitem" draggable="true" data-drag="newblock" data-type="${k}"><span class="tx"><b>${esc(bl(k))}</b><small class="plain">${esc(c(BLOCKS[k].d))}</small></span>${BLOCKS[k].full ? `<span class="ty">${esc(c('full'))}</span>` : ''}</button>`; });
+    const nq = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const words = nq(q).split(/\s+/).filter(Boolean);
+    const hit = k => !words.length || words.every(w => nq([bl(k), bd(k), BLOCKS[k].tags || '', cl(CATS[BLOCKS[k].cat] || ['','']), k].join(' ')).includes(w));
+    let anyB = false;
+    Object.keys(CATS).forEach(cat => {
+      const ks = Object.keys(BLOCKS).filter(k => k !== 'grid' && k !== 'custom' && BLOCKS[k].cat === cat && hit(k));
+      if (!ks.length) return; anyB = true;
+      h += `<div class="pgroup"><span>${esc(cl(CATS[cat]))}</span>`;
+      ks.forEach(k => { h += `<button type="button" class="pitem" draggable="true" data-drag="newblock" data-type="${k}"><span class="tx"><b>${esc(bl(k))}</b><small class="plain">${esc(bd(k))}</small></span>${BLOCKS[k].full ? `<span class="ty">${esc(c('full'))}</span>` : BL[k] ? `<span class="ty new">${esc(c('newTag'))}</span>` : ''}</button>`; });
+      h += '</div>'; });
+    if (!anyB) h += `<p class="hint">${esc(c('noBlockMatch'))}</p>`;
+    h += `<p class="hint">${esc(c('wbHint'))}</p>`;
     h += `<div class="pgroup"><span>${esc(c('components'))}</span>`;
     COMPS.forEach(cp => { h += `<button type="button" class="pitem" draggable="true" data-drag="newblock" data-type="custom" data-cls="${esc(cp.name)}"><span class="tx"><b>${esc(T(cp.lab) || cp.name)}</b><small>${esc(cp.name)}</small></span></button>`; });
     if (!COMPS.length) h += `<p class="hint">${esc(c('noComponent'))}</p>`;
@@ -401,6 +737,8 @@ function locRef(key){
   if (kind === 'field') return {o:S.blocks[sel.b].fields[sel.i], p:'label'};
   if (kind === 'action') return {o:S.blocks[sel.id].actions[+a], p:'btn'};
   if (kind === 'tr'){ const x = allTexts()[+a]; return {o:x.o, p:x.p}; }
+  if (kind === 'spec'){ const path = key.slice(5), base = specBase(); if (!base) return null; const ks = path.split('.'); const last = ks.pop();
+    let o = base; ks.forEach((k2, i) => { if (o[k2] == null || typeof o[k2] !== 'object') o[k2] = /^\d+$/.test(ks[i + 1] || last) ? [] : {}; o = o[k2]; }); return {o, p:last}; }
 }
 function pathList(key, arr){
   return `<div class="list-mini">${(arr || []).map((p, i) => `<label style="justify-content:space-between"><span>${esc(lab(p))}</span><button type="button" class="btn small ghost" data-pdel="${key}:${i}" style="height:22px">${esc(c('del'))}</button></label>`).join('')}<select data-padd="${key}" aria-label="${esc(c('add'))}">${fieldOpts('', null).replace('<option value="">—</option>', `<option value="">${esc(c('add'))}</option>`)}</select></div>`;
@@ -431,12 +769,14 @@ function renderInspector(){
     h += `<div class="insp"><span class="kind">${esc(c('row'))}</span><h3>${esc(c('row'))} ${Lr.ri + 1} · ${esc(T(Lr.t.label))}</h3>
       <div class="fld"><span class="l">${esc(c('columns'))}</span><div class="seg"><button type="button" data-cols="1" aria-pressed="${r.cols === 1}">1</button><button type="button" data-cols="2" aria-pressed="${r.cols === 2}">2</button></div></div>
       ${r.cols === 2 ? `<div class="fld"><span class="l">${esc(c('ratio'))}</span><div class="seg"><button type="button" data-ratio="11" aria-pressed="${(r.ratio || '11') === '11'}">1 : 1</button><button type="button" data-ratio="21" aria-pressed="${r.ratio === '21'}">2 : 1</button><button type="button" data-ratio="12" aria-pressed="${r.ratio === '12'}">1 : 2</button></div></div>` : ''}
-      <p class="hint">${esc(c('rowHint'))}</p><div class="row-btns"><button type="button" class="btn small ghost" data-act="rup">${esc(c('up'))}</button><button type="button" class="btn small ghost" data-act="rdown">${esc(c('down'))}</button><button type="button" class="btn small ghost" data-act="rdel">${esc(c('delRow'))}</button></div></div>`;
+      <p class="hint">${esc(c('rowHint'))}</p>${specHtml([{k:'bool', key:'section.on', def:false, l:['Section repliable','Collapsible section']}, {k:'loc', key:'section.title', l:['Titre de la section','Section title'], when:x => x.section && x.section.on}, {k:'bool', key:'section.collapsed', def:false, l:['Repliée à l’ouverture','Collapsed when opened'], when:x => x.section && x.section.on}], r)}<div class="row-btns"><button type="button" class="btn small ghost" data-act="rup">${esc(c('up'))}</button><button type="button" class="btn small ghost" data-act="rdown">${esc(c('down'))}</button><button type="button" class="btn small ghost" data-act="rdel">${esc(c('delRow'))}</button></div></div>`;
   } else if (sel.k === 'block'){
     const b = S.blocks[sel.id]; if (!b){ sel = null; return renderInspector(); }
     h += `<div class="insp"><span class="kind">${esc(bl(b.type))}${b.type === 'custom' ? ' · ' + esc(b.cls) : ''}</span>`;
-    if (['panel','grid','map','tree','duplicates','custom','validation','hours'].includes(b.type)) h += locField('block.title', c('titleF'), b.title, b.type === 'grid' && A[b.a] ? (lc => A[b.a].lab[lc] || '') : null);
-    if (['panel','grid','map','tree','duplicates','custom','hours'].includes(b.type)) h += locField('block.note', c('note'), b.note);
+    const titled = ['panel','grid','map','tree','duplicates','custom','validation','hours'].includes(b.type) || !!BL[b.type];
+    if (titled) h += locField('block.title', c('titleF'), b.title, defTitle(b) ? (lc => { const s2 = b.a && A[b.a] ? A[b.a].lab[lc] : b.fk && F[b.fk] ? F[b.fk].lab[lc] : b.field && F[b.field] ? F[b.field].lab[lc] : ''; return s2 || ''; }) : null);
+    if (titled && b.type !== 'validation') h += locField('block.note', c('note'), b.note);
+    if (BL[b.type]) h += specHtml(BL[b.type].spec, b);
     if (b.type === 'panel') h += `<label class="chk"><input type="checkbox" id="ld-i-ro"${b.ro ? ' checked' : ''}> ${esc(c('allRo'))}</label><div class="fld"><span class="l">${esc(c('fields'))} (${(b.fields || []).length})</span><div class="list-mini">${(b.fields || []).map((f, i) => `<label><button type="button" class="btn small ghost" data-fsel="${i}" style="height:24px">${esc(hasText(f.label) ? T(f.label) : lab(f.p))}</button></label>`).join('')}</div></div>`;
     if (b.type === 'hero') h += `<div class="fld"><label for="ld-i-ht">${esc(c('heroTitle'))}</label><select id="ld-i-ht" data-bk="title">${fieldOpts(b.title, f => f.t === 'str' || f.t === 'fk')}</select></div>
       <div class="fld"><label for="ld-i-hm">${esc(c('meter'))}</label><select id="ld-i-hm" data-bk="meter">${fieldOpts(b.meter, f => f.t === 'int' || f.t === 'dec')}</select></div>
@@ -481,7 +821,8 @@ function renderInspector(){
     if (b.type === 'duplicates') h += `<div class="info">${esc(c('dupInfo'))}</div>`;
     if (b.type === 'note') h += locField('block.text', c('text'), b.text, null, true);
     if (b.type === 'custom') h += `<div class="fld"><label for="ld-i-cc">${esc(c('component'))}</label><input type="text" id="ld-i-cc" class="mono" value="${esc(b.cls)}"></div><div class="info">${esc(c('compInfo'))}</div>`;
-    h += `<div class="fld"><label for="ld-i-cond">${esc(c('cond'))}</label><input type="text" id="ld-i-cond" class="mono" value="${esc(b.cond || '')}" placeholder="${esc(c('always'))}"></div>
+    h += behaviourBlockHtml(b);
+    h += `<div class="fld"><label for="ld-i-cond">${esc(c('condX'))}</label><input type="text" id="ld-i-cond" class="mono" value="${esc(b.cond || '')}" placeholder="${esc(c('always'))}"></div>
       <label class="chk"><input type="checkbox" id="ld-i-hc"${b.hideCreate ? ' checked' : ''}> ${esc(c('hideCreate'))}</label>${moveBtns()}</div>`;
   } else if (sel.k === 'field'){
     const b = S.blocks[sel.b]; const f = b && b.fields[sel.i]; if (!f || !F[f.p]){ sel = null; return renderInspector(); }
@@ -489,10 +830,11 @@ function renderInspector(){
     h += `<div class="insp"><span class="kind">${esc(c('field'))} · ${esc(blockName(b))}</span><h3>${esc(hasText(f.label) ? T(f.label) : lab(f.p))}</h3>
       <div class="fld"><span class="l">${esc(c('path'))}</span><code style="font-family:var(--mono);font-size:12px">.${esc(f.p)}</code><span class="hint">${esc(c(TY[fd.t] || 'tStr'))}${fd.req ? ' · ' + esc(c('required')) : ''}${fd.fn ? ' · ' + esc(c('computed')) : ''}</span></div>
       ${locField('field.label', c('fieldLabel'), f.label, lc => (fd.lab[lc] || '') + ' ' + c('modelLabel'))}<p class="hint" style="margin-top:-6px">${esc(c('fieldLabelHint'))}</p>
-      <div class="fld"><label for="ld-i-fw">${esc(c('widget'))}</label><select id="ld-i-fw">${widgetsFor(fd.t).map(([k, l]) => opt(k, f.w || defaultWidget(fd.t), c(l))).join('')}</select></div>
+      <div class="fld"><label for="ld-i-fw">${esc(c('widget'))}</label><select id="ld-i-fw"><optgroup label="${esc(c('wInput'))}">${widgetsFor(fd.t).filter(([k]) => !isDisplayW(k)).map(([k, l]) => opt(k, f.w || defaultWidget(fd.t), cl(l))).join('')}</optgroup><optgroup label="${esc(c('wDisplay'))}">${widgetsFor(fd.t).filter(([k]) => isDisplayW(k)).concat(displayWidgetsFor(fd.t)).map(([k, l]) => opt(k, f.w || defaultWidget(fd.t), cl(l))).join('')}</optgroup></select></div>
+      ${WG[f.w] ? `<div class="rule">${specHtml(WG[f.w].spec, f) || `<p class="hint">${esc(c('noSetting'))}</p>`}</div>` : ''}${isDisplayW(f.w) ? `<p class="hint">${esc(c('displayHint'))}</p>` : ''}
       <label class="chk"><input type="checkbox" id="ld-i-fro"${f.ro || fd.fn ? ' checked' : ''}${fd.fn ? ' disabled' : ''}> ${esc(c('ro'))}</label>
       <label class="chk"><input type="checkbox" id="ld-i-fwide"${f.wide ? ' checked' : ''}> ${esc(c('wide'))}</label>
-      ${fd.req ? `<div class="info">${esc(c('reqInfo'))}</div>` : ''}${moveBtns()}</div>`;
+      ${fd.req ? `<div class="info">${esc(c('reqInfo'))}</div>` : ''}${behaviourFieldHtml(f)}${moveBtns()}</div>`;
   }
   $('#ld-insp').innerHTML = h;
   /* on a narrow screen the inspector is a drawer: open while something is selected */
@@ -581,7 +923,7 @@ function newBlock(type, extra){
     grid:{a:(B.assocs[0] || {}).p || '', style:'native'}, map:{title:L('Localisation','Location','Posizione'), lat:'', lng:''},
     tree:{title:L('Structure du groupe','Group structure','Struttura del gruppo'), parent:'', children:''},
     hours:{title:L('Horaires d’ouverture','Opening hours','Orari di apertura'), week:{a:'', day:'', open:'', close:'', closed:''}, days:{}, exceptions:{a:'', date:'', open:'', close:'', closed:'', reason:''}, max:3, tz:''}, duplicates:{title:L('Doublons','Duplicates','Duplicati')},
-    note:{text:L('Texte d’aide pour l’utilisateur.','Help text for the user.','Testo di aiuto per l’utente.')}, custom:{cls:'', title:{}}}[type];
+    note:{text:L('Texte d’aide pour l’utilisateur.','Help text for the user.','Testo di aiuto per l’utente.')}, custom:{cls:'', title:{}}}[type] || Object.assign({title:BL[type] && !['timeline','contacts','documents','chart','pivot','aggregates','linked','stepper'].includes(type) ? L(BL[type].l[0], BL[type].l[1]) : {}}, BL[type] ? BL[type].def : {});
   S.blocks[id] = Object.assign({id, type}, JSON.parse(JSON.stringify(base)), extra || {});
   return id;
 }
@@ -771,6 +1113,15 @@ root.addEventListener('click', e => {
     const bk = t.closest('#ld-canvas [data-item="block"]'); if (bk){ sel = {k:'block', id:bk.dataset.id}; explain = ''; return renderAll(); }
   }
   const pi = t.closest('#ld-palette .pitem'); if (pi) return addFromPalette(pi.dataset);
+  const sbase = specBase();
+  if (sbase){
+    const sc = t.closest('[data-schoice]'); if (sc){ snapshot(); const [k, v] = sc.dataset.schoice.split('|'); setP(sbase, k, sc.dataset.num ? Number(v) : v); return commit(''); }
+    const sd = t.closest('[data-scode]'); if (sd){ snapshot(); const i = sd.dataset.scode.indexOf('|'); const k = sd.dataset.scode.slice(0, i), v = sd.dataset.scode.slice(i + 1);
+      const arr = (getP(sbase, k) || []).slice(); const j = arr.findIndex(x => String(x).toLowerCase() === v.toLowerCase()); if (j >= 0) arr.splice(j, 1); else arr.push(v); setP(sbase, k, arr); return commit(''); }
+    const sdl = t.closest('[data-sdel]'); if (sdl){ snapshot(); const [k, i] = sdl.dataset.sdel.split('|'); const arr = getP(sbase, k); if (Array.isArray(arr)) arr.splice(+i, 1); return commit(''); }
+    const sa = t.closest('[data-sadd]'); if (sa){ snapshot(); const k = sa.dataset.sadd; const arr = getP(sbase, k); const item = JSON.parse(sa.dataset.tpl || '{}'); if (Array.isArray(arr)) arr.push(item); else setP(sbase, k, [item]); return commit(''); }
+    const sw = t.closest('[data-swhen]'); if (sw){ snapshot(); const [k, kind] = sw.dataset.swhen.split('|'); setP(sbase, k, kind === 'xpath' ? {xpath:''} : kind === 'value' ? {field:''} : {filled:''}); return commit(''); }
+  }
   const ab = t.closest('[data-act]'); if (ab) return act(ab.dataset.act);
   const trg = t.closest('[data-trgo]'); if (trg){ const x = allTexts()[+trg.dataset.trgo]; sel = x.go; if (x.go.k === 'tab') cur = x.go.id; else { const Lc = locate(x.go.k === 'field' ? x.go.b : x.go.id); if (Lc) cur = Lc.t.id; } explain = ''; return renderAll(); }
   const fs = t.closest('[data-fsel]'); if (fs){ sel = {k:'field', b:sel.id, i:+fs.dataset.fsel}; explain = ''; return renderAll(); }
@@ -804,6 +1155,22 @@ root.addEventListener('change', e => {
   if (t.id === 'ld-rec'){ if (t.value === '__new'){ creating = true; return renderAll(); } creating = false; return submit('record', t.value); }
   if (!sel) return;
   if (t.id === 'ld-i-miss'){ onlyMissing = t.checked; return renderInspector(); }
+  const sb = specBase();
+  if (sb && t.dataset.sk != null){
+    snapshot(); const k = t.dataset.sk, sv = t.dataset.sv;
+    if (t.dataset.scond && !t.value){ const pk = k.replace(/\.field$/, ''); const q = getP(sb, pk); if (q){ ['field','in','notIn','filled','empty'].forEach(x => delete q[x]); if (!Object.keys(q).length) setP(sb, pk, undefined); } return commit(''); }
+    const v = sv === 'num' ? (t.value === '' ? undefined : Number(t.value)) : sv === 'bool' ? t.checked : sv === 'codes' ? t.value.split(',').map(x => x.trim()).filter(Boolean) : t.value.trim();
+    setP(sb, k, sv === 'bool' ? !!v : v); return commit('');
+  }
+  if (sb && t.dataset.sop){ snapshot(); const q = getP(sb, t.dataset.sop) || {}; const prev = q.in || q.notIn || []; ['in','notIn','filled','empty'].forEach(x => delete q[x]);
+    if (t.value === 'in' || t.value === 'notIn') q[t.value] = prev; else q[t.value] = true; setP(sb, t.dataset.sop, q); return commit(''); }
+  if (sb && t.dataset.sarr){ snapshot(); const i = t.dataset.sarr.indexOf('|'); const k = t.dataset.sarr.slice(0, i), v = t.dataset.sarr.slice(i + 1);
+    const arr = (getP(sb, k) || []).filter(x => x !== v); if (t.checked) arr.push(v); setP(sb, k, arr); return commit(''); }
+  if (sb && t.dataset.spush && t.value){ snapshot(); const arr = (getP(sb, t.dataset.spush) || []).slice(); arr.push(t.value); setP(sb, t.dataset.spush, arr); return commit(''); }
+  if (sb && t.dataset.spushw && t.value){ snapshot(); const arr = (getP(sb, t.dataset.spushw) || []).slice(); arr.push({p:t.value, weight:1}); setP(sb, t.dataset.spushw, arr); return commit(''); }
+  if (sb && t.dataset.stone){ snapshot(); const i = t.dataset.stone.indexOf('|'); const k = t.dataset.stone.slice(0, i), v = t.dataset.stone.slice(i + 1);
+    const m = Object.assign({}, getP(sb, k) || {}); if (t.value) m[v] = t.value; else delete m[v]; setP(sb, k, Object.keys(m).length ? m : undefined); return commit(''); }
+  if (sb && t.dataset.stadd && t.value.trim()){ snapshot(); const m = Object.assign({}, getP(sb, t.dataset.stadd) || {}); m[t.value.trim()] = 'accent'; setP(sb, t.dataset.stadd, m); return commit(''); }
   const Bk = sel.k === 'block' ? S.blocks[sel.id] : null;
   if (sel.k === 'tab' && t.dataset.count){ snapshot(); const tb = tabOf(sel.id); if (t.checked) tb.count.push(t.dataset.count); else tb.count = tb.count.filter(p => p !== t.dataset.count); return commit(''); }
   if (Bk && t.dataset.bk){ snapshot(); Bk[t.dataset.bk] = t.value; return commit(''); }
@@ -817,7 +1184,7 @@ root.addEventListener('change', e => {
   if (Bk && flags[t.id]){ snapshot(); Bk[flags[t.id]] = t.checked; return commit(''); }
   if (Bk && t.id === 'ld-i-vmax'){ snapshot(); Bk.max = +t.value; return commit(''); }
   if (sel.k === 'field'){ const f = S.blocks[sel.b].fields[sel.i];
-    if (t.id === 'ld-i-fw'){ snapshot(); f.w = t.value; return commit(''); }
+    if (t.id === 'ld-i-fw'){ snapshot(); if (WG[f.w]) WG[f.w].spec.forEach(x => { if (x.key) delete f[x.key.split('.')[0]]; }); f.w = t.value; if (isDisplayW(t.value) && !f.ro && !(F[f.p] || {}).fn){ f.ro = true; return commit(esc(c('explDisplayRo'))); } return commit(''); }
     if (t.id === 'ld-i-fro'){ snapshot(); f.ro = t.checked; return commit(''); }
     if (t.id === 'ld-i-fwide'){ snapshot(); f.wide = t.checked; return commit(''); }
   }

@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit 26ce1aa456e4dd674e14b65f305611b6c73dce5c
-Opening hours block ("type": "hours"), version 1.3.0
+Exported from EBX-Layout-Designer commit 01c6ff90554f96db63c1a3bd0d032473b2123a70
+Merge feature/component-library: Layout Designer 1.4.0
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

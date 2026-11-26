@@ -45,6 +45,10 @@ final class RenderContext
 	final JsonNode layout;
 	final Map<String, Location> locations = new HashMap<String, Location>();
 	private final Map<String, Integer> counts = new HashMap<String, Integer>();
+	/** Fields whose changes re-run the dynamic behaviours (their widget calls ldfDyn). */
+	final java.util.Set<String> controllers = new java.util.HashSet<String>();
+	/** Values computed once per display (a configuration table read by a behaviour). */
+	final Map<String, Object> cache = new HashMap<String, Object>();
 	private List<ReportItems.Item> report;
 
 	RenderContext(final UIFormContext pContext, final JsonNode pLayout)
@@ -223,6 +227,32 @@ final class RenderContext
 		return this.report;
 	}
 
+	/** An XPath predicate on the record: its result, pDefault when there is no record or it cannot run. */
+	boolean xpath(final String pCondition, final boolean pDefault)
+	{
+		if (pCondition == null || pCondition.trim().isEmpty() || this.record == null)
+		{
+			return pDefault;
+		}
+		try
+		{
+			final RequestResult result = this.record.getContainerTable().createRequestResult(this.record.toXPathPredicateString() + " and (" + pCondition + ")");
+			try
+			{
+				return !result.isEmpty();
+			}
+			finally
+			{
+				result.close();
+			}
+		}
+		catch (final RuntimeException ex)
+		{
+			LoggingCategory.getKernel().warn("[layout-designer] condition '" + pCondition + "' not evaluated: " + ex.getMessage());
+			return pDefault;
+		}
+	}
+
 	static String blockId(final JsonNode pBlock, final int pTab, final int pRow, final int pCol, final int pIndex)
 	{
 		final String id = pBlock.path("id").asText("");
@@ -246,9 +276,23 @@ final class RenderContext
 		{
 			return t;
 		}
-		if ("grid".equals(pBlock.path("type").asText()))
+		final String type = pBlock.path("type").asText();
+		if ("grid".equals(type) || "timeline".equals(type) || "contacts".equals(type) || "documents".equals(type) || "chart".equals(type) || "pivot".equals(type)
+			|| "aggregates".equals(type) || ("gallery".equals(type) && !pBlock.path("a").asText("").isEmpty()))
 		{
 			return this.label(pBlock.path("a").asText());
+		}
+		if ("history".equals(type))
+		{
+			return RuntimeText.get("historyTitle", this.locale);
+		}
+		if ("linked".equals(type))
+		{
+			return this.label(pBlock.path("fk").asText());
+		}
+		if ("stepper".equals(type))
+		{
+			return this.label(pBlock.path("field").asText());
 		}
 		return "";
 	}
@@ -272,6 +316,7 @@ final class RenderContext
 						final JsonNode b = col.get(k);
 						final String id = RenderContext.blockId(b, t, r, c, k);
 						final String type = b.path("type").asText();
+						Behaviors.controllers(b, this.controllers);
 						final String title = tabLabel + " › " + this.blockTitle(b);
 						if ("panel".equals(type))
 						{
@@ -290,7 +335,18 @@ final class RenderContext
 						{
 							this.locations.put(b.path("a").asText(), new Location(t, RenderContext.blockAnchor(id), title, null));
 						}
-						else if ("custom".equals(type) || "tree".equals(type))
+						else if (!"panel".equals(type))
+						{
+							for (final String key : new String[] { "a", "fk", "field", "from", "to", "zip", "city", "country", "parent", "children" })
+							{
+								final String p = b.path(key).asText("");
+								if (p.startsWith("/") && this.node(p) != null && !this.locations.containsKey(p))
+								{
+									this.locations.put(p, new Location(t, RenderContext.blockAnchor(id), title, null));
+								}
+							}
+						}
+						if ("custom".equals(type) || "tree".equals(type))
 						{
 							for (final JsonNode p : b.path("covers"))
 							{

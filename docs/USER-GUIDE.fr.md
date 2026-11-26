@@ -45,9 +45,30 @@ association. C'est un brouillon tant que vous ne l'enregistrez pas.
 
 ### Widgets d'un champ
 
-Texte, texte sur une ligne, zone de texte, nombre, date, case à cocher, Oui / Non (radio), liste déroulante, liste sans
-« Créer » (clé étrangère), boutons radio. Formes d'affichage en lecture seule : chiffre mis en avant, pastille, lien,
-code (police fixe). Sans choix, c'est le widget d'EBX qui s'applique.
+La liste ne propose que les widgets qui conviennent au type du champ, en deux groupes.
+
+- **Saisie** : texte, texte sur une ligne, zone de texte, nombre, date, case à cocher, Oui / Non (radio), liste
+  déroulante, liste sans « Créer » (clé étrangère), boutons radio. Le widget d'EBX s'applique si rien n'est choisi.
+- **Affichage (lecture seule)** : chiffre mis en avant, pastille, lien, code, et depuis la 1.4.0 pastille colorée par
+  valeur, montant avec devise, valeur avec unité, pourcentage en barre, note en étoiles, date relative (« dans 12
+  jours »), durée, pays (nom et drapeau), téléphone et e-mail (avec Copier), adresse web, couleur, code-barres EAN /
+  GTIN (barres et clé de contrôle), identifiant copiable, puces, valeur masquée (certains rôles peuvent tout afficher),
+  lien vers la fiche d'une clé étrangère, vignette, coordonnées GPS, oui / non en icône. Leurs réglages (devise, unité,
+  couleurs par valeur…) apparaissent sous la liste. En choisir un coche *Lecture seule* : un widget d'affichage sert
+  quand le champ est en lecture seule, un champ modifiable garde la saisie d'EBX.
+
+### Comportements d'un champ
+
+Sous *Comportements*, dans l'inspecteur du champ :
+
+- **Afficher seulement si (en direct)** : le champ apparaît ou disparaît pendant la saisie d'un autre champ, sans
+  enregistrer (`Famille est l'une des valeurs Essuie-glaces`, `Consentement est renseigné`…) ; sa valeur peut être
+  gardée ou vidée quand il se cache ;
+- **Obligatoire si (astérisque en direct)** : l'astérisque suit une valeur ;
+- **Lecture seule si** : pour certaines valeurs d'un champ, et/ou pour certains rôles, sauf pour d'autres (calculé à
+  l'ouverture).
+
+Un comportement change l'affichage, pas la validation d'EBX : pour bloquer l'enregistrement, ajoutez une règle au modèle.
 
 ## 4. Les blocs
 
@@ -67,6 +88,39 @@ code (police fixe). Sans choix, c'est le widget d'EBX qui s'applique.
 
 Deux réglages sur chaque bloc : **Afficher seulement si (XPath)**, un prédicat sur la fiche
 (`./Lifecycle/status = 'ACTIVE'`), et **Masquer à la création d'une fiche**.
+
+
+Depuis la 1.4.0 :
+
+| Bloc | Ce qu'il montre |
+|---|---|
+| **Frise chronologique** | les lignes d'une association sur une frise, la plus récente en haut, colorées selon un champ |
+| **Historique des modifications** | qui a changé quoi et quand, pour les champs choisis (historisation activée sur la table) |
+| **Complétude** | la part des champs renseignés (chacun avec un poids), les manquants avec *Aller au champ* |
+| **Cycle de vie (étapes)** | les étapes d'un champ statut, l'étape courante mise en avant, les étapes de sortie en rouge |
+| **Liste de contrôle** | des points cochés selon une condition : champ renseigné, valeur, ou prédicat XPath |
+| **Répartition (graphique)** | les lignes d'une association regroupées par un champ, comptées, sommées ou moyennées, en barres ou en anneau |
+| **Totaux d'une association** | somme, moyenne, minimum, maximum ou nombre de lignes, en nombre, montant ou pourcentage |
+| **Matrice** | les lignes d'une association croisées sur deux champs (disponibilité par pays et par canal) |
+| **Fiche liée** | les champs choisis de l'enregistrement visé par une clé étrangère, avec un lien pour l'ouvrir |
+| **Contacts** | les personnes d'une association en cartes, e-mail et téléphone avec Copier, le contact principal en tête |
+| **Galerie d'images** | les images de champs média ou d'adresse, de la fiche ou d'une association |
+| **Documents** | les fichiers d'une association : nom, type, date (en rouge une fois une échéance passée), lien |
+| **Liens et actions** | des boutons vers une adresse construite avec les valeurs de la fiche (`https://boutique.exemple.fr/p/${./Sku}`) |
+| **Période de validité** | à venir, en vigueur, bientôt échu ou expiré, avec les jours restants |
+| **Adresse formatée** | les champs d'adresse mis en forme selon le pays, avec un lien vers la carte |
+| **Arborescence** | le fil d'Ariane d'une clé parent sur plusieurs niveaux, et les enfants |
+
+Réglages communs à tous les blocs : **Afficher seulement si (en direct)**, une condition sur un autre champ évaluée
+pendant la saisie (sur un panneau, les valeurs des champs cachés peuvent être vidées) ; **Afficher seulement si (XPath,
+à l'ouverture)**, un prédicat sur la fiche ; **Masquer à la création d'une fiche**.
+
+Un **panneau** peut aussi tirer ses champs d'une **table de configuration** du dataset : *Champs pilotés par une table
+de configuration* indique la table, le champ de la fiche qui pilote (la famille) et les colonnes famille, attribut
+(chemin ou nom du champ) et, en option, obligatoire. Un champ que la table cite pour une famille ne s'affiche que pour
+cette famille, en direct ; un champ qu'elle ne cite jamais reste affiché.
+
+Une **ligne** peut être une **section repliable** (inspecteur de la ligne) : un titre, ouverte ou repliée à l'ouverture.
 
 ## 5. Le bloc « Rapport de validation »
 
@@ -121,7 +175,7 @@ Il apparaît alors dans la palette sous *Composants enregistrés* ; le runtime o
 du bloc, et le composant écrit à l'intérieur. Le module n'a besoin du jar runtime qu'à la compilation (il est dans
 celui du serveur à l'exécution).
 
-## 9. Limites (1.0.0)
+## 9. Limites
 
 - **Modèles DMA** : le designer ne sait pas écrire lui-même la déclaration (déclarez la classe dans l'écran du modèle
   ou avec `set_form_layout`), ni la lire : l'état affiché dans la barre du haut indique alors *Modèle DMA : déclaration à

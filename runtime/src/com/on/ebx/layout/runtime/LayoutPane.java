@@ -16,6 +16,8 @@ import com.orchestranetworks.ui.form.UIFormContext;
 import com.orchestranetworks.ui.form.UIFormPane;
 import com.orchestranetworks.ui.form.UIFormPaneWriter;
 import com.orchestranetworks.ui.form.UIFormRow;
+import com.orchestranetworks.ui.base.JsFunctionCall;
+import com.orchestranetworks.ui.form.widget.UIAtomicWidget;
 import com.orchestranetworks.ui.form.widget.UIComboBox;
 import com.orchestranetworks.ui.form.widget.UITextBox;
 import com.orchestranetworks.ui.form.widget.UIWidget;
@@ -29,6 +31,7 @@ final class LayoutPane implements UIFormPane
 	private final RenderContext rc;
 	private final JsonNode tab;
 	private final int tabIndex;
+	private Behaviors.Rules rules;
 
 	LayoutPane(final RenderContext pContext, final JsonNode pTab, final int pTabIndex)
 	{
@@ -41,6 +44,7 @@ final class LayoutPane implements UIFormPane
 	public void writePane(final UIFormPaneWriter pWriter, final UIFormContext pContext)
 	{
 		pWriter.add("<style>").add(Css.STYLE).add("</style><div class=\"ldf\">");
+		this.rules = new Behaviors.Rules(pWriter);
 		final JsonNode rows = this.tab.path("rows");
 		for (int r = 0; r < rows.size(); r++)
 		{
@@ -48,6 +52,13 @@ final class LayoutPane implements UIFormPane
 			final JsonNode cols = row.path("blocks");
 			final boolean two = row.path("columns").asInt(1) == 2 && cols.size() == 2;
 			final String ratio = row.path("ratio").asText("11");
+			final JsonNode section = row.path("section");
+			final boolean inSection = section.isObject() && section.path("on").asBoolean(true) && !section.isEmpty();
+			if (inSection)
+			{
+				pWriter.add("<details class=\"ldf-sec\"").add(section.path("collapsed").asBoolean(false) ? "" : " open").add("><summary>")
+					.add(LayoutPane.esc(this.rc.text(section.get("title")))).add("</summary>");
+			}
 			pWriter.add("<div class=\"ldf-row").add(two ? " ldf-c2" + ("21".equals(ratio) ? " ldf-r21" : "12".equals(ratio) ? " ldf-r12" : "") : "").add("\">");
 			for (int c = 0; c < cols.size(); c++)
 			{
@@ -68,9 +79,18 @@ final class LayoutPane implements UIFormPane
 				pWriter.add("</div>");
 			}
 			pWriter.add("</div>");
+			if (inSection)
+			{
+				pWriter.add("</details>");
+			}
 		}
 		pWriter.add("</div>");
 		pWriter.addJS_cr(Css.GO_JS);
+		pWriter.addJS_cr(DisplayWidgets.JS);
+		if (!this.rules.isEmpty())
+		{
+			pWriter.addJS_cr(this.rules.js());
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------ blocks
@@ -85,7 +105,39 @@ final class LayoutPane implements UIFormPane
 		{
 			return;
 		}
+		final JsonNode showIf = b.get("showIf");
+		final boolean dynamic = showIf != null && !showIf.path("field").asText("").isEmpty();
+		if (dynamic)
+		{
+			final boolean on = Behaviors.test(showIf, this.rc.raw(showIf.path("field").asText()));
+			final List<String> clear = new ArrayList<String>();
+			if ("clear".equals(b.path("onHide").asText("keep")))
+			{
+				for (final JsonNode f : b.path("fields"))
+				{
+					clear.add(f.path("p").asText());
+				}
+			}
+			w.add("<div class=\"ldf-dyn\" id=\"ldd-").add(id).add("\"").add(on ? "" : " style=\"display:none\"").add(">");
+			this.rules.show(this.rc, showIf, "ldd-" + id, clear);
+		}
+		this.typed(w, b, id);
+		if (dynamic)
+		{
+			w.add("</div>");
+		}
+	}
+
+	private void typed(final UIFormPaneWriter w, final JsonNode b, final String id)
+	{
 		final String type = b.path("type").asText();
+		final String inner = this.more(type, b);
+		if (inner != null)
+		{
+			this.startPanel(w, b, id, this.rc.blockTitle(b), null, null);
+			w.add(inner).add("</section>");
+			return;
+		}
 		if ("panel".equals(type))
 		{
 			this.panel(w, b, id);
@@ -133,31 +185,52 @@ final class LayoutPane implements UIFormPane
 		}
 	}
 
+	/** The HTML of a block added in 1.4.0, null for the other types. */
+	private String more(final String pType, final JsonNode b)
+	{
+		switch (pType)
+		{
+		case "timeline":
+			return MoreBlocks.timeline(this.rc, b);
+		case "history":
+			return MoreBlocks.history(this.rc, b);
+		case "completeness":
+			return MoreBlocks.completeness(this.rc, b);
+		case "stepper":
+			return MoreBlocks.stepper(this.rc, b);
+		case "checklist":
+			return MoreBlocks.checklist(this.rc, b);
+		case "chart":
+			return MoreBlocks.chart(this.rc, b);
+		case "aggregates":
+			return MoreBlocks.aggregates(this.rc, b);
+		case "pivot":
+			return MoreBlocks.pivot(this.rc, b);
+		case "linked":
+			return MoreBlocks.linkedBlock(this.rc, b);
+		case "contacts":
+			return MoreBlocks.contacts(this.rc, b);
+		case "gallery":
+			return MoreBlocks.gallery(this.rc, b);
+		case "documents":
+			return MoreBlocks.documents(this.rc, b);
+		case "links":
+			return MoreBlocks.links(this.rc, b);
+		case "validity":
+			return MoreBlocks.validity(this.rc, b);
+		case "address":
+			return MoreBlocks.address(this.rc, b);
+		case "hierarchy":
+			return MoreBlocks.hierarchy(this.rc, b);
+		default:
+			return null;
+		}
+	}
+
 	/** An XPath predicate on the record; true when there is none, when the record is new or when it cannot run. */
 	private boolean visible(final String pCondition)
 	{
-		if (pCondition.trim().isEmpty() || this.rc.record == null)
-		{
-			return true;
-		}
-		try
-		{
-			final RequestResult result = this.rc.record.getContainerTable()
-				.createRequestResult(this.rc.record.toXPathPredicateString() + " and (" + pCondition + ")");
-			try
-			{
-				return !result.isEmpty();
-			}
-			finally
-			{
-				result.close();
-			}
-		}
-		catch (final RuntimeException ex)
-		{
-			LoggingCategory.getKernel().warn("[layout-designer] condition '" + pCondition + "' not evaluated, block shown: " + ex.getMessage());
-			return true;
-		}
+		return this.rc.xpath(pCondition, true);
 	}
 
 	private void startPanel(final UIFormPaneWriter w, final JsonNode b, final String pId, final String pTitle, final String pCount, final String pExtra)
@@ -196,6 +269,8 @@ final class LayoutPane implements UIFormPane
 		final JsonNode fields = b.path("fields");
 		final boolean allReadOnly = b.path("ro").asBoolean(false);
 		this.startPanel(w, b, id, this.rc.text(b.get("title")), null, null);
+		final JsonNode by = b.get("attributesBy");
+		final List<String[]> familyFields = new ArrayList<String[]>();
 		boolean table = false;
 		for (int i = 0; i < fields.size(); i++)
 		{
@@ -209,9 +284,23 @@ final class LayoutPane implements UIFormPane
 			final Path path = LayoutPaths.relative(stored);
 			final String anchor = RenderContext.fieldAnchor(id, i);
 			final String kind = f.path("w").asText("");
-			final boolean ro = allReadOnly || f.path("ro").asBoolean(false) || node.isValueFunction();
+			final boolean ro = allReadOnly || f.path("ro").asBoolean(false) || node.isValueFunction() || Behaviors.readOnly(this.rc, f.get("readOnlyIf"));
+			final JsonNode fShow = f.get("showIf");
+			if (fShow != null && !fShow.path("field").asText("").isEmpty())
+			{
+				this.rules.show(this.rc, fShow, anchor, "clear".equals(f.path("onHide").asText("keep")) ? java.util.Collections.singletonList(stored) : null);
+			}
+			final JsonNode fMand = f.get("mandatoryIf");
+			if (fMand != null && !fMand.path("field").asText("").isEmpty() && !ro)
+			{
+				this.rules.mandatory(this.rc, fMand, stored);
+			}
+			if (by != null)
+			{
+				familyFields.add(new String[] { anchor, stored });
+			}
 			final String label = LText.hasText(f.get("label")) ? this.rc.text(f.get("label")) : node.getLabel(this.rc.locale);
-			final boolean displayOnly = ro && ("badge".equals(kind) || "fig".equals(kind) || "link".equals(kind) || "mono".equals(kind));
+			final boolean displayOnly = ro && ("badge".equals(kind) || "fig".equals(kind) || "link".equals(kind) || "mono".equals(kind) || DisplayWidgets.isDisplay(kind));
 			if (displayOnly)
 			{
 				if (table)
@@ -220,7 +309,7 @@ final class LayoutPane implements UIFormPane
 					table = false;
 				}
 				w.add("<div class=\"ldf-ro\" id=\"").add(anchor).add("\"><span class=\"ldf-l\">").add(LayoutPane.esc(label)).add("</span>");
-				w.add(this.displayHtml(stored, kind)).add("</div>");
+				w.add(DisplayWidgets.isDisplay(kind) ? DisplayWidgets.html(this.rc, f, stored, kind) : this.displayHtml(stored, kind)).add("</div>");
 				continue;
 			}
 			if (f.path("wide").asBoolean(false))
@@ -253,6 +342,10 @@ final class LayoutPane implements UIFormPane
 			w.endTableFormRow();
 		}
 		w.add("</section>");
+		if (by != null && !by.path("key").asText("").isEmpty())
+		{
+			this.rules.family(this.rc, by, RenderContext.blockAnchor(id), familyFields);
+		}
 	}
 
 	private UIWidget widget(final UIFormPaneWriter w, final Path path, final SchemaNode node, final String kind, final boolean ro)
@@ -284,6 +377,10 @@ final class LayoutPane implements UIFormPane
 				box.setMultiLine("area".equals(kind));
 				widget = box;
 			}
+			else if (!ro && this.rc.controllers.contains(LayoutPaths.stored(path)))
+			{
+				widget = LayoutPane.atomic(w, path, node); // the best-matching widget takes no afterValueChanged action
+			}
 			else
 			{
 				widget = w.newBestMatching(path);
@@ -297,7 +394,34 @@ final class LayoutPane implements UIFormPane
 		{
 			widget.setEditorDisabled(true);
 		}
+		else if (widget instanceof UIAtomicWidget && this.rc.controllers.contains(LayoutPaths.stored(path)))
+		{
+			((UIAtomicWidget) widget).setActionOnAfterValueChanged(JsFunctionCall.on("ldfDyn"));
+		}
 		return widget;
+	}
+
+	/** An atomic widget for a field whose changes drive behaviours, close to what EBX would choose. */
+	private static UIWidget atomic(final UIFormPaneWriter w, final Path path, final SchemaNode node)
+	{
+		if (node.getMaxOccurs() > 1)
+		{
+			return w.newBestMatching(path);
+		}
+		if (node.getFacetOnTableReference() != null || node.getFacetEnumeration() != null)
+		{
+			return w.newComboBox(path);
+		}
+		final Class<?> c = node.getOccurrencesJavaClass();
+		if (c == Boolean.class)
+		{
+			return w.newRadioButtonGroup(path);
+		}
+		if (c == java.util.Date.class)
+		{
+			return w.newDateTime(path);
+		}
+		return w.newTextBox(path);
 	}
 
 	private String displayHtml(final String pStored, final String pKind)

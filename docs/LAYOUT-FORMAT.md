@@ -41,17 +41,20 @@ A layout is one JSON document, stored in field `layout` of `LayoutDesigner/FormL
 |---|---|---|
 | `columns` | 1 or 2 | |
 | `ratio` | `"11"`, `"21"`, `"12"` | widths of a two-column row (default `"11"`) |
+| `section` | object | optional: `{"on": true, "title": text, "collapsed": false}` draws the row as a collapsible section |
 | `blocks` | array of columns, each an array of blocks | `[[…left…], […right…]]` |
 
 ## Block: common keys
 
 | Key | Meaning |
 |---|---|
-| `type` | `panel`, `hero`, `facts`, `validation`, `grid`, `map`, `tree`, `hours`, `duplicates`, `note`, `custom` |
+| `type` | `panel`, `hero`, `facts`, `validation`, `grid`, `map`, `tree`, `hours`, `duplicates`, `note`, `custom`; since 1.4.0 `timeline`, `history`, `completeness`, `stepper`, `checklist`, `chart`, `aggregates`, `pivot`, `linked`, `contacts`, `gallery`, `documents`, `links`, `validity`, `address`, `hierarchy` |
 | `id` | unique in the layout |
 | `title`, `note` | texts |
 | `cond` | XPath predicate on the record; the block shows only when it is true (always shown on creation) |
 | `hideCreate` | `true`: not shown when a record is created |
+| `showIf` | a live condition (see *Behaviours*): the block shows or hides while the user types, without saving |
+| `onHide` | on a panel with `showIf`: `keep` (default) or `clear` the values of its fields when it hides |
 
 ## Block types
 
@@ -61,7 +64,8 @@ A layout is one JSON document, stored in field `layout` of `LayoutDesigner/FormL
 |---|---|
 | `p` | path |
 | `label` | text replacing the model's label on this form |
-| `w` | widget: `line`, `area`, `check`, `yesno`, `select`, `nocreate`, `radio`; read-only display forms `fig`, `badge`, `link`, `mono` |
+| `w` | widget: `line`, `area`, `check`, `yesno`, `select`, `nocreate`, `radio`; read-only display forms `fig`, `badge`, `link`, `mono`, and the display widgets of 1.4.0 (below) |
+| `showIf`, `mandatoryIf`, `readOnlyIf`, `onHide` | behaviours (below) |
 | `ro` | read only (a computed field always is) |
 | `wide` | label above, full width |
 
@@ -117,6 +121,90 @@ hours of its date. On creation the block says the hours are entered once the rec
 **`note`**: `text`.
 
 **`custom`**: `cls` (the name a `LayoutComponent` was registered under); any other key is passed to the component.
+
+
+## Blocks added in 1.4.0
+
+Every block below also takes `title`, `note`, `cond`, `hideCreate`, `showIf`. An association is read through the
+record (`a`, its path); a field of its target table is a path of that table (`/amount`). Texts are localized objects.
+
+| Block | Keys |
+|---|---|
+| `timeline` | `a`, `date` (date field of the rows, most recent first), `titleField` (default: the row's label), `detail`, `color: {field, map: {value: tone}}`, `max` (10) |
+| `history` | `fields` (paths followed; empty: all), `max` (8), `author` (true). Reads `AdaptationTable.getHistory()`: history must be activated on the table, else the block says so |
+| `completeness` | `fields: [{p, weight}]` (empty: every field placed on the form), `threshold` (80, %), `listMissing` (true, with "Go to field") |
+| `stepper` | `field` (status), `steps` (codes in order; empty: the enumeration's values), `exits` (codes shown in red outside the steps), `labels: {code: text}` (optional) |
+| `checklist` | `items: [{label, when, go}]`; `when` is `{"filled": path}`, a condition `{"field", "in"…}` or `{"xpath": "./Price > 0"}`; `go` (optional) the field opened by "Go to field" |
+| `chart` | `a`, `by` (field of the rows), `measure: {fn: count / sum / avg, field}`, `shape` (`bars` or `donut`), `top` (6; the rest grouped as "Other") |
+| `aggregates` | `a`, `items: [{label, fn: sum / avg / min / max / count, field, format: number / money / percent, currency, decimals}]` |
+| `pivot` | `a`, `rows`, `cols` (fields of the rows), `value: {field}` (empty: a tick when the pair exists) |
+| `linked` | `fk` (foreign key of the record), `fields` (paths of the target table), `open` (true: link to the record, `getURLForSelection`) |
+| `contacts` | `a`, `name` (default: row label), `role`, `email`, `phone`, `main` (boolean: shown first, highlighted) |
+| `gallery` | `a` + `media` + `caption`, and/or `fields` (media or URL fields of the record), `perRow` (4) |
+| `documents` | `a`, `file` (media or URL field), `name`, `docType`, `date`, `expiry` (true: a past date shows red) |
+| `links` | `items: [{label, url, sameTab}]`; `${./path}` in `url` inserts the record's value, URL-encoded; a button whose value is empty is hidden; only `http(s):`, `mailto:`, `tel:` and `/` addresses |
+| `validity` | `from`, `to` (date fields), `warnDays` (30): upcoming, in force, ending soon, expired |
+| `address` | `lines` (street paths), `zip`, `city`, `region`, `country`, `format` (`auto` by country, `zipFirst`, `cityFirst`, `zipAfter`), `mapLink` (true) |
+| `hierarchy` | `parent` (foreign key), `up` (the parent's own parent key when the target is another table; same path by default on a self-referencing table), `label`, `depth` (6), `children` (association) |
+
+A media field is read through the Digital Asset Manager's public API (`MediaType.getAttachment`,
+`AssetManager.getDigitalAsset`, `DigitalAsset.getURL`), called by reflection so the form works without the add-on; a text
+field holding an `http(s)` or `/` address works as well.
+
+Tones (`color.map`, `colors`): `ok` (green), `warn` (orange), `bad` (red), `accent` (purple), `info` (blue), `muted` (grey).
+
+## Display widgets of a field (1.4.0)
+
+Set `w` and the widget's keys on the field. A display widget applies when the field is read only (`ro`, a computed
+field or a read-only panel); an editable field keeps EBX's input. The designer ticks *Read only* when one is chosen.
+
+| `w` | For | Keys |
+|---|---|---|
+| `badgeMap` | list, text, yes/no, key | `colors: {value: tone}`, `defaultTone` (`muted`) |
+| `money` | number | `currency` (ISO code) or `currencyField`, `decimals` |
+| `unit` | number | `unit` or `unitField`, `decimals` |
+| `percent` | number | `scale` (100 or 1), `thresholds: [red below, orange below]` (50, 80) |
+| `stars` | number | `max` (5) |
+| `relativeDate` | date | `warnDays` (0: no colour; else past = red, within the days = orange) |
+| `duration` | number | `unit`: `minute`, `hour`, `day`, `month`, `year` |
+| `country` | text, list, key | `show` (`both`, `name`, `code`), `flag` (true); ISO 3166 alpha-2 or alpha-3 |
+| `phone`, `email` | text | link (`tel:`, `mailto:`) and Copy |
+| `url` | text | `show` (`domain` or `full`) |
+| `color` | text, list | `colors: {value: css colour}` (optional), `showCode` (true) |
+| `barcode` | text, number | `checkDigit` (true): EAN-13, EAN-8 and UPC-A drawn as bars, GS1 check digit verified (GTIN-14: digits only) |
+| `copyId` | text, number, key | Copy button |
+| `tags` | multiple, list | `max` (6), `colors` |
+| `masked` | text | `visible` (4 last characters), `revealRoles` (roles that may show the whole value) |
+| `recordLink` | foreign key | `sameTab` (false) |
+| `thumbnail` | text, media | `size` (`small`, `medium`, `large`) |
+| `geo` | number, text | `lng` (longitude field), `format` (`decimal` or `dms`) |
+| `boolIcon` | yes/no | `labels: {true: text, false: text}` |
+
+## Behaviours (1.4.0)
+
+A **condition** is `{"field": path, "in": [values]}`, or `"notIn"`, or `{"field": path, "filled": true}`, or
+`"empty": true`. Values are compared as stored: an enumeration's code, a foreign key's key, `true`/`false`.
+
+| Where | Key | Effect |
+|---|---|---|
+| block | `showIf` | the block shows only while the condition holds, live; on a panel `onHide: "clear"` empties its fields when it hides |
+| field | `showIf`, `onHide` | the same for one field of a panel |
+| field | `mandatoryIf` | the mandatory asterisk follows the condition, live (`ebx_form_setMandatoryIndicator`) |
+| field | `readOnlyIf` | read only when the condition holds, and/or for `roles`, never for `exceptRoles`; computed when the form opens |
+| panel | `attributesBy` | `{table, key, familyCol, attributeCol, mandatoryCol, hideEmpty}`: a table of the same dataset says which fields go with each value of `key` (a family); a field the table lists shows only for its families (mandatory when `mandatoryCol` is true), a field it never lists always shows; `hideEmpty` (true) hides the panel with no field left. The attribute column holds a path (`/Dimensions/length`) or a field name |
+
+The live part uses the documented JavaScript API of EBX forms (`ebx_form_getValue`, `ebx_form_setValue`,
+`ebx_form_setMandatoryIndicator`), called after each change of the controlling field
+(`UIAtomicWidget.setActionOnAfterValueChanged`); the first state is computed on the server. A behaviour changes what is
+shown, never what EBX validates: a value that must be mandatory needs a rule in the model.
+
+```json
+{"type": "panel", "title": {"en-US": "Wiper blade"}, "showIf": {"field": "/Family", "in": ["WIPER"]},
+ "attributesBy": {"table": "/root/FamilyAttribute", "key": "/Family", "familyCol": "/family", "attributeCol": "/attribute", "mandatoryCol": "/mandatory"},
+ "fields": [{"p": "/Length", "w": "unit", "unit": "cm"},
+            {"p": "/Price", "w": "money", "ro": true, "currency": "EUR"},
+            {"p": "/Mobile", "mandatoryIf": {"field": "/SmsOptIn", "in": ["true"]}}]}
+```
 
 ## Example
 
