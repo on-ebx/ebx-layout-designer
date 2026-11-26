@@ -47,7 +47,7 @@ A layout is one JSON document, stored in field `layout` of `LayoutDesigner/FormL
 
 | Key | Meaning |
 |---|---|
-| `type` | `panel`, `hero`, `facts`, `validation`, `grid`, `map`, `tree`, `duplicates`, `note`, `custom` |
+| `type` | `panel`, `hero`, `facts`, `validation`, `grid`, `map`, `tree`, `hours`, `duplicates`, `note`, `custom` |
 | `id` | unique in the layout |
 | `title`, `note` | texts |
 | `cond` | XPath predicate on the record; the block shows only when it is true (always shown on creation) |
@@ -81,6 +81,36 @@ this block stands for).
 **`map`**: `lat`, `lng` (paths), `tall` (larger map).
 
 **`tree`**: `parent` (path of the parent foreign key), `children` (association path).
+
+**`hours`** (opening hours, read only): whether the record is open now in its own time zone, the current week (one card
+per day, today highlighted) and the next exceptional days. Every table and field comes from the block; rows are read
+through the record's associations.
+
+| Key | Meaning |
+|---|---|
+| `week.a` | association of the regular hours (required) |
+| `week.day`, `week.open`, `week.close` | fields of the association's table: day, opening time, closing time |
+| `week.closed` | optional boolean field: the row means "closed" |
+| `days` | optional, the day field's code for each ISO day: `{"1": "MON", …, "7": "SUN"}`. Empty: the code is recognised by itself — `1` to `7` (Monday = 1), English, French or Italian day names, full or abbreviated (`MON`, `MONDAY`, `LUN`, `LUNDI`, `LUNEDÌ`…), case ignored |
+| `exceptions.a` | optional association of the exceptional hours; absent: no exception section, only the regular week counts |
+| `exceptions.date`, `.open`, `.close`, `.closed`, `.reason` | fields of that table (date, times, optional closed flag, optional reason) |
+| `max` | upcoming exceptions listed (default 3; 0 hides the section) |
+| `tz` | optional field of the record holding a time-zone id (`Europe/Paris`); absent or unknown: the server's zone |
+| `excTitle` | optional text: title of the exceptions section (default "Upcoming exceptional hours") |
+
+Times: a text `HH:mm` (also `H:mm`, `HH:mm:ss`, `24:00`) or a time value. Dates: a date value or an ISO text. A day may
+hold several rows (split hours); a slot whose closing time is before its opening time ends after midnight. A row marked
+closed, or with a missing time, adds no slot; a day with no slot is shown "Closed". An exception replaces the regular
+hours of its date. On creation the block says the hours are entered once the record exists.
+
+```json
+{"type": "hours", "id": "h1", "title": {"en-US": "Opening hours", "fr-FR": "Horaires"},
+ "week": {"a": "/OpeningHoursTab", "day": "/DayOfWeek", "open": "/OpenTime", "close": "/CloseTime", "closed": "/IsClosed"},
+ "days": {"1": "MON", "2": "TUE", "3": "WED", "4": "THU", "5": "FRI", "6": "SAT", "7": "SUN"},
+ "exceptions": {"a": "/OpeningHoursExceptionTab", "date": "/ExceptionDate", "open": "/OpenTime", "close": "/CloseTime",
+                "closed": "/IsClosed", "reason": "/Reason"},
+ "max": 3, "tz": "/Timezone"}
+```
 
 **`duplicates`**: no other key.
 

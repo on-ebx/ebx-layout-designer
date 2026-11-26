@@ -338,3 +338,8 @@
 .ld-app .ld-dlg-hd h2{margin:0;font-size:15px}
 .ld-app .ld-dlg-bd{display:flex;flex-direction:column;gap:10px;padding:16px;overflow:auto;max-height:calc(100vh - 140px)}
 .ld-app .ld-dlg-bd .code{max-height:calc(100vh - 300px)}
+/* opening hours block: indicative preview */
+.ld-app .ohw{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:6px}
+.ld-app .ohd{border:1px solid var(--p-line);border-top:3px solid var(--p-purple);border-radius:8px;padding:6px 8px;display:flex;flex-direction:column;gap:3px;font-size:12px}
+.ld-app .ohd b{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--p-muted)}
+.ld-app .ohd.off{border-top-color:var(--p-line);color:var(--p-muted)}.ld-app .ohd.today{box-shadow:0 0 0 2px #CDB8F5}

@@ -14,6 +14,18 @@ public final class RuntimeText
 
 	static
 	{
+		RuntimeText.put("hoursClosed", "Closed", "Ferm\u00e9", "Chiuso");
+		RuntimeText.put("hoursOpenNow", "Open now", "Ouvert actuellement", "Aperto ora");
+		RuntimeText.put("hoursClosedNow", "Closed now", "Ferm\u00e9 actuellement", "Chiuso ora");
+		RuntimeText.put("hoursUntil", "until {n}", "jusqu'\u00e0 {n}", "fino alle {n}");
+		RuntimeText.put("hoursExceptionToday", "exceptional hours today", "horaires exceptionnels aujourd'hui", "orario eccezionale oggi");
+		RuntimeText.put("hoursLocalTime", "local time {n}", "heure locale {n}", "ora locale {n}");
+		RuntimeText.put("hoursToday", "today", "auj.", "oggi");
+		RuntimeText.put("hoursUpcoming", "Upcoming exceptional hours", "Prochains horaires exceptionnels", "Prossimi orari eccezionali");
+		RuntimeText.put("hoursNone", "None planned.", "Aucun de pr\u00e9vu.", "Nessuno previsto.");
+		RuntimeText.put("hoursMore", "+ {n} more", "+ {n} autres", "+ altri {n}");
+		RuntimeText.put("hoursCreate", "The hours are entered once the record is created.", "Les horaires se saisissent une fois l'enregistrement cr\u00e9\u00e9.", "Gli orari si inseriscono dopo la creazione del record.");
+		RuntimeText.put("hoursSetup", "Choose the association of the regular hours and its fields in the designer.", "Choisissez dans le designer l'association des horaires de la semaine et ses champs.", "Scegli nel designer l'associazione degli orari settimanali e i suoi campi.");
 		RuntimeText.put("noIssue", "The validation report shows nothing.", "Le rapport de validation ne signale rien.", "Il rapporto di convalida non segnala nulla.");
 		RuntimeText.put("error", "Error", "Erreur", "Errore");
 		RuntimeText.put("warning", "Warning", "Avertissement", "Avviso");

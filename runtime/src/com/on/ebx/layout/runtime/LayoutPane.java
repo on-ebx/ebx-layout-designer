@@ -114,6 +114,11 @@ final class LayoutPane implements UIFormPane
 		{
 			this.tree(w, b, id);
 		}
+		else if ("hours".equals(type))
+		{
+			this.startPanel(w, b, id, this.rc.text(b.get("title")), null, null);
+			w.add(OpeningHours.render(this.rc, b)).add("</section>");
+		}
 		else if ("duplicates".equals(type))
 		{
 			this.duplicates(w, b, id);

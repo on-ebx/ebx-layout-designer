@@ -1,5 +1,13 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.3.0 (2026-10-08)
+
+- **Opening hours** block (`"type": "hours"`): open now in the record's time zone, the current week one card per day
+  (today highlighted, a bar for the open hours), the next exceptional days. Nothing fixed: the associations and their
+  fields, the codes of the day field (or their recognition: 1-7, English, French or Italian names), the optional
+  exceptions, how many are listed, the time-zone field and the titles are chosen in the inspector. Times as text
+  `HH:mm` or time values; several slots per day; slots ending after midnight. Format in `docs/LAYOUT-FORMAT.md`.
+
 ## 1.2.0 (2026-10-07)
 
 - **State of the form in the top bar**, next to Save, as the model declares it: *Declared in the model*, *The table uses

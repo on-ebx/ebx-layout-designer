@@ -62,7 +62,25 @@ final class Css
 		+ "@keyframes ldfflash{0%,60%{box-shadow:0 0 0 4px rgba(127,23,255,.35);background:#F1E8FF}100%{box-shadow:0 0 0 4px transparent}}"
 		+ ".ldf-flash,.ldf-flash td{animation:ldfflash 1.8s ease-out}"
 		+ "@media (prefers-reduced-motion: reduce){.ldf-flash,.ldf-flash td{animation:none;background:#F1E8FF}}"
-		+ "@media (max-width:700px){.ldf-vi{grid-template-columns:22px minmax(0,1fr)}.ldf-va{grid-column:2;justify-content:flex-start}.ldf-ro{grid-template-columns:minmax(0,1fr)}}";
+		+ "@media (max-width:700px){.ldf-vi{grid-template-columns:22px minmax(0,1fr)}.ldf-va{grid-column:2;justify-content:flex-start}.ldf-ro{grid-template-columns:minmax(0,1fr)}}"
+		// opening hours block (look validated on the PointOfSale form, 2026-10-07)
+		+ ".ldf-oh-now{display:flex;align-items:center;gap:8px;margin:2px 0 10px;font-size:12.5px;color:#6B6575;flex-wrap:wrap}"
+		+ ".ldf-oh-dot{width:8px;height:8px;border-radius:50%;background:#B9B3C2;display:inline-block}"
+		+ ".ldf-oh-now.ldf-oh-on .ldf-oh-dot{background:#0B7A4B}.ldf-oh-now b{color:#07073C}"
+		+ ".ldf-oh-week{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}"
+		+ ".ldf-oh-day{border:1px solid #E2DEE6;border-top:3px solid #7F17FF;border-radius:10px;padding:8px 10px;min-width:0;background:#fff}"
+		+ ".ldf-oh-day.ldf-oh-off{border-top-color:#DDD8E3;background:#FAF9FB;color:#8E8898}"
+		+ ".ldf-oh-day.ldf-oh-today{box-shadow:0 0 0 2px #CDB8F5;background:#F8F3FF}"
+		+ ".ldf-oh-dl{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6B6575;display:flex;justify-content:space-between;gap:4px}"
+		+ ".ldf-oh-dl i{font-style:normal;color:#5B12C7}"
+		+ ".ldf-oh-h{font-size:13px;font-weight:600;color:#07073C;margin:4px 0 7px;overflow-wrap:anywhere}.ldf-oh-off .ldf-oh-h{color:#8E8898;font-weight:500}"
+		+ ".ldf-oh-exc .ldf-oh-h{color:#8A4B00}"
+		+ ".ldf-oh-bar{position:relative;height:5px;border-radius:3px;background:#EFECF3;overflow:hidden}"
+		+ ".ldf-oh-bar b{position:absolute;top:0;bottom:0;background:#7F17FF;border-radius:3px}"
+		+ ".ldf-oh-xt{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6B6575;margin:14px 0 6px}"
+		+ ".ldf-oh-x{display:grid;grid-template-columns:minmax(110px,auto) minmax(0,1fr) auto;gap:10px;align-items:baseline;padding:6px 0;border-top:1px solid #EFECF3;font-size:12.5px}"
+		+ ".ldf-oh-x span{color:#6B6575;overflow-wrap:anywhere}.ldf-oh-x em{font-style:normal;font-weight:600;color:#07073C;white-space:nowrap}"
+		+ ".ldf-oh-x em.ldf-oh-c{color:#C73200}.ldf-oh-empty{font-size:12.5px;color:#6B6575}";
 
 	/**
 	 * "Go to field": opens the tab holding the anchor (the n-th tab of the form) when the anchor is hidden, then

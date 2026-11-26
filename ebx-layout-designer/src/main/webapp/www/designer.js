@@ -95,7 +95,15 @@ const C = {
  explBlockDel:['Bloc retiré. « Annuler » le remet.','Block removed. “Undo” puts it back.'], explNoPanel:['Aucun panneau sélectionné : « {0} » est dans un nouveau panneau en bas de l’onglet.','No panel selected: “{0}” is in a new panel at the bottom of the tab.'],
  explGoto:['Message « {0} » : onglet « {1} ».','Message “{0}”: tab “{1}”.'], newTab:['Nouvel onglet','New tab'],
  kPanel:['Panneau','Panel'], kHero:['Bandeau d’identité','Identity band'], kFacts:['Chiffres clés','Key figures'], kValidation:['Rapport de validation','Validation report'], kGrid:['Association','Association'],
- kMap:['Carte','Map'], kTree:['Structure du groupe','Group structure'], kDup:['Doublons','Duplicates'], kNote:['Texte d’aide','Help text'], kCustom:['Composant enregistré','Registered component'],
+ kMap:['Carte','Map'], kHours:['Horaires d’ouverture','Opening hours'], dHours:['Ouvert maintenant, la semaine, les prochains horaires exceptionnels.','Open now, the week, the next exceptional hours.'],
+ ohWeek:['Horaires de la semaine','Regular hours'], ohAssoc:['Association','Association'], ohDay:['Champ jour','Day field'], ohOpen:['Champ ouverture','Opening time field'], ohClose:['Champ fermeture','Closing time field'],
+ ohClosedF:['Champ « fermé » (facultatif)','“Closed” field (optional)'], ohDays:['Codes du champ jour (facultatif)','Codes of the day field (optional)'],
+ ohDaysHint:['Vide : reconnus seuls (1 à 7 avec lundi = 1, MON/MONDAY, LUN/LUNDI, LUNEDÌ…). Sinon, le code de chaque jour.','Empty: recognised by themselves (1 to 7 with Monday = 1, MON/MONDAY, LUN/LUNDI, LUNEDÌ…). Otherwise, the code of each day.'],
+ ohExc:['Horaires exceptionnels (facultatif)','Exceptional hours (optional)'], ohDate:['Champ date','Date field'], ohReason:['Champ motif','Reason field'],
+ ohMax:['Exceptions affichées (0 = section masquée)','Exceptions shown (0 = section hidden)'], ohTz:['Champ fuseau horaire (facultatif)','Time-zone field (optional)'],
+ ohTzHint:['Un identifiant comme Europe/Paris ; sans lui, le fuseau du serveur.','An identifier such as Europe/Paris; without it, the server’s time zone.'],
+ ohExcTitle:['Titre des exceptions','Exceptions title'], ohSetup:['Choisissez l’association des horaires de la semaine et ses champs.','Choose the association of the regular hours and its fields.'],
+ ohPreview:['Aperçu indicatif : la fiche affiche les vraies valeurs.','Indicative preview: the form shows the real values.'], ohTimes:['Heures en texte « HH:mm » ou en champ heure.','Times as text “HH:mm” or as a time field.'], kTree:['Structure du groupe','Group structure'], kDup:['Doublons','Duplicates'], kNote:['Texte d’aide','Help text'], kCustom:['Composant enregistré','Registered component'],
  dPanel:['Un titre, une note et des lignes de champs natives.','A title, a note and native field rows.'], dHero:['Initiales, titre, puces, jauge.','Initials, title, chips, gauge.'], dFacts:['Une rangée de valeurs courtes.','A row of short values.'],
  dValidation:['Les messages de validation de la fiche, reliés au champ concerné.','The record’s validation messages, linked to their field.'], dMap:['Carte sur deux champs latitude et longitude.','Map on a latitude and a longitude field.'],
  dTree:['Maison mère, la fiche, ses filiales.','Parent, the record, its children.'], dDup:['État Match and Merge : golden record, groupe.','Match and Merge state: golden record, group.'], dNote:['Un paragraphe pour l’utilisateur.','A paragraph for the user.'],
@@ -114,7 +122,7 @@ const c = (k, ...a) => { let s = (C[k] || [k,k])[UI]; a.forEach((v,i) => { s = s
 const U = {
  completeness:['completeness','complétude','completezza'], noRow:['No rows.','Aucune ligne.','Nessuna riga.'], rows:['rows','lignes','righe'], actions:['Actions ▾','Actions ▾','Azioni ▾'], filter:['Filter','Filtrer','Filtra'],
  noParent:['No parent · head of group','Aucune maison mère · tête de groupe','Nessuna controllante · capogruppo'], mame:['Match and Merge state, read at display','État Match and Merge, lu à l’affichage','Stato Match and Merge, letto alla visualizzazione'],
- noCoords:['No coordinates yet','Pas encore de coordonnées','Nessuna coordinata'], newRecord:['New record','Nouvel enregistrement','Nuovo record'],
+ noCoords:['No coordinates yet','Pas encore de coordonnées','Nessuna coordinata'], closed:['Closed','Fermé','Chiuso'], newRecord:['New record','Nouvel enregistrement','Nuovo record'],
  error:['Error','Erreur','Errore'], warning:['Warning','Avertissement','Avviso'], info:['Information','Information','Informazione'],
  error1:['error','erreur','errore'], warning1:['warning','avertissement','avviso'], info1:['information','information','informazione'],
  errorN:['errors','erreurs','errori'], warningN:['warnings','avertissements','avvisi'], infoN:['information','informations','informazioni'],
@@ -137,7 +145,7 @@ const COMPS = B.components || [];
 
 const BLOCKS = {
  panel:{l:'kPanel', d:'dPanel'}, hero:{l:'kHero', d:'dHero', full:1}, facts:{l:'kFacts', d:'dFacts', full:1}, validation:{l:'kValidation', d:'dValidation', full:1},
- grid:{l:'kGrid', d:''}, map:{l:'kMap', d:'dMap'}, tree:{l:'kTree', d:'dTree'}, duplicates:{l:'kDup', d:'dDup'}, note:{l:'kNote', d:'dNote'}, custom:{l:'kCustom', d:''}
+ grid:{l:'kGrid', d:''}, map:{l:'kMap', d:'dMap'}, hours:{l:'kHours', d:'dHours'}, tree:{l:'kTree', d:'dTree'}, duplicates:{l:'kDup', d:'dDup'}, note:{l:'kNote', d:'dNote'}, custom:{l:'kCustom', d:''}
 };
 const bl = t => c(BLOCKS[t].l);
 
@@ -202,7 +210,7 @@ function allTexts(){
   S.tabs.forEach((t, ti) => {
     out.push({ctx:c('ctxTab', ti+1), o:t, p:'label', go:{k:'tab', id:t.id}});
     t.rows.forEach(r => r.c.forEach(col => col.forEach(id => { const b = S.blocks[id]; if (!b) return; const nm = `${bl(b.type)} « ${blockName(b)} »`;
-      ['title','note','addBtn','text'].forEach(p => { if (hasText(b[p])) out.push({ctx:`${nm} · ${c({title:'ctxTitle',note:'ctxNote',addBtn:'ctxBtn',text:'ctxText'}[p])}`, o:b, p, go:{k:'block', id}}); });
+      ['title','note','addBtn','text','excTitle'].forEach(p => { if (hasText(b[p])) out.push({ctx:`${nm} · ${c({title:'ctxTitle',note:'ctxNote',addBtn:'ctxBtn',text:'ctxText',excTitle:'ohExcTitle'}[p])}`, o:b, p, go:{k:'block', id}}); });
       (b.actions || []).forEach((a, i) => { if (hasText(a.btn)) out.push({ctx:`${nm} · ${c('ctxAct', i+1)}`, o:a, p:'btn', go:{k:'block', id}}); });
       (b.fields || []).forEach((f, i) => { if (hasText(f.label)) out.push({ctx:c('ctxField', lab(f.p)), o:f, p:'label', go:{k:'field', b:id, i}}); });
     })));
@@ -311,6 +319,9 @@ function renderBlock(b){
     case 'map': inner = `<div class="panel">${head(b)}<div class="map ${b.tall ? 'tall' : ''}"><span class="pin"></span><small>${creating || !val(b.lat) ? esc(u('noCoords')) : esc(val(b.lat) + ', ' + val(b.lng))}</small></div></div>`; break;
     case 'tree': { const kids = A[b.children];
       inner = `<div class="panel${flashc}">${head(b)}<div class="tree"><span class="top">${val(b.parent) ? esc(val(b.parent)) : esc(u('noParent'))}</span><span class="me">${esc(B.record.label || '')}</span>${(creating || !kids ? [] : kids.rows || []).map(r => `<a href="#" data-noop="1">${esc(r)}</a>`).join('')}</div></div>`; break; }
+    case 'hours': { const wk = b.week || {}; const dn = i => new Date(2024, 0, 1 + i).toLocaleDateString(lang, {weekday:'short'});
+      const cards = wk.a ? [0,1,2,3,4,5,6].map(i => `<div class="ohd${i === 6 ? ' off' : ''}${i === 2 ? ' today' : ''}"><b>${esc(dn(i))}</b><span>${i === 6 ? esc(u('closed')) : '10:00 – 19:00'}</span></div>`).join('') : '';
+      inner = `<div class="panel${flashc}">${head(b)}${wk.a ? `<div class="ohw">${cards}</div><div class="more">${esc(c('ohPreview'))}</div>` : `<div class="note-b">${esc(c('ohSetup'))}</div>`}</div>`; break; }
     case 'duplicates': inner = `<div class="panel">${head(b)}<div class="dup"><span class="w-badge ok">Golden</span><span class="w-badge">${esc(u('mame'))}</span></div></div>`; break;
     case 'note': inner = `<div class="note-b">${tx(b.text)}</div>`; break;
     case 'custom': inner = `<div class="panel${flashc}">${head(b)}<div class="note-b">${esc(u('component', b.cls))}</div></div>`; break;
@@ -424,8 +435,8 @@ function renderInspector(){
   } else if (sel.k === 'block'){
     const b = S.blocks[sel.id]; if (!b){ sel = null; return renderInspector(); }
     h += `<div class="insp"><span class="kind">${esc(bl(b.type))}${b.type === 'custom' ? ' · ' + esc(b.cls) : ''}</span>`;
-    if (['panel','grid','map','tree','duplicates','custom','validation'].includes(b.type)) h += locField('block.title', c('titleF'), b.title, b.type === 'grid' && A[b.a] ? (lc => A[b.a].lab[lc] || '') : null);
-    if (['panel','grid','map','tree','duplicates','custom'].includes(b.type)) h += locField('block.note', c('note'), b.note);
+    if (['panel','grid','map','tree','duplicates','custom','validation','hours'].includes(b.type)) h += locField('block.title', c('titleF'), b.title, b.type === 'grid' && A[b.a] ? (lc => A[b.a].lab[lc] || '') : null);
+    if (['panel','grid','map','tree','duplicates','custom','hours'].includes(b.type)) h += locField('block.note', c('note'), b.note);
     if (b.type === 'panel') h += `<label class="chk"><input type="checkbox" id="ld-i-ro"${b.ro ? ' checked' : ''}> ${esc(c('allRo'))}</label><div class="fld"><span class="l">${esc(c('fields'))} (${(b.fields || []).length})</span><div class="list-mini">${(b.fields || []).map((f, i) => `<label><button type="button" class="btn small ghost" data-fsel="${i}" style="height:24px">${esc(hasText(f.label) ? T(f.label) : lab(f.p))}</button></label>`).join('')}</div></div>`;
     if (b.type === 'hero') h += `<div class="fld"><label for="ld-i-ht">${esc(c('heroTitle'))}</label><select id="ld-i-ht" data-bk="title">${fieldOpts(b.title, f => f.t === 'str' || f.t === 'fk')}</select></div>
       <div class="fld"><label for="ld-i-hm">${esc(c('meter'))}</label><select id="ld-i-hm" data-bk="meter">${fieldOpts(b.meter, f => f.t === 'int' || f.t === 'dec')}</select></div>
@@ -451,6 +462,21 @@ function renderInspector(){
         <p class="hint">${esc(c('gridHint'))}</p>`;
     }
     if (b.type === 'map') h += `<div class="fld"><label for="ld-i-ml">${esc(c('lat'))}</label><select id="ld-i-ml" data-bk="lat">${fieldOpts(b.lat)}</select></div><div class="fld"><label for="ld-i-mg">${esc(c('lng'))}</label><select id="ld-i-mg" data-bk="lng">${fieldOpts(b.lng)}</select></div><label class="chk"><input type="checkbox" id="ld-i-mt"${b.tall ? ' checked' : ''}> ${esc(c('tall'))}</label><div class="info">${esc(c('mapInfo'))}</div>`;
+    if (b.type === 'hours'){ const wk = b.week || {}, ex = b.exceptions || {}, dy = b.days || {};
+      const tOpts = (a, cv) => `<option value="">—</option>` + ((A[a] || {}).fields || []).map(f => opt(f.p, cv, T(f.lab) + '  ' + f.p)).join('');
+      const sel2 = (id, nk, label, a, cv) => `<div class="fld"><label for="${id}">${esc(label)}</label><select id="${id}" data-nk="${nk}">${tOpts(a, cv)}</select></div>`;
+      const dn = i => new Date(2024, 0, i).toLocaleDateString(UI === 0 ? 'fr' : 'en', {weekday:'long'});
+      h += `<h3 style="margin-top:6px">${esc(c('ohWeek'))}</h3>
+        <div class="fld"><label for="ld-i-ohwa">${esc(c('ohAssoc'))}</label><select id="ld-i-ohwa" data-nk="week.a"><option value="">—</option>${assocOpts(wk.a)}</select></div>`;
+      if (wk.a) h += sel2('ld-i-ohwd', 'week.day', c('ohDay'), wk.a, wk.day) + sel2('ld-i-ohwo', 'week.open', c('ohOpen'), wk.a, wk.open) + sel2('ld-i-ohwc', 'week.close', c('ohClose'), wk.a, wk.close) + sel2('ld-i-ohwx', 'week.closed', c('ohClosedF'), wk.a, wk.closed)
+        + `<p class="hint">${esc(c('ohTimes'))}</p><div class="fld"><span class="l">${esc(c('ohDays'))}</span><div class="kv">${[1,2,3,4,5,6,7].map(i => `<span>${esc(dn(i))}</span><input type="text" data-nk="days.${i}" value="${esc(dy[i] || '')}" aria-label="${esc(dn(i))}">`).join('')}</div><p class="hint">${esc(c('ohDaysHint'))}</p></div>`;
+      h += `<h3 style="margin-top:10px">${esc(c('ohExc'))}</h3>
+        <div class="fld"><label for="ld-i-ohea">${esc(c('ohAssoc'))}</label><select id="ld-i-ohea" data-nk="exceptions.a"><option value="">—</option>${assocOpts(ex.a)}</select></div>`;
+      if (ex.a) h += sel2('ld-i-ohed', 'exceptions.date', c('ohDate'), ex.a, ex.date) + sel2('ld-i-oheo', 'exceptions.open', c('ohOpen'), ex.a, ex.open) + sel2('ld-i-ohec', 'exceptions.close', c('ohClose'), ex.a, ex.close)
+        + sel2('ld-i-ohex', 'exceptions.closed', c('ohClosedF'), ex.a, ex.closed) + sel2('ld-i-oher', 'exceptions.reason', c('ohReason'), ex.a, ex.reason)
+        + `<div class="fld"><label for="ld-i-ohmax">${esc(c('ohMax'))}</label><input type="number" min="0" max="50" id="ld-i-ohmax" value="${b.max == null ? 3 : b.max}"></div>` + locField('block.excTitle', c('ohExcTitle'), b.excTitle, lc => '');
+      h += `<div class="fld"><label for="ld-i-ohtz">${esc(c('ohTz'))}</label><select id="ld-i-ohtz" data-bk="tz">${fieldOpts(b.tz, f => f.t === 'str' || f.t === 'enum' || f.t === 'fk')}</select><p class="hint">${esc(c('ohTzHint'))}</p></div>`;
+    }
     if (b.type === 'tree') h += `<div class="fld"><label for="ld-i-tp">${esc(c('parent'))}</label><select id="ld-i-tp" data-bk="parent">${fieldOpts(b.parent, f => f.t === 'fk')}</select></div><div class="fld"><label for="ld-i-tc">${esc(c('children'))}</label><select id="ld-i-tc" data-bk="children"><option value="">—</option>${assocOpts(b.children)}</select></div>`;
     if (b.type === 'duplicates') h += `<div class="info">${esc(c('dupInfo'))}</div>`;
     if (b.type === 'note') h += locField('block.text', c('text'), b.text, null, true);
@@ -553,7 +579,8 @@ function newBlock(type, extra){
     hero:{title:(B.fields.find(f => f.t === 'str') || {}).p || '', sub:[], chips:[], meter:'', status:''},
     facts:{items:[]}, validation:{title:L('À traiter','To review','Da verificare'), sev:{error:true, warning:true, info:false}, group:'severity', max:5, links:true, hideEmpty:false, actions:[]},
     grid:{a:(B.assocs[0] || {}).p || '', style:'native'}, map:{title:L('Localisation','Location','Posizione'), lat:'', lng:''},
-    tree:{title:L('Structure du groupe','Group structure','Struttura del gruppo'), parent:'', children:''}, duplicates:{title:L('Doublons','Duplicates','Duplicati')},
+    tree:{title:L('Structure du groupe','Group structure','Struttura del gruppo'), parent:'', children:''},
+    hours:{title:L('Horaires d’ouverture','Opening hours','Orari di apertura'), week:{a:'', day:'', open:'', close:'', closed:''}, days:{}, exceptions:{a:'', date:'', open:'', close:'', closed:'', reason:''}, max:3, tz:''}, duplicates:{title:L('Doublons','Duplicates','Duplicati')},
     note:{text:L('Texte d’aide pour l’utilisateur.','Help text for the user.','Testo di aiuto per l’utente.')}, custom:{cls:'', title:{}}}[type];
   S.blocks[id] = Object.assign({id, type}, JSON.parse(JSON.stringify(base)), extra || {});
   return id;
@@ -780,6 +807,8 @@ root.addEventListener('change', e => {
   const Bk = sel.k === 'block' ? S.blocks[sel.id] : null;
   if (sel.k === 'tab' && t.dataset.count){ snapshot(); const tb = tabOf(sel.id); if (t.checked) tb.count.push(t.dataset.count); else tb.count = tb.count.filter(p => p !== t.dataset.count); return commit(''); }
   if (Bk && t.dataset.bk){ snapshot(); Bk[t.dataset.bk] = t.value; return commit(''); }
+  if (Bk && t.dataset.nk){ snapshot(); const [o, k] = t.dataset.nk.split('.'); Bk[o] = Bk[o] || {}; Bk[o][k] = t.value.trim(); return commit(''); }
+  if (Bk && t.id === 'ld-i-ohmax'){ snapshot(); Bk.max = Math.max(0, +t.value || 0); return commit(''); }
   if (Bk && t.dataset.padd && t.value){ snapshot(); (Bk[t.dataset.padd] = Bk[t.dataset.padd] || []).push(t.value); return commit(''); }
   if (Bk && t.dataset.sev){ snapshot(); Bk.sev = Bk.sev || {}; Bk.sev[t.dataset.sev] = t.checked; return commit(''); }
   if (Bk && t.dataset.ak){ snapshot(); Bk.actions[+t.dataset.ak][t.dataset.af] = t.value; return commit(''); }

@@ -44,6 +44,10 @@ manifest="$work/MANIFEST.MF"
 stage="$work/$name"
 mkdir -p "$stage/server-lib/if-missing" "$stage/docs"
 
+printf '== checks\n'
+"${java_home:+$java_home/bin/}javac" --release 11 -cp "$lib/*:$root/dist/ebx-layout-designer-runtime.jar" -d "$work/checks" "$root/runtime/test/com/on/ebx/layout/runtime/OpeningHoursCheck.java"
+"${java_home:+$java_home/bin/}java" -cp "$lib/*:$root/dist/ebx-layout-designer-runtime.jar:$work/checks" com.on.ebx.layout.runtime.OpeningHoursCheck
+
 printf '== runtime jar\n'
 mkdir -p "$work/runtime"
 (cd "$work/runtime" && "$jar_bin" xf "$root/dist/ebx-layout-designer-runtime.jar")
