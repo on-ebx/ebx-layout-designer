@@ -1,5 +1,10 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.8.1 (2026-10-12)
+
+- **Hierarchy chart**: up to six subsidiaries sit centred under the record, each hung on the line like an org chart (they
+  were packed to the left); cards no longer overlap their neighbour.
+
 ## 1.8.0 (2026-10-12)
 
 - **New block "Hierarchy chart"** (palette › Relations): the group the record belongs to, through a foreign key to the

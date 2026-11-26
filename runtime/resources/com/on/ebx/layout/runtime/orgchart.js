@@ -27,7 +27,8 @@
       h += '</div><div class="ldf-oc-focus"><span class="ldf-oc-nm">' + esc(me.n) + '</span><span class="ldf-oc-facts">' + (me.cv ? '<span>' + dot(me) + ' ' + esc(me.cv) + '</span>' : '') + (me.s ? '<span>' + esc(me.s) + '</span>' : '')
         + '<span>' + esc(plural(ch.length, T.oneChild, T.children)) + '</span>' + (t > ch.length ? '<span>' + esc(T.below.replace('{n}', t)) + '</span>' : '') + '<span>' + esc(T.level.replace('{n}', p.length).replace('{m}', depth(root))) + '</span></span></div>';
       if (ch.length) {
-        h += '<div class="ldf-oc-bus"><i></i></div><div class="ldf-oc-kids">';
+        // a few subsidiaries sit centred under the record, each hung on the line; many fill a grid
+        h += '<div class="ldf-oc-bus"><i></i></div><div class="ldf-oc-kids' + (ch.length <= 6 ? ' ldf-oc-few' : '') + '">';
         ch.forEach(function (k) {
           var d = byKey[k], g = kids[k] || [], open = !!openKids[k];
           h += '<div class="ldf-oc-kid">' + link(d, 'ldf-oc-node ldf-oc-card', '<span class="ldf-oc-top">' + dot(d) + '<span class="ldf-oc-nm">' + esc(d.n) + '</span></span>' + (d.s ? '<span class="ldf-oc-sub">' + esc(d.s) + '</span>' : ''));
