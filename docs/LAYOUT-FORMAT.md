@@ -82,7 +82,12 @@ this block stands for).
 **`grid`**: `a` (association path), `style` (`native` or `cards`), `cardFields` (paths shown on each card), `addBtn`
 (text).
 
-**`map`**: `lat`, `lng` (paths), `tall` (larger map).
+**`map`**: `lat`, `lng` (paths), `tall` (larger map), and since 1.7.0 `address` (paths, in order: number, street,
+postcode, city, country…). When latitude or longitude is empty, the non-empty address values (a foreign key gives its label)
+are joined with ", " and the EBX server asks a Nominatim search service for the position: OpenStreetMap's public one by
+default (at most one call per 1.1 s, answers kept in memory, failures retried after ten minutes). The system property
+`ebx.layout.geocoder.url` names another Nominatim (self-hosted), or `off` to never send an address out. The map then
+says "position from the address …"; an unknown address shows a link to OpenStreetMap's search.
 
 **`tree`**: `parent` (path of the parent foreign key), `children` (association path).
 
@@ -131,7 +136,7 @@ record (`a`, its path); a field of its target table is a path of that table (`/a
 | Block | Keys |
 |---|---|
 | `timeline` | `a`, `date` (date field of the rows, most recent first), `titleField` (default: the row's label), `detail`, `color: {field, map: {value: tone}}`, `max` (10) |
-| `history` | `fields` (paths followed; empty: all), `max` (8), `author` (true), `creationDetails` (false: a creation shows who and when only, since 1.6.1). Reads `AdaptationTable.getHistory()`: history must be activated on the table, else the block says so |
+| `history` | `fields` (paths followed; empty: all), `max` (8), `author` (true), `summarizeAbove` (6: an entry changing more fields shows "N fields", the detail one click away; 0 never sums up, since 1.7.0), `creationDetails` (false: a creation shows who and when only, since 1.6.1). Reads `AdaptationTable.getHistory()`: history must be activated on the table, else the block says so |
 | `completeness` | `fields: [{p, weight}]` (empty: every field placed on the form), `threshold` (80, %), `listMissing` (true, with "Go to field") |
 | `stepper` | `field` (status), `steps` (codes in order; empty: the enumeration's values), `exits` (codes shown in red outside the steps), `labels: {code: text}` (optional) |
 | `checklist` | `items: [{label, when, go}]`; `when` is `{"filled": path}`, a condition `{"field", "in"…}` or `{"xpath": "./Price > 0"}`; `go` (optional) the field opened by "Go to field" |

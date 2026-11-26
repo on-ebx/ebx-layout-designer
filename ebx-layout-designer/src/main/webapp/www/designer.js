@@ -199,6 +199,7 @@ const BL = {
    def:{fields:[], max:8, author:true},
    spec:[{k:'fields', key:'fields', l:['Champs suivis (vide : tous)','Fields followed (empty: all)']}, {k:'num', key:'max', def:8, l:['Nombre d’entrées','Entries']}, {k:'bool', key:'author', def:true, l:['Afficher l’auteur','Show the author']},
      {k:'bool', key:'creationDetails', def:false, l:['Détailler les valeurs à la création','List the values at creation']},
+     {k:'num', key:'summarizeAbove', def:6, l:['Résumer au-delà de N champs changés (0 : jamais)','Sum up beyond N changed fields (0: never)']},
      {k:'hint', l:['Lit l’historique d’EBX (AdaptationTable.getHistory) : l’historisation doit être activée sur la table.','Reads EBX’s history (AdaptationTable.getHistory): history must be activated on the table.']}]},
  completeness:{cat:'quality', l:['Complétude','Completeness'], d:['Le pourcentage de champs renseignés et les manquants, avec « Aller au champ ».','The share of filled fields and the missing ones, with “Go to field”.'], tags:'qualité remplissage score quality',
    def:{fields:[], threshold:80, listMissing:true},
@@ -679,7 +680,8 @@ function renderBlock(b){
         content = `<div class="grid-tb"><span class="plus">+</span><span>${esc(u('actions'))}</span><span>${esc(u('filter'))}</span><span>${n} ${esc(u('rows'))}</span></div><div class="gtab"><table><tbody>${(creating ? [] : a.rows || []).map(r => `<tr><td>${esc(r)}</td></tr>`).join('')}</tbody></table></div>${!n ? `<div class="more">${esc(u('noRow'))}</div>` : n > (a.rows || []).length ? `<div class="more">${esc(u('more', n - a.rows.length))}</div>` : ''}`;
       }
       inner = `<div class="panel${flashc}">${head(b)}${content}</div>`; break; }
-    case 'map': inner = `<div class="panel">${head(b)}<div class="map ${b.tall ? 'tall' : ''}"><span class="pin"></span><small>${creating || !val(b.lat) ? esc(u('noCoords')) : esc(val(b.lat) + ', ' + val(b.lng))}</small></div></div>`; break;
+    case 'map': { const adr = (b.address || []).map(val).filter(Boolean).join(', ');
+      inner = `<div class="panel">${head(b)}<div class="map ${b.tall ? 'tall' : ''}"><span class="pin"></span><small>${creating ? esc(u('noCoords')) : val(b.lat) ? esc(val(b.lat) + ', ' + val(b.lng)) : adr ? esc(adr) : esc(u('noCoords'))}</small></div></div>`; break; }
     case 'tree': { const kids = A[b.children];
       inner = `<div class="panel${flashc}">${head(b)}<div class="tree"><span class="top">${val(b.parent) ? esc(val(b.parent)) : esc(u('noParent'))}</span><span class="me">${esc(B.record.label || '')}</span>${(creating || !kids ? [] : kids.rows || []).map(r => `<a href="#" data-noop="1">${esc(r)}</a>`).join('')}</div></div>`; break; }
     case 'hours': { const wk = b.week || {}; const dn = i => new Date(2024, 0, 1 + i).toLocaleDateString(lang, {weekday:'short'});
@@ -840,7 +842,9 @@ function renderInspector(){
         ${b.style === 'cards' && a ? `<div class="fld"><span class="l">${esc(c('cardFields'))}</span><div class="list-mini">${(a.fields || []).map(f => `<label><input type="checkbox" data-cardf="${esc(f.p)}"${(b.cardFields || []).includes(f.p) ? ' checked' : ''}> ${esc(T(f.lab))}</label>`).join('')}</div></div>${locField('block.addBtn', c('addBtn'), b.addBtn, () => c('none'))}` : ''}
         <p class="hint">${esc(c('gridHint'))}</p>`;
     }
-    if (b.type === 'map') h += `<div class="fld"><label for="ld-i-ml">${esc(c('lat'))}</label><select id="ld-i-ml" data-bk="lat">${fieldOpts(b.lat)}</select></div><div class="fld"><label for="ld-i-mg">${esc(c('lng'))}</label><select id="ld-i-mg" data-bk="lng">${fieldOpts(b.lng)}</select></div><label class="chk"><input type="checkbox" id="ld-i-mt"${b.tall ? ' checked' : ''}> ${esc(c('tall'))}</label><div class="info">${esc(c('mapInfo'))}</div>`;
+    if (b.type === 'map') h += `<div class="fld"><label for="ld-i-ml">${esc(c('lat'))}</label><select id="ld-i-ml" data-bk="lat">${fieldOpts(b.lat)}</select></div><div class="fld"><label for="ld-i-mg">${esc(c('lng'))}</label><select id="ld-i-mg" data-bk="lng">${fieldOpts(b.lng)}</select></div><label class="chk"><input type="checkbox" id="ld-i-mt"${b.tall ? ' checked' : ''}> ${esc(c('tall'))}</label><div class="info">${esc(c('mapInfo'))}</div>`
+      + specHtml([{k:'fields', key:'address', l:['Ou adresse : champs dans l’ordre (n°, rue, code postal, ville, pays…)','Or address: fields in order (number, street, postcode, city, country…)']},
+        {k:'hint', l:['Sans latitude ni longitude remplies, la carte place l’adresse : ses champs sont mis bout à bout et envoyés au service de recherche d’OpenStreetMap (Nominatim) par le serveur EBX, réponse gardée en mémoire. Propriété système ebx.layout.geocoder.url : un autre service, ou off.','Without latitude and longitude filled in, the map places the address: its fields are put end to end and sent to OpenStreetMap’s search service (Nominatim) by the EBX server, answer kept in memory. System property ebx.layout.geocoder.url: another service, or off.']}], b);
     if (b.type === 'hours'){ const wk = b.week || {}, ex = b.exceptions || {}, dy = b.days || {};
       const tOpts = (a, cv) => `<option value="">—</option>` + ((A[a] || {}).fields || []).map(f => opt(f.p, cv, T(f.lab) + '  ' + f.p)).join('');
       const sel2 = (id, nk, label, a, cv) => `<div class="fld"><label for="${id}">${esc(label)}</label><select id="${id}" data-nk="${nk}">${tOpts(a, cv)}</select></div>`;

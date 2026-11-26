@@ -49,6 +49,9 @@ public final class RuntimeText
 		RuntimeText.put("ubNone", "No other record refers to this one.", "Aucun autre enregistrement ne fait r\u00e9f\u00e9rence \u00e0 celui-ci.", "Nessun altro record fa riferimento a questo.");
 		RuntimeText.put("ubVia", "through {n}", "par {n}", "tramite {n}");
 		RuntimeText.put("ubOpen", "Show", "Voir", "Mostra");
+		RuntimeText.put("addressNotFound", "Address not found on the map.", "Adresse introuvable sur la carte.", "Indirizzo non trovato sulla mappa.");
+		RuntimeText.put("fromAddress", "position from the address {n}", "position d'apr\u00e8s l'adresse {n}", "posizione dall'indirizzo {n}");
+		RuntimeText.put("histFields", "{n} fields", "{n} champs", "{n} campi");
 		RuntimeText.put("historyTitle", "Change history", "Historique des modifications", "Cronologia delle modifiche");
 		RuntimeText.put("historyNone", "No change recorded yet.", "Aucune modification enregistrée pour l'instant.", "Nessuna modifica registrata.");
 		RuntimeText.put("histCreated", "Created", "Création", "Creazione");

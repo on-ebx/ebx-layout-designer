@@ -74,7 +74,7 @@ A behaviour changes what is shown, not what EBX validates: to block saving, add 
 | **Key figures** | a row of short values, plus the row count of an association |
 | **Validation report** | see section 5 |
 | **Association** | *Native grid* (EBX's own grid: toolbar, filter, paging, creation) or *Cards* (chosen fields on each card, the full grid under *Manage the rows*); title (default: the association's label), add button label |
-| **Map** | a latitude and a longitude field; OpenStreetMap in a fixed-height box, *Large map* option |
+| **Map** | a latitude and a longitude field, or (1.7.0) address fields placed through OpenStreetMap's search by the EBX server; OpenStreetMap in a fixed-height box, *Large map* option |
 | **Opening hours** | open now (in the record's time zone), the current week one card per day, the next exceptional days. Choose the association of the regular hours and its day, opening and closing fields (and an optional "closed" field), optionally the codes of the day field, the association of the exceptional hours and its fields, how many exceptions to list, and the record's time-zone field. Details in the layout format reference |
 | **Group structure** | the parent foreign key and the association of children: parent, the record, its children |
 | **Duplicates** | the Match and Merge state of the record (golden, merged, group). Without the add-on, the block says so |

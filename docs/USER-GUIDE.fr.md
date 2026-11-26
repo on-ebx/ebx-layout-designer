@@ -80,7 +80,7 @@ Un comportement change l'affichage, pas la validation d'EBX : pour bloquer l'enr
 | **Chiffres clés** | une rangée de valeurs courtes, plus le nombre de lignes d'une association |
 | **Rapport de validation** | voir section 5 |
 | **Association** | *Grille native* (la grille d'EBX : barre d'outils, filtre, pagination, création) ou *Cartes* (champs choisis sur chaque carte, la grille complète sous *Gérer les lignes*) ; titre (par défaut, le libellé de l'association), libellé du bouton d'ajout |
-| **Carte** | un champ latitude et un champ longitude ; OpenStreetMap dans un cadre de hauteur fixe, option *Grande carte* |
+| **Carte** | un champ latitude et un champ longitude, ou (1.7.0) des champs d'adresse placés par la recherche d'OpenStreetMap, appelée par le serveur EBX ; OpenStreetMap dans un cadre de hauteur fixe, option *Grande carte* |
 | **Horaires d'ouverture** | ouvert maintenant (dans le fuseau de la fiche), la semaine en cours une carte par jour, les prochains jours exceptionnels. Choisissez l'association des horaires de la semaine et ses champs jour, ouverture et fermeture (et un champ « fermé » facultatif), éventuellement les codes du champ jour, l'association des horaires exceptionnels et ses champs, le nombre d'exceptions listées et le champ fuseau horaire de la fiche. Détails dans la référence du format |
 | **Structure du groupe** | la clé étrangère vers la maison mère et l'association des filiales : maison mère, la fiche, ses filiales |
 | **Doublons** | l'état Match and Merge de la fiche (golden, fusionnée, groupe). Sans l'add-on, le bloc le dit |

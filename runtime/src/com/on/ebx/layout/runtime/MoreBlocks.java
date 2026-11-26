@@ -259,7 +259,18 @@ final class MoreBlocks
 			{
 				e.append(" · ").append(MoreBlocks.esc(Values.key(r.get(who))));
 			}
-			e.append("</span><b>").append(MoreBlocks.esc(kind)).append("</b><span class=\"ldf-hcs\">").append(String.join("", changes)).append("</span></li>");
+			e.append("</span><b>").append(MoreBlocks.esc(kind)).append("</b>");
+			// a change of many fields at once (an enrichment, an import) is summed up, its detail one click away
+			final int fold = b.path("summarizeAbove").asInt(6);
+			if (fold > 0 && changes.size() > fold)
+			{
+				e.append("<details class=\"ldf-hd\"><summary>").append(MoreBlocks.esc(RuntimeText.get("histFields", rc.locale, Integer.valueOf(changes.size()))))
+					.append("</summary><span class=\"ldf-hcs\">").append(String.join("", changes)).append("</span></details></li>");
+			}
+			else
+			{
+				e.append("<span class=\"ldf-hcs\">").append(String.join("", changes)).append("</span></li>");
+			}
 			entries.add(e.toString());
 			previous = r;
 		}

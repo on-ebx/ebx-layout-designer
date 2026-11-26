@@ -769,9 +769,38 @@ final class LayoutPane implements UIFormPane
 		{
 			// no coordinates
 		}
+		// no coordinates: the position of the address, when the block names address fields (number, street, postcode, city, country…)
+		String address = "";
+		boolean approximate = false;
+		if ((Double.isNaN(la) || Double.isNaN(lo)) && b.path("address").isArray() && this.rc.record != null)
+		{
+			final List<String> parts = new ArrayList<String>();
+			for (final JsonNode p : b.path("address"))
+			{
+				final String v = this.rc.display(p.asText()).trim();
+				if (!v.isEmpty())
+				{
+					parts.add(v);
+				}
+			}
+			address = String.join(", ", parts);
+			final double[] at = Geocoder.locate(address, this.rc.locale);
+			if (at != null)
+			{
+				la = at[0];
+				lo = at[1];
+				approximate = true;
+			}
+		}
 		if (Double.isNaN(la) || Double.isNaN(lo))
 		{
-			w.add("<div class=\"ldf-more\">").add(LayoutPane.esc(RuntimeText.get("noCoords", this.rc.locale))).add("</div></section>");
+			w.add("<div class=\"ldf-more\">").add(LayoutPane.esc(RuntimeText.get(address.isEmpty() ? "noCoords" : "addressNotFound", this.rc.locale)));
+			if (!address.isEmpty())
+			{
+				w.add(" · <a href=\"https://www.openstreetmap.org/search?query=").add(LayoutPane.esc(java.net.URLEncoder.encode(address, java.nio.charset.StandardCharsets.UTF_8)))
+					.add("\" target=\"_blank\" rel=\"noopener\">").add(LayoutPane.esc(RuntimeText.get("openMap", this.rc.locale))).add("</a>");
+			}
+			w.add("</div></section>");
 			return;
 		}
 		final int height = b.path("tall").asBoolean(false) ? 560 : 360;
@@ -780,7 +809,7 @@ final class LayoutPane implements UIFormPane
 			.add(bbox).add("&amp;layer=mapnik&amp;marker=").add(la + "," + lo).add("\"></iframe></div>");
 		w.add("<div class=\"ldf-more\"><a href=\"https://www.openstreetmap.org/?mlat=").add(String.valueOf(la)).add("&amp;mlon=").add(String.valueOf(lo))
 			.add("#map=16/").add(la + "/" + lo).add("\" target=\"_blank\" rel=\"noopener\">").add(LayoutPane.esc(RuntimeText.get("openMap", this.rc.locale)))
-			.add("</a> · ").add(LayoutPane.esc(lat + ", " + lng)).add("</div></section>");
+			.add("</a> · ").add(LayoutPane.esc(approximate ? RuntimeText.get("fromAddress", this.rc.locale, address) : lat + ", " + lng)).add("</div></section>");
 	}
 
 	private void tree(final UIFormPaneWriter w, final JsonNode b, final String id)

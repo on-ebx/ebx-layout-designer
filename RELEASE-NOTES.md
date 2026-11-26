@@ -1,5 +1,14 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.7.0 (2026-10-11)
+
+- **Map from an address**: the map block takes address fields in order (number, street, postcode, city, country…). When
+  latitude or longitude is empty, the EBX server asks OpenStreetMap's search (Nominatim) for the position of the address
+  and the map says so under it. Answers are kept in memory, calls spaced by more than a second as the public service asks;
+  `-Debx.layout.geocoder.url=<url>` points to another Nominatim, `=off` never sends an address out.
+- **Change history**: a change of many fields at once (an enrichment, an import) shows "N fields", the detail one click
+  away. *Sum up beyond N changed fields* (`summarizeAbove`, 6) sets the threshold, 0 never sums up.
+
 ## 1.6.2 (2026-10-11)
 
 - **Contacts block**: wider cards (320 px minimum, `cardWidth` to change it) so that a name and an e-mail address stay on

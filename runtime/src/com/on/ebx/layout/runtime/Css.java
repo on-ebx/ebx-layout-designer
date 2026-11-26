@@ -93,6 +93,7 @@ final class Css
 		+ ".ldf-tl>li{position:relative;display:flex;flex-direction:column;gap:1px}.ldf-tl>li::before{content:'';position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--ldf-tone,#7F17FF);box-shadow:0 0 0 3px #fff}"
 		+ ".ldf-tl-d{font-size:11px;color:#6B6575}.ldf-tl b{color:#07073C;font-weight:600;overflow-wrap:anywhere}.ldf-tl-s{font-size:12px;color:#6B6575;overflow-wrap:anywhere}"
 		+ ".ldf-hcs{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px}.ldf-hc i{font-style:normal;color:#6B6575}.ldf-hc s{color:#8E8898}"
+		+ ".ldf-hd summary{cursor:pointer;font-size:12px;color:#6B6575;list-style-position:inside}.ldf-hd[open] summary{margin-bottom:4px}"
 		+ ".ldf-cp{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.ldf-cp-n{font-size:22px;color:var(--ldf-tone)}.ldf-cp .ldf-bar{height:8px;min-width:140px}"
 		+ ".ldf-cp-miss{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;align-items:baseline}.ldf-cp-m{font-size:12.5px}"
 		+ ".ldf-step{list-style:none;margin:4px 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}"
