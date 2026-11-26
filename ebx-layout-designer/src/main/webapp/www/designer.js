@@ -52,7 +52,7 @@ const C = {
  previewMode:['Aperçu','Preview'], width:['Largeur','Width'], undo:['Annuler','Undo'], save:['Enregistrer','Save'], saved:['Enregistré','Saved'],
  dirty:['Modifié, non enregistré','Changed, not saved'], draft:['Brouillon (non enregistré)','Draft (not saved)'], generated:['Mise en page de départ, générée depuis le modèle','Starting layout, built from the model'],
  palette:['Palette','Palette'], fields:['Champs','Fields'], assocs:['Associations','Associations'], blocks:['Blocs','Blocks'], search:['Rechercher un champ, un chemin…','Search a field, a path…'],
- placed:['placé','placed'], noMatch:['Aucun champ ne correspond.','No field matches.'], dropRemove:['Déposer ici pour retirer de la fiche','Drop here to remove from the form'],
+ placed:['placé','placed'], noMatch:['Aucun champ ne correspond.','No field matches.'], dropRemove:['Déposer ici pour retirer de la fiche','Drop here to remove from the form'], binTip:['Corbeille : glissez ici un bloc ou un champ pour le retirer de la fiche','Bin: drag a block or a field here to remove it from the form'],
  assocHint:['Une association devient un bloc : grille native d’EBX ou cartes.','An association becomes a block: EBX’s native grid, or cards.'],
  components:['Composants enregistrés','Registered components'], noComponent:['Aucun composant enregistré sur cette instance (LayoutComponents.register).','No component registered on this instance (LayoutComponents.register).'],
  selection:['Sélection','Selection'], tabs:['onglets','tabs'], nblocks:['blocs','blocks'], nfields:['champs sur {0} placés','fields of {0} placed'],
@@ -845,9 +845,15 @@ function renderBlock(b){
     case 'custom': inner = `<div class="panel${flashc}">${head(b)}<div class="note-b">${esc(u('component', b.cls))}</div></div>`; break;
     default: if (BL[b.type]) inner = `<div class="panel${flashc}">${head(b)}${previewMore(b)}</div>`;
   }
-  return `<div class="blk${selc}${bHid ? ' ashid' : ''}" data-item="block" data-id="${b.id}" data-type="${b.type}">${tag}${inner}</div>`;
+  const dragb = mode === 'design' ? ` draggable="true" data-drag="block"` : '';
+  return `<div class="blk${selc}${bHid ? ' ashid' : ''}" data-item="block" data-id="${b.id}" data-type="${b.type}"${dragb}>${tag}${inner}</div>`;
 }
+/* while the mouse is down on the canvas, redrawing it would replace the element a drag is about to start from
+   (an inspector input that loses focus commits its value at that moment): the canvas is redrawn on release */
+let holding = false, pendingCanvas = false;
 function renderCanvas(){
+  if (holding){ pendingCanvas = true; return; }
+  pendingCanvas = false;
   const t = curTab();
   if (mode === 'preview' && hiddenFor(t)){ const vis = S.tabs.find(x => !hiddenFor(x)); if (vis){ cur = vis.id; return renderCanvas(); } }
   const tabs = S.tabs.map(x => { if (mode === 'preview' && hiddenFor(x)) return ''; const n = creating ? null : tabCount(x); return `<button type="button" class="tab${sel && sel.k === 'tab' && sel.id === x.id ? ' sel' : ''}${hiddenFor(x) ? ' ashid' : ''}" role="tab" aria-selected="${x.id === cur}" data-tab="${x.id}" ${mode === 'design' ? 'draggable="true" data-drag="tab"' : ''}>${tx(x.label)}${n ? ` <span class="n">${n}</span>` : ''}${mode === 'design' ? audTags(x, true) : ''}</button>`; }).join('')
@@ -988,7 +994,6 @@ function renderPalette(){
     if (!COMPS.length) h += `<p class="hint">${esc(c('noComponent'))}</p>`;
     h += '</div>';
   }
-  h += `<div class="pdrop on" data-drop="palette">${esc(c('dropRemove'))}</div>`;
   $('#ld-palette').innerHTML = h;
 }
 
@@ -1226,7 +1231,7 @@ function renderStatus(){
   $('#ld-i18n').innerHTML = `${esc(c('translations'))} <span class="badge ${n ? 'todo' : 'done'}">${esc(n ? c('todo', n) : c('complete'))}</span>`;
   $('#ld-i18n').setAttribute('aria-pressed', !!(sel && sel.k === 'i18n'));
 }
-function renderAll(){ renderTopPicks(); renderCanvas(); renderPalette(); renderInspector(); renderOutput(); renderStatus(); }
+function renderAll(){ $('#ld-bin').hidden = mode !== 'design'; renderTopPicks(); renderCanvas(); renderPalette(); renderInspector(); renderOutput(); renderStatus(); }
 
 /* ======================= mutations ======================= */
 function newBlock(type, extra){
@@ -1299,7 +1304,7 @@ function addFromPalette(ds){
 let drag = null, target = null;
 const line = document.createElement('div'); line.id = 'dropline'; document.body.appendChild(line);
 const tip = document.createElement('div'); tip.id = 'droptip'; document.body.appendChild(tip);
-function hideLine(){ line.style.display = 'none'; tip.style.display = 'none'; root.querySelectorAll('.droptab').forEach(e => e.classList.remove('droptab')); target = null; }
+function hideLine(){ line.style.display = 'none'; tip.style.display = 'none'; root.querySelectorAll('.droptab').forEach(e => e.classList.remove('droptab')); $('#ld-bin').classList.remove('over'); target = null; }
 function indexIn(container, selector, y){
   const kids = [...container.querySelectorAll(':scope > ' + selector)];
   const box = k => k.getBoundingClientRect().height ? k : (k.firstElementChild || k);
@@ -1312,19 +1317,27 @@ function showLineAt(el, before, label, container){
   Object.assign(line.style, {display:'block', left:cr.left + 'px', width:cr.width + 'px', top:y + 'px'});
   Object.assign(tip.style, {display:'block', left:cr.left + 'px', top:(y - 20) + 'px'}); tip.textContent = label;
 }
+function release(){ if (!holding) return; holding = false; setTimeout(() => { if (pendingCanvas) renderCanvas(); }, 0); }
+root.addEventListener('mousedown', e => { if (e.button === 0 && e.target.closest('#ld-canvas')) holding = true; }, true);
+document.addEventListener('mouseup', release, true);
+root.addEventListener('mousemove', e => { if (holding && !(e.buttons & 1)) release(); }); /* released outside the window */
 root.addEventListener('dragstart', e => {
-  const d = e.target.closest && e.target.closest('[data-drag]'); if (!d) return;
+  const el = e.target.nodeType === 1 ? e.target : e.target.parentElement; /* a dragged text selection starts on a text node */
+  const d = el && el.closest('[data-drag]'); if (!d) return;
   const k = d.dataset.drag;
   drag = {k, id:d.dataset.id, b:d.dataset.b, i:+d.dataset.i, p:d.dataset.p, type:d.dataset.type, a:d.dataset.a, cls:d.dataset.cls, tab:d.dataset.tab, isField:k === 'field' || k === 'newfield'};
   e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', k); } catch (_){ /* some browsers */ }
-  root.classList.add('dragging');
+  root.classList.add('dragging'); root.classList.toggle('drag-rm', k === 'block' || k === 'field');
+  const src = d.closest(k === 'field' ? '.fr' : k === 'block' ? '.blk' : null); if (src) src.classList.add('dragsrc');
 });
-root.addEventListener('dragend', () => { drag = null; hideLine(); root.classList.remove('dragging'); });
+/* called by drop too: a drop redraws the canvas, so dragend fires on a node no longer in the page and never reaches root */
+function endDrag(){ release(); drag = null; hideLine(); root.classList.remove('dragging', 'drag-rm'); root.querySelectorAll('.dragsrc').forEach(e => e.classList.remove('dragsrc')); }
+root.addEventListener('dragend', endDrag);
 root.addEventListener('dragover', e => {
   if (!drag) return; hideLine();
   const t = e.target.closest ? e.target : e.target.parentElement;
   if (drag.k === 'tab'){ const tb = t.closest('[data-tab]'); if (!tb || tb.dataset.tab === drag.tab) return; e.preventDefault(); tb.classList.add('droptab'); target = {kind:'tabmove', to:tb.dataset.tab}; return; }
-  if (t.closest('[data-drop="palette"], #ld-palette') && (drag.k === 'block' || drag.k === 'field')){ e.preventDefault(); target = {kind:'remove'}; return; }
+  if (t.closest('[data-drop="palette"], #ld-palette') && (drag.k === 'block' || drag.k === 'field')){ e.preventDefault(); if (t.closest('#ld-bin')) $('#ld-bin').classList.add('over'); target = {kind:'remove'}; return; }
   const tb = t.closest('[data-tab]');
   if (tb && !drag.isField){ e.preventDefault(); tb.classList.add('droptab'); target = {kind:'totab', tab:tb.dataset.tab}; return; }
   if (drag.isField){ const pf = t.closest('[data-drop="fields"]'); if (pf){ e.preventDefault(); const ix = indexIn(pf, '.fr', e.clientY); showLineAt(ix.ref, ix.before, c('inPanel'), pf); target = {kind:'field', b:pf.dataset.b, i:ix.i}; return; } }
@@ -1335,7 +1348,7 @@ root.addEventListener('dragover', e => {
 });
 root.addEventListener('drop', e => {
   if (!drag || !target) return; e.preventDefault();
-  const d = drag, tg = target; hideLine(); root.classList.remove('dragging'); drag = null;
+  const d = drag, tg = target; endDrag(); /* clears target: read it first */
   snapshot(); let msg = ''; const tab = curTab(); let field = null, bid = null;
   if (d.k === 'field') field = S.blocks[d.b].fields[d.i];
   if (d.k === 'newfield'){ field = {p:d.p}; if (placedFields().has(d.p)) msg = c('explTwice', lab(d.p)); }
@@ -1555,6 +1568,7 @@ root.innerHTML = `<div class="wrap">
     <aside class="side palette"><div class="side-hd"><h2>${esc(c('palette'))}</h2><div class="ptabs" role="tablist"><button type="button" role="tab" id="ld-pt-fields">${esc(c('fields'))}</button><button type="button" role="tab" id="ld-pt-assoc">${esc(c('assocs'))}</button><button type="button" role="tab" id="ld-pt-blocks">${esc(c('blocks'))}</button></div><input type="search" class="search" id="ld-psearch" placeholder="${esc(c('search'))}"></div><div class="side-bd" id="ld-palette"></div></aside>
     <section class="canvas-wrap"><div class="canvas-bar" id="ld-cbar"></div><div class="canvas design" id="ld-canvas"></div></section>
     <aside class="side inspector" aria-label="${esc(c('selection'))}"><div class="side-hd"><div class="insp-hd"><h2>${esc(c('selection'))}</h2><button type="button" class="btn small ghost insp-close" id="ld-insp-close">${esc(c('closeInsp'))}</button></div></div><div class="side-bd" id="ld-insp"></div></aside>
+    <div class="bin" id="ld-bin" data-drop="palette" role="note" title="${esc(c('binTip'))}" aria-label="${esc(c('binTip'))}"><span class="bin-tip">${esc(c('dropRemove'))}</span><span class="bin-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g class="lid"><path d="M3 6h18"/><path d="M9 6V4h6v2"/></g><path d="M5 6l1 14h12l1-14"/><path d="M10 10v7M14 10v7"/></svg></span></div>
   </div>
   <datalist id="ld-rolelist">${DIR.roles.map(r => `<option value="${esc(r.l)}"></option>`).join('')}</datalist>
   <dialog class="ld-dlg" id="ld-dlg" aria-labelledby="ld-dlg-t"><div class="ld-dlg-hd"><h2 id="ld-dlg-t">${esc(c('codeTitle'))}</h2><div class="seg"><button type="button" id="ld-o-json" aria-pressed="true">${esc(c('outJson'))}</button><button type="button" id="ld-o-java" aria-pressed="false">${esc(c('outJava'))}</button></div><button type="button" class="btn small ghost" id="ld-dlg-close">${esc(c('closeDlg'))}</button></div>

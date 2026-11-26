@@ -41,6 +41,7 @@ association. C'est un brouillon tant que vous ne l'enregistrez pas.
 - **Associations** : glissez-en une pour poser sa grille.
 - **Blocs** : glissez depuis la palette ; posé entre deux lignes, un bloc ouvre une nouvelle ligne ; posé sur un
   onglet, il part à la fin de celui-ci.
+- **Retirer** : déposez un bloc ou un champ sur la corbeille en bas à droite de la fenêtre.
 - Chaque modification dit ce qu'elle a fait (« le panneau X a été créé autour de Y ») et *Annuler* la défait.
 
 ### Widgets d'un champ

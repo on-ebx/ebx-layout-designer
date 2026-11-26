@@ -57,8 +57,6 @@
 .ld-app .pitem .ty{font-size:10px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 4px;flex:none}
 .ld-app .pitem.placed{opacity:.55}
 .ld-app .pitem.placed .ty{border-color:transparent;background:var(--ok-soft);color:var(--ok-ink)}
-.ld-app .pdrop{border:1.5px dashed var(--line);border-radius:8px;padding:8px;font-size:12px;color:var(--muted);text-align:center}
-.ld-app.dragging .pdrop.on{border-color:var(--accent);color:var(--accent-ink);background:var(--accent-soft)}
 .ld-app .hint{font-size:12px;color:var(--muted);margin:0}
 .ld-app .insp{display:flex;flex-direction:column;gap:12px}
 .ld-app .insp h3{margin:0;font-size:15px}
@@ -120,7 +118,8 @@
 .ld-app .design .addrow{display:flex;gap:8px;justify-content:center;padding-top:4px}
 .ld-app .design .addrow button{border:1.5px dashed var(--p-dash);background:transparent;color:var(--p-purple-ink);border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:600;font-size:12px}
 .ld-app .blk{position:relative;min-width:0;border-radius:13px}
-.ld-app .design .blk{cursor:pointer}
+.ld-app .design .blk{cursor:grab;-webkit-user-select:none;user-select:none}
+.ld-app .dragsrc{opacity:.4}
 .ld-app .design .blk:hover{box-shadow:0 0 0 1.5px var(--p-dash)}
 .ld-app .design .blk.sel{box-shadow:0 0 0 2px var(--p-purple)}
 .ld-app .btag{display:none}
@@ -442,3 +441,18 @@
 .ld-app table.mx tbody th{text-align:left;font-weight:600;white-space:normal}.ld-app table.mx th.l1{font-weight:400;padding-left:16px}.ld-app table.mx th.l2{font-weight:400;padding-left:28px;color:var(--muted)}
 .ld-app table.mx td.y{color:#0B7A4B;font-weight:700}.ld-app table.mx td.n{color:#B9B3C2}.ld-app table.mx td.r{color:#8A4B00;font-weight:600}
 .ld-app table.mx tbody tr{cursor:pointer}.ld-app table.mx tbody tr:hover th,.ld-app table.mx tbody tr:hover td{background:var(--bg)}
+
+/* the bin: always at the bottom right of the window; it opens while a block or a field of the form is dragged */
+.ld-app .bin{position:fixed;right:calc(env(safe-area-inset-right,0px) + 20px);bottom:calc(env(safe-area-inset-bottom,0px) + 20px);z-index:45;display:flex;align-items:center;gap:10px}
+.ld-app .bin[hidden]{display:none}
+.ld-app .bin-ic{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--surface);color:var(--muted);border:1.5px solid var(--line);box-shadow:0 4px 14px rgba(23,32,51,.16);transition:width .15s,height .15s,background .15s,color .15s,border-color .15s,transform .15s}
+.ld-app .bin-ic svg{width:22px;height:22px}
+.ld-app .bin .lid{transform-box:view-box;transform-origin:21px 6px;transition:transform .15s}
+.ld-app .bin-tip{display:none;font-size:12px;font-weight:600;background:var(--surface);color:var(--p-err);border:1.5px solid var(--p-err);border-radius:8px;padding:6px 10px;white-space:nowrap;box-shadow:0 4px 14px rgba(23,32,51,.16)}
+.ld-app.drag-rm .bin-ic{width:64px;height:64px;color:var(--p-err);background:var(--p-err-bg);border:2px dashed var(--p-err)}
+.ld-app.drag-rm .bin-ic svg{width:28px;height:28px}
+.ld-app.drag-rm .bin-tip{display:block}
+.ld-app .bin.over .bin-ic{background:var(--p-err);color:#FFFFFF;border-style:solid;transform:scale(1.08)}
+.ld-app .bin.over .lid{transform:rotate(18deg) translateY(-1px)}
+@media (max-width:1280px){.ld-app .bench.has-sel .bin{right:calc(min(360px,100vw - 24px) + 28px)}}
+@media (prefers-reduced-motion: reduce){.ld-app .bin-ic,.ld-app .bin .lid{transition:none}}

@@ -1,5 +1,11 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.10.2 (2026-10-12)
+
+- **A bin to remove a block or a field** (contributed by Christian Mayor, PR #1): drop a block or a field on the bin at
+  the bottom right of the designer to remove it from the form; a whole block can now be dragged by its body, not only by
+  its tag. Undo puts it back. The bin is hidden in Preview mode.
+
 ## 1.10.1 (2026-10-12)
 
 - **EBX permissions are applied to every block, not only to the fields.** Fields have always gone through EBX's own
