@@ -1,5 +1,15 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.6.0 (2026-10-09)
+
+- **New block "Changes in this request"** (palette › Quality): in a child dataspace (a workflow's work dataspace), what
+  the record changes compared with the reference, field by field (old value struck through → new value), or "created in
+  this request". Compares with the reference as it was when the request was created (default) or as it is now. Public
+  API `DifferenceHelper.compareOccurrences`.
+- **New block "Used by"** (palette › Relations): the records of other tables (and other datasets) that point to this
+  one, counted per table and field, with a few examples. Public API `SchemaNode.getRelationships(dataset, session)`,
+  filtered by the user's permissions.
+
 ## 1.5.0 (2026-10-09)
 
 - **New block "Record information"** (palette › Time): who created the record and when, who changed it last and when.

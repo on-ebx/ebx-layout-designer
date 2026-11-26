@@ -1214,6 +1214,243 @@ final class MoreBlocks
 		return h.append("</div>").toString();
 	}
 
+	// ------------------------------------------------------------------------------------------------ changes in a request
+
+	/**
+	 * What this record changes compared with the dataspace it was created from (a workflow's work dataspace): the record
+	 * of the parent snapshot ({@code against} "creation", default) or of the parent dataspace as it is now ("current"),
+	 * compared by {@code DifferenceHelper.compareOccurrences}. {@code max} rows (20).
+	 */
+	static String changes(final RenderContext rc, final JsonNode b)
+	{
+		if (rc.creating || rc.record == null)
+		{
+			return MoreBlocks.creatingNote(rc);
+		}
+		final Adaptation r = rc.record;
+		final com.onwbp.adaptation.AdaptationHome home = r.getHome();
+		final com.onwbp.adaptation.AdaptationHome parentBranch = home.getParentBranch();
+		if (parentBranch == null)
+		{
+			return MoreBlocks.empty(MoreBlocks.t("chOutside", rc));
+		}
+		final com.onwbp.adaptation.AdaptationHome against = "current".equals(b.path("against").asText("")) || home.getParent() == null ? parentBranch : home.getParent();
+		final String againstLabel = parentBranch.getLabelOrName(rc.locale);
+		Adaptation before = null;
+		try
+		{
+			// the dataset must exist in the parent: a dataspace made to hold its own datasets is not a request
+			final Adaptation dataset = against.findAdaptationOrNull(r.getContainer().getAdaptationName());
+			if (dataset == null)
+			{
+				return MoreBlocks.empty(MoreBlocks.t("chOutside", rc));
+			}
+			final AdaptationTable table = dataset.getTable(r.getContainerTable().getTablePath());
+			before = table == null ? null : table.lookupAdaptationByPrimaryKey(r.getOccurrencePrimaryKey());
+		}
+		catch (final RuntimeException ex)
+		{
+			return MoreBlocks.empty(MoreBlocks.t("chOutside", rc));
+		}
+		if (before == null)
+		{
+			return "<div class=\"ldf-val\"><span class=\"ldf-badge ldf-t-info\">" + MoreBlocks.esc(MoreBlocks.t("chCreated", rc)) + "</span></div>";
+		}
+		final List<com.orchestranetworks.service.comparison.NodeDifference> diffs;
+		try
+		{
+			diffs = com.orchestranetworks.service.comparison.DifferenceHelper.compareOccurrences(before, r, true).getNodeDifferences();
+		}
+		catch (final RuntimeException ex)
+		{
+			LoggingCategory.getKernel().warn("[layout-designer] changes block: comparison failed: " + ex);
+			return MoreBlocks.empty(MoreBlocks.t("chNone", rc).replace("{n}", againstLabel));
+		}
+		if (diffs == null || diffs.isEmpty())
+		{
+			return MoreBlocks.empty(RuntimeText.get("chNone", rc.locale, againstLabel));
+		}
+		final int max = Math.max(1, b.path("max").asInt(20));
+		final StringBuilder h = new StringBuilder("<div class=\"ldf-val\"><span class=\"ldf-badge ldf-t-warn\">")
+			.append(MoreBlocks.esc(RuntimeText.get("chCount", rc.locale, Integer.valueOf(diffs.size())))).append("</span><span class=\"ldf-more\">")
+			.append(MoreBlocks.esc(againstLabel)).append("</span></div><table class=\"ldf-ch\">");
+		int n = 0;
+		for (final com.orchestranetworks.service.comparison.NodeDifference d : diffs)
+		{
+			if (n++ >= max)
+			{
+				break;
+			}
+			final com.orchestranetworks.schema.Path p = d.getRightValuePath() != null ? d.getRightValuePath() : d.getLeftValuePath();
+			final SchemaNode node = MoreBlocks.diffNode(r, p);
+			final String label = node == null ? String.valueOf(p) : node.getLabel(rc.locale);
+			h.append("<tr><th>").append(MoreBlocks.esc(label)).append("</th><td class=\"ldf-ch-o\">").append(MoreBlocks.esc(MoreBlocks.shown(rc, node, before, d.getLeftValue())))
+				.append("</td><td class=\"ldf-ch-a\">\u2192</td><td class=\"ldf-ch-n\">").append(MoreBlocks.esc(MoreBlocks.shown(rc, node, r, d.getRightValue()))).append("</td></tr>");
+		}
+		h.append("</table>");
+		if (diffs.size() > max)
+		{
+			h.append(MoreBlocks.empty(RuntimeText.get("chMore", rc.locale, Integer.valueOf(diffs.size() - max))));
+		}
+		return h.toString();
+	}
+
+	private static SchemaNode diffNode(final Adaptation pRecord, final com.orchestranetworks.schema.Path pPath)
+	{
+		if (pPath == null)
+		{
+			return null;
+		}
+		try
+		{
+			// the comparison answers its own Path kind ("AspectPath[/Label]"): read the node again from the formatted path
+			String f = pPath.format();
+			if (f.startsWith("/"))
+			{
+				f = "." + f;
+			}
+			final SchemaNode n = pRecord.getSchemaNode().getNode(com.orchestranetworks.schema.Path.parse(f));
+			return n != null ? n : pRecord.getSchemaNode().getNode(pPath);
+		}
+		catch (final RuntimeException ex)
+		{
+			return null;
+		}
+	}
+
+	private static String shown(final RenderContext rc, final SchemaNode pNode, final Adaptation pRow, final Object pValue)
+	{
+		if (pValue == null || (pValue instanceof List && ((List<?>) pValue).isEmpty()))
+		{
+			return MoreBlocks.t("chEmpty", rc);
+		}
+		if (pNode == null)
+		{
+			return String.valueOf(pValue);
+		}
+		try
+		{
+			if (pValue instanceof List)
+			{
+				final StringBuilder s = new StringBuilder();
+				for (final Object o : (List<?>) pValue)
+				{
+					s.append(s.length() == 0 ? "" : ", ").append(o == null ? "" : pNode.displayOccurrence(o, true, pRow.createValueContext(), rc.locale));
+				}
+				return s.toString();
+			}
+			final String s = pNode.displayOccurrence(pValue, true, pRow.createValueContext(), rc.locale);
+			return s == null ? String.valueOf(pValue) : s;
+		}
+		catch (final RuntimeException ex)
+		{
+			return String.valueOf(pValue);
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------ used by
+
+	/**
+	 * The records of other tables that refer to this one, counted per table and field, through
+	 * {@code SchemaNode.getRelationships(dataset, session)} and its reverse relationships (filtered by the user's
+	 * permissions). {@code otherDatasets} (true) also reads references from other datasets; {@code samples} (3) labels
+	 * are listed under each count; {@code showZero} (false) keeps the relations with no record.
+	 */
+	static String usedBy(final RenderContext rc, final JsonNode b)
+	{
+		if (rc.creating || rc.record == null)
+		{
+			return MoreBlocks.creatingNote(rc);
+		}
+		final Adaptation r = rc.record;
+		final int samples = Math.max(0, b.path("samples").asInt(3));
+		final boolean showZero = b.path("showZero").asBoolean(false);
+		final boolean others = b.path("otherDatasets").asBoolean(true);
+		final StringBuilder h = new StringBuilder();
+		int shown = 0;
+		try
+		{
+			final com.orchestranetworks.schema.relationships.SchemaNodeRelationships rels = r.getContainerTable().getTableNode().getRelationships(r.getContainer(), rc.context.getSession());
+			for (final com.orchestranetworks.schema.relationships.ReverseRelationship rel : rels.getReverseRelationships())
+			{
+				final List<RequestResult> results = new ArrayList<RequestResult>();
+				final List<Adaptation> datasets = new ArrayList<Adaptation>();
+				if (rel instanceof com.orchestranetworks.schema.relationships.ReverseRelationshipIntraDataset)
+				{
+					final com.orchestranetworks.schema.relationships.ReverseRelationshipResult res = ((com.orchestranetworks.schema.relationships.ReverseRelationshipIntraDataset) rel).getReferringRecords(r);
+					if (res != null)
+					{
+						results.add(res.getResult());
+						datasets.add(r.getContainer());
+					}
+				}
+				else if (others && rel instanceof com.orchestranetworks.schema.relationships.ReverseRelationshipInterDataset)
+				{
+					final com.orchestranetworks.schema.relationships.ReverseRelationshipResultsInterDataset res = ((com.orchestranetworks.schema.relationships.ReverseRelationshipInterDataset) rel).getReferringRecords(r);
+					if (res != null)
+					{
+						for (final com.orchestranetworks.schema.relationships.ReverseRelationshipResultInDataspace ds : res.getResultsByDataspaces())
+						{
+							for (final com.orchestranetworks.schema.relationships.ReverseRelationshipResult one : ds.getResultByDatasets())
+							{
+								results.add(one.getResult());
+								datasets.add(one.getReferringTable().getContainerAdaptation());
+							}
+						}
+					}
+				}
+				int count = 0;
+				final List<String> labels = new ArrayList<String>();
+				for (final RequestResult rr : results)
+				{
+					if (rr == null)
+					{
+						continue;
+					}
+					try
+					{
+						count += rr.getSize();
+						for (Adaptation a = rr.nextAdaptation(); a != null && labels.size() < samples; a = rr.nextAdaptation())
+						{
+							labels.add(a.getLabel(rc.locale));
+						}
+					}
+					finally
+					{
+						rr.close();
+					}
+				}
+				if (count == 0 && !showZero)
+				{
+					continue;
+				}
+				shown++;
+				final SchemaNode owner = rel.getExplicitRelationship() == null ? null : rel.getExplicitRelationship().getOwnerNode();
+				final String tableLabel = rel.getReferringTableNode().getLabel(rc.locale);
+				h.append("<div class=\"ldf-ub\"><b class=\"ldf-ub-n\">").append(count).append("</b><span class=\"ldf-ub-t\">").append(MoreBlocks.esc(tableLabel));
+				if (owner != null)
+				{
+					h.append(" <span class=\"ldf-more\">").append(MoreBlocks.esc(RuntimeText.get("ubVia", rc.locale, owner.getLabel(rc.locale)))).append("</span>");
+				}
+				if (datasets.size() == 1 && !datasets.get(0).equals(r.getContainer()))
+				{
+					h.append(" <span class=\"ldf-more\">\u00b7 ").append(MoreBlocks.esc(datasets.get(0).getLabelOrName(rc.locale))).append("</span>");
+				}
+				h.append("</span>");
+				if (!labels.isEmpty())
+				{
+					h.append("<span class=\"ldf-ub-s\">").append(MoreBlocks.esc(String.join(", ", labels))).append(count > labels.size() ? "\u2026" : "").append("</span>");
+				}
+				h.append("</div>");
+			}
+		}
+		catch (final Exception ex)
+		{
+			LoggingCategory.getKernel().warn("[layout-designer] usedBy block: " + ex);
+		}
+		return shown == 0 ? MoreBlocks.empty(MoreBlocks.t("ubNone", rc)) : "<div class=\"ldf-ubs\">" + h + "</div>";
+	}
+
 	private static String user(final RenderContext rc, final com.orchestranetworks.service.UserReference pUser)
 	{
 		if (pUser == null)

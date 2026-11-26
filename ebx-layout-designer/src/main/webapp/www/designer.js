@@ -135,6 +135,8 @@ const c = (k, ...a) => { let s = (C[k] || [k,k])[UI]; a.forEach((v,i) => { s = s
 
 /* the form's own words (as the runtime writes them), in the preview language */
 const U = {
+ afterCreate2:['Shown once the record is created.','Affiché une fois l’enregistrement créé.','Visibile dopo la creazione del record.'], chCount:['2 fields changed','2 champs modifiés','2 campi modificati'], chEmpty:['(empty)','(vide)','(vuoto)'],
+ ubSample1:['Contacts, through Company','Contacts, par Société','Contatti, tramite Società'], ubSample2:['Addresses, through Company','Adresses, par Société','Indirizzi, tramite Società'],
  riCreatedBy:['Created by','Créé par','Creato da'], riCreatedOn:['Created on','Créé le','Creato il'], riModifiedBy:['Last modified by','Modifié par','Modificato da'], riModifiedOn:['Last modified on','Modifié le','Modificato il'], riNew:['Filled in when the record is saved.','Renseigné à l’enregistrement.','Compilato al salvataggio del record.'],
  completeness:['completeness','complétude','completezza'], noRow:['No rows.','Aucune ligne.','Nessuna riga.'], rows:['rows','lignes','righe'], actions:['Actions ▾','Actions ▾','Azioni ▾'], filter:['Filter','Filtrer','Filtra'],
  noParent:['No parent · head of group','Aucune maison mère · tête de groupe','Nessuna controllante · capogruppo'], mame:['Match and Merge state, read at display','État Match and Merge, lu à l’affichage','Stato Match and Merge, letto alla visualizzazione'],
@@ -243,6 +245,16 @@ const BL = {
    spec:[{k:'items', key:'items', l:['Boutons','Buttons'], add:['+ Bouton','+ Button'], tpl:{label:{}, url:''}, item:[{k:'loc', key:'label', l:['Libellé','Label']}, {k:'str', key:'url', l:['Adresse : ${./chemin} insère une valeur','Address: ${./path} inserts a value'], ph:'https://shop.example.com/p/${./Sku}'},
      {k:'bool', key:'sameTab', def:false, l:['Dans le même onglet','In the same tab']}]},
      {k:'hint', l:['Une valeur vide masque le bouton. Une adresse /ebx/?… ouvre un composant web d’EBX (documenté).','An empty value hides the button. An /ebx/?… address opens an EBX web component (documented).']}]},
+ changes:{cat:'quality', l:['Changements de la demande','Changes in this request'], d:['Dans l’espace de travail d’un workflow : ce que la fiche change par rapport à la référence.','In a workflow’s work dataspace: what the record changes compared with the reference.'], tags:'workflow validation approbation diff comparaison différences review approval compare',
+   def:{against:'creation', max:20},
+   spec:[{k:'choice', key:'against', def:'creation', l:['Comparer avec','Compare with'], opts:[['creation',['La référence à la création de la demande','The reference when the request was created']],['current',['La référence telle qu’elle est maintenant','The reference as it is now']]]},
+     {k:'num', key:'max', def:20, l:['Lignes au plus','Rows at most']},
+     {k:'hint', l:['Hors d’un espace de données enfant, le bloc dit qu’il n’y a rien à comparer. Comparaison par l’API publique d’EBX (DifferenceHelper).','Outside a child dataspace the block says there is nothing to compare. Compared through EBX’s public API (DifferenceHelper).']}]},
+ usedBy:{cat:'relations', l:['Utilisé par','Used by'], d:['Les enregistrements d’autres tables qui pointent vers celui-ci, comptés par table.','The records of other tables that point to this one, counted per table.'], tags:'références inverses dépendances impact suppression reverse references dependencies where used',
+   def:{samples:3, showZero:false, otherDatasets:true},
+   spec:[{k:'num', key:'samples', def:3, l:['Exemples cités par table','Examples named per table']}, {k:'bool', key:'showZero', def:false, l:['Montrer aussi les relations sans enregistrement','Also show relations with no record']},
+     {k:'bool', key:'otherDatasets', def:true, l:['Chercher aussi dans les autres jeux de données','Also look in other datasets']},
+     {k:'hint', l:['Relations inverses déclarées dans les modèles (clés étrangères, liens), filtrées selon les droits de l’utilisateur.','Reverse relationships declared in the models (foreign keys, links), filtered by the user’s permissions.']}]},
  recordInfo:{cat:'time', l:['Informations de l’enregistrement','Record information'], d:['Qui a créé la fiche et quand, qui l’a modifiée en dernier et quand.','Who created the record and when, who changed it last and when.'], tags:'métadonnées créateur auteur date création modification audit metadata creator author',
    def:{createdBy:true, createdOn:true, modifiedBy:true, modifiedOn:true, style:'grid', relative:true},
    spec:[{k:'bool', key:'createdBy', def:true, l:['Créé par','Created by']}, {k:'bool', key:'createdOn', def:true, l:['Créé le','Created on']}, {k:'bool', key:'modifiedBy', def:true, l:['Modifié par','Last modified by']}, {k:'bool', key:'modifiedOn', def:true, l:['Modifié le','Last modified on']},
@@ -433,6 +445,10 @@ function previewMore(b){
       return rows.length ? rows.map(r => `<div class="docx"><span class="file">PDF</span><b>${esc(r)}</b></div>`).join('') : `<div class="note-b">${esc(u('noRow'))}</div>`;
     case 'links': if (!(b.items || []).length) return setupNote();
       return `<div style="display:flex;gap:8px;flex-wrap:wrap">${b.items.map((it, i) => `<span class="pbtn${i === 0 ? ' solid' : ''}">${tx(it.label) || '…'}</span>`).join('')}</div>`;
+    case 'changes': if (creating) return `<div class="note-b">${esc(u('afterCreate2'))}</div>`;
+      return `<span class="w-badge t-warn">${esc(u('chCount'))}</span><table class="chx"><tr><th>${esc(F[Object.keys(F)[0]] ? lab(Object.keys(F)[0]) : '…')}</th><td class="o">12,90 €</td><td>→</td><td class="n">13,50 €</td></tr><tr><th>${esc(F[Object.keys(F)[1]] ? lab(Object.keys(F)[1]) : '…')}</th><td class="o">${esc(u('chEmpty'))}</td><td>→</td><td class="n">…</td></tr></table>${indicative()}`;
+    case 'usedBy': if (creating) return `<div class="note-b">${esc(u('afterCreate2'))}</div>`;
+      return `<div class="ubx"><div><b>12</b><span>${esc(u('ubSample1'))}</span></div><div><b>3</b><span>${esc(u('ubSample2'))}</span></div></div>${indicative()}`;
     case 'recordInfo': { if (creating) return `<div class="note-b">${esc(u('riNew'))}</div>`;
       const m = B.record.meta || {}, its = [['createdBy','riCreatedBy'],['createdOn','riCreatedOn'],['modifiedBy','riModifiedBy'],['modifiedOn','riModifiedOn']].filter(([k]) => b[k] !== false);
       if (!its.length) return setupNote();

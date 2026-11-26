@@ -60,6 +60,7 @@ Open a table, then **Actions › Design the record form** (or the web component
 | Timeline, change history | an association's rows on a timeline; who changed what and when (historized table) |
 | Completeness, checklist | share of filled fields with weights; points ticked by a condition |
 | Lifecycle steps, validity period | the steps of a status field; upcoming / in force / ending / expired |
+| Changes in this request, used by | what a workflow request changes (old → new); who refers to this record |
 | Record information | created by / on, last modified by / on, kept by EBX for every record |
 | Breakdown chart, association totals, matrix | an association's rows grouped (bars or ring), summed or crossed on two fields |
 | Linked record, contacts, hierarchy | fields of a foreign key's target; people as cards; breadcrumb of a parent key |

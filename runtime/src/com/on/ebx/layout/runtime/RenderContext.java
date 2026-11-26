@@ -290,6 +290,14 @@ final class RenderContext
 		{
 			return RuntimeText.get("recordInfoTitle", this.locale);
 		}
+		if ("changes".equals(type))
+		{
+			return RuntimeText.get("changesTitle", this.locale);
+		}
+		if ("usedBy".equals(type))
+		{
+			return RuntimeText.get("usedByTitle", this.locale);
+		}
 		if ("linked".equals(type))
 		{
 			return this.label(pBlock.path("fk").asText());

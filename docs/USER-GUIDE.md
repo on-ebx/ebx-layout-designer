@@ -99,6 +99,8 @@ Since 1.4.0:
 | **Documents** | files of an association: name, type, date (red once an expiry date is past), link |
 | **Links and actions** | buttons to an address built from the record's values (`https://shop.example.com/p/${./Sku}`) |
 | **Validity period** | upcoming, in force, ending soon or expired, with the days left |
+| **Changes in this request** (1.6.0) | in a workflow's work dataspace, what the record changes compared with the reference, field by field (old → new) |
+| **Used by** (1.6.0) | the records of other tables that point to this one, counted per table, with a few examples |
 | **Record information** (1.5.0) | who created the record and when, who changed it last and when, as a grid or on one line; nothing to set up |
 | **Formatted address** | the address fields laid out after the country, with a map link |
 | **Hierarchy** | the breadcrumb of a parent key over several levels, and the children |

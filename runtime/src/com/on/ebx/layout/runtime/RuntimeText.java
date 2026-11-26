@@ -38,6 +38,17 @@ public final class RuntimeText
 		RuntimeText.put("riAgo", "{n} days ago", "il y a {n} jours", "{n} giorni fa");
 		RuntimeText.put("riYesterday", "yesterday", "hier", "ieri");
 		RuntimeText.put("riNew", "Filled in when the record is saved.", "Renseign\u00e9 \u00e0 l'enregistrement.", "Compilato al salvataggio del record.");
+		RuntimeText.put("changesTitle", "Changes in this request", "Changements de la demande", "Modifiche della richiesta");
+		RuntimeText.put("chOutside", "Nothing to compare: this dataset has no copy in a parent dataspace.", "Rien \u00e0 comparer : ce jeu de donn\u00e9es n'a pas de copie dans un espace de donn\u00e9es parent.", "Niente da confrontare: questo dataset non ha copia in uno spazio dati padre.");
+		RuntimeText.put("chCreated", "Created in this request", "Cr\u00e9\u00e9 dans cette demande", "Creato in questa richiesta");
+		RuntimeText.put("chNone", "No change compared with {n}.", "Aucun changement par rapport \u00e0 {n}.", "Nessuna modifica rispetto a {n}.");
+		RuntimeText.put("chCount", "{n} field(s) changed", "{n} champ(s) modifi\u00e9(s)", "{n} campo/i modificato/i");
+		RuntimeText.put("chMore", "+ {n} more", "+ {n} autres", "+ altri {n}");
+		RuntimeText.put("chEmpty", "(empty)", "(vide)", "(vuoto)");
+		RuntimeText.put("usedByTitle", "Used by", "Utilis\u00e9 par", "Usato da");
+		RuntimeText.put("ubNone", "No other record refers to this one.", "Aucun autre enregistrement ne fait r\u00e9f\u00e9rence \u00e0 celui-ci.", "Nessun altro record fa riferimento a questo.");
+		RuntimeText.put("ubVia", "through {n}", "par {n}", "tramite {n}");
+		RuntimeText.put("ubOpen", "Show", "Voir", "Mostra");
 		RuntimeText.put("historyTitle", "Change history", "Historique des modifications", "Cronologia delle modifiche");
 		RuntimeText.put("historyNone", "No change recorded yet.", "Aucune modification enregistrée pour l'instant.", "Nessuna modifica registrata.");
 		RuntimeText.put("histCreated", "Created", "Création", "Creazione");
