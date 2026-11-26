@@ -200,6 +200,10 @@ public final class LayoutsHomeUserService implements UserService<TableViewEntity
 		final ObjectNode out = LayoutStore.json().createObjectNode();
 		out.put("userLocale", locale.toLanguageTag());
 		out.put("service", LayoutPaths.MODULE_NAME + "@" + DesignerServiceDeclaration.SERVICE_NAME);
+		out.put("about", LayoutPaths.MODULE_NAME + "@" + AboutServiceDeclaration.SERVICE_NAME);
+		out.put("aboutLabel", Messages.get(locale, "about.link"));
+		out.put("helpLabel", Messages.get(locale, "help.link"));
+		out.put("helpUrl", AboutServiceDeclaration.guideUrl(locale));
 
 		// open, non-technical dataspaces, their datasets and tables
 		final ArrayNode spaces = out.putArray("dataspaces");

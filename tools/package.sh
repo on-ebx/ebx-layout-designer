@@ -27,6 +27,9 @@ sha256() { if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$@"; else s
 work="$(mktemp -d "${TMPDIR:-/tmp}/layout-package.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 
+printf '== help pages\n'
+python3 "$root/tools/build_help.py" --check
+
 printf '== compile\n'
 EBX_LIB_DIR="$lib" bash "$root/build.sh"
 

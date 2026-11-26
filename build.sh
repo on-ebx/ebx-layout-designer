@@ -29,5 +29,11 @@ rm -rf "$out"; mkdir -p "$out"
 find "$root/ebx-layout-designer/src/main/java" -name '*.java' > "$work/module.txt"
 "${bin}javac" --release "$release" -encoding UTF-8 -nowarn -Xlint:none -cp "$lib/*:$work/runtime" -d "$out" @"$work/module.txt"
 cp -R "$root/ebx-layout-designer/src/main/resources/." "$out/"
+# version stamp read by ModuleVersion (the About page): git describe from a tag, else VERSION; commit; build time (UTC)
+version="$(git -C "$root" describe --tags --always --match 'v[0-9]*' 2>/dev/null || true)"
+case "$version" in v[0-9]*) version="${version#v}" ;; *) version="$(tr -d '[:space:]' < "$root/VERSION")${version:+-dev+$version}" ;; esac
+mkdir -p "$out/com/on/ebx/layout/designer"
+printf 'version=%s\ncommit=%s\nbuiltAt=%s\n' "$version" "$(git -C "$root" rev-parse --short HEAD 2>/dev/null || echo unknown)" \
+	"$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$out/com/on/ebx/layout/designer/version.properties"
 
-printf 'runtime: %s\nmodule:  %s classes -> %s\n' "$root/dist/ebx-layout-designer-runtime.jar" "$(find "$out" -name '*.class' | wc -l | tr -d ' ')" "$out"
+printf 'version: %s\nruntime: %s\nmodule:  %s classes -> %s\n' "$version" "$root/dist/ebx-layout-designer-runtime.jar" "$(find "$out" -name '*.class' | wc -l | tr -d ' ')" "$out"

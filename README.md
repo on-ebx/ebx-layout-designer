@@ -65,9 +65,13 @@ Every block can be shown only when an XPath predicate is true on the record, and
 | Document | For |
 |---|---|
 | [docs/INSTALL.md](docs/INSTALL.md) | installing, declaring a table's form, upgrading, uninstalling |
-| [docs/USER-GUIDE.md](docs/USER-GUIDE.md) | administrators who design forms; limitations |
+| [docs/USER-GUIDE.md](docs/USER-GUIDE.md), [docs/USER-GUIDE.fr.md](docs/USER-GUIDE.fr.md) | administrators who design forms; limitations |
 | [docs/LAYOUT-FORMAT.md](docs/LAYOUT-FORMAT.md) | the JSON a layout is saved as |
 | [RELEASE-NOTES.md](RELEASE-NOTES.md) | what each version brings |
+
+The same documents are served by the module as HTML (`/ebx-layout-designer/www/help/`) and linked from its **About**
+page (service `ebx-layout-designer@About` on the `FormLayout` table: version, commit, build date, ON EBX version).
+After editing a Markdown document, run `python3 tools/build_help.py` (the release script checks the pages are current).
 
 ## Build and release
 

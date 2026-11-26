@@ -29,13 +29,18 @@ const rows = H.layouts.map((l, i) => { const at = datasetOf(l.model, l.table);
     <td>${l.version}</td><td>${l.active ? `<span class="badge done">${t('active','active')}</span>` : `<span class="badge todo">${t('inactive','inactive')}</span>`}</td><td>${esc(l.updatedOn)} ${esc(l.updatedBy || '')}</td>
     <td>${at ? `<button type="button" class="btn small" data-open="${i}" title="${esc(at.label)}">${t('Ouvrir le designer','Open the designer')}</button>` : `<span class="hint">${t('Aucun dataset ouvert sur ce modèle','No open dataset on this model')}</span>`}</td></tr>`; }).join('');
 
-root.innerHTML = `<div class="wrap" style="max-width:1200px">
+function aboutUrl(){ let key = null;
+  try { const m = window.top.location.pathname.match(/\/ebx-ui\/ui\/custom\/([^/]+)\//); if (m) key = m[1]; } catch (_){ /* other origin */ }
+  if (key) return `/ebx-ui/ui/custom/${encodeURIComponent(key)}/data/BLayoutDesigner/LayoutDesigner/root/FormLayout?service=${encodeURIComponent(H.about)}&serviceMode=TABLE_VIEW`;
+  return `/ebx/?branch=LayoutDesigner&instance=LayoutDesigner&xpath=${encodeURIComponent('/root/FormLayout')}&service=${encodeURIComponent(H.about)}`; }
+const links = `<p class="hint" style="display:flex;gap:16px;justify-content:flex-end;margin:0 0 8px"><a href="${esc(H.helpUrl)}" target="_blank" rel="noopener">${esc(H.helpLabel)}</a><a href="#" data-about>${esc(H.aboutLabel)}</a></p>`;
+root.innerHTML = `<div class="wrap" style="max-width:1200px">${links}
     ${H.problem ? `<div class="explain" role="status">${esc(H.problem)}</div>` : ''}
   <section class="out"><div class="out-hd"><h2>${t('Mises en page enregistrées','Saved layouts')} · ${H.layouts.length}</h2></div>
     <div style="padding:8px 16px 16px;overflow-x:auto">${H.layouts.length ? `<table class="ld-h-table" style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th>${t('Table','Table')}</th><th>${t('Modèle','Model')}</th><th>Version</th><th>${t('État','State')}</th><th>${t('Modifiée','Changed')}</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : `<p class="hint">${t('Aucune mise en page enregistrée pour l’instant.','No saved layout yet.')}</p>`}</div></section>
 </div>`;
 
 if (H.go){ go(designerUrl(H.go.dataspace, H.go.dataset, H.go.table)); }
-root.addEventListener('click', e => { const b = e.target.closest('[data-open]'); if (!b) return; const l = H.layouts[+b.dataset.open]; const at = datasetOf(l.model, l.table); if (at) go(designerUrl(at.ds, at.dataset, l.table)); });
+root.addEventListener('click', e => { if (e.target.closest('[data-about]')) { e.preventDefault(); go(aboutUrl()); return; } const b = e.target.closest('[data-open]'); if (!b) return; const l = H.layouts[+b.dataset.open]; const at = datasetOf(l.model, l.table); if (at) go(designerUrl(at.ds, at.dataset, l.table)); });
 root.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.preventDefault(); });
 })();

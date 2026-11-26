@@ -1,5 +1,15 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.1.0 (2026-10-07)
+
+- **About** page (service `ebx-layout-designer@About`, on the `FormLayout` table, for every user): version, commit, build
+  date, the running ON EBX, a line to copy into a support request, and links to the documentation.
+- The documentation is served by the module (`/ebx-layout-designer/www/help/`): user guide in English and French,
+  release notes, and for administrators the installation guide and the layout format. Generated from the Markdown by
+  `tools/build_help.py`, so it is always the one of the installed version.
+- *Help* link in the designer's top bar, *Documentation* and *About* links on the *Record form layouts* page.
+- The build stamps `version.properties` (version from the git tag, commit, build time).
+
 ## 1.0.0 (2026-10-07)
 
 First release.

@@ -48,6 +48,7 @@ final class ModelExport
 		}
 		boot.put("defaultLocale", pRepository.getDefaultLocale().toLanguageTag());
 		boot.put("userLocale", ModelExport.closest(pUserLocale, locales).toLanguageTag());
+		boot.put("helpUrl", AboutServiceDeclaration.guideUrl(pUserLocale));
 
 		final Adaptation dataset = pTable.getContainerAdaptation();
 		final SchemaNode tableNode = pTable.getTableNode();
