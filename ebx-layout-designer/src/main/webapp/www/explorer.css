@@ -110,3 +110,17 @@
 .ldx-fresh .ldx-changed{color:var(--ldx-warn);font-weight:600}
 .ldx-refresh{border:1px solid var(--ldx-line);background:var(--ldx-surface);border-radius:6px;padding:2px 8px;font-size:12px;cursor:pointer;color:inherit}
 .ldx-fresh.changed .ldx-refresh{border-color:var(--ldx-warn);color:var(--ldx-warn)}
+
+.ldx-dir{border:1px solid var(--ldx-line);background:var(--ldx-surface);border-radius:6px;padding:4px 9px;cursor:pointer;color:inherit;font-size:14px}
+.ldx-bar select + .ldx-dir{margin-left:-4px}
+.ldx-views{display:inline-flex;border:1px solid var(--ldx-line);border-radius:6px;overflow:hidden}
+.ldx-views button{border:0;background:var(--ldx-surface);padding:4px 10px;cursor:pointer;color:inherit;font-size:14px}
+.ldx-views button[aria-pressed=true]{background:var(--ldx-main,#5B3FD3);color:#fff}
+.ldx-create{white-space:nowrap}
+.ldx-links{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:flex-end;margin:-2px 0 10px;font-size:13px}
+.ldx-links a{color:var(--ldx-main,#5B3FD3);font-weight:600;text-decoration:none;cursor:pointer}
+.ldx-links a:hover{text-decoration:underline}
+.ldx-group{grid-column:1/-1;margin:14px 0 2px;font-size:17px;font-weight:600}
+.ldx-group small{font-size:12px;font-weight:400;color:var(--ldx-mute);margin-left:8px}
+.ldx-grid > .ldx-group:first-child{margin-top:0}
+.ldx-btn .n{display:inline-block;margin-left:4px;padding:0 5px;border-radius:8px;background:var(--ldx-line);font-size:11px;font-weight:600}

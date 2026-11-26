@@ -1,5 +1,22 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.20.0 (2026-10-15)
+
+- **Cards or list, the user's choice.** The configurator lists the layouts users may switch between (`card.layouts`); the
+  page shows a switch and remembers the choice per user.
+- **↑/↓ button** next to the sort: the user reverses the chosen sort.
+- **Page header**: a create button opening EBX's creation form (only for users EBX lets create), and links to other tables
+  of the dataset (filtered, with a service, in the current perspective) or to an address.
+- **Linked records buttons** ("Contacts 2", "Subsidiaries 1"): EBX's own table view of the linked records, filtered on the
+  card's record; hidden when there is none.
+- **Dates relative to today** in conditions (`days`: "LEIs to renew within 90 days", "expired").
+- **Groups**: records under a heading per value of a field (sector, country…), with the group's count. The heading of the records
+  without a value can be renamed (`group.emptyLabel`).
+- A condition on a Match and Merge linked field (state, golden, suspects…) now combines with a computed value: SQL reads
+  it in the metadataset. Before, such a flag was dropped without a message.
+- Fixes found reproducing the Companies explorer: a tree row that is its own parent (NACE sections) is a root (values were
+  indented 12 levels); a header link with a blank `table` opens the explorer's own table (it was not drawn).
+
 ## 1.19.0 (2026-10-15)
 
 - **Freshness chosen by the explorer's configurator.** *On demand* (the default): computed results are shared and kept

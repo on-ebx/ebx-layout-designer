@@ -31,21 +31,28 @@
     narrow: ['Pour les {n} autres, cherchez.', 'For the other {n}, search.'], all: ['Toutes', 'All'], yes: ['Oui', 'Yes'], no: ['Non', 'No'],
     copy: ['Copier', 'Copy'], copied: ['Copié', 'Copied'], compliant: ['Rien à signaler', 'Nothing to report'], error: ['Le serveur n’a pas répondu correctement.', 'The server answer could not be read.'],
     sort: ['Trier', 'Sort'], computed: ['Calculé à {t}', 'Computed at {t}'], agoMin: ['il y a {n} min', '{n} min ago'], now: ['à l’instant', 'just now'],
-    refresh: ['Actualiser', 'Refresh'], changed: ['Des données ont changé depuis.', 'Data changed since.'], auto: ['Mis à jour automatiquement', 'Updated automatically'], ago: ['il y a {n}', '{n} ago'], inT: ['dans {n}', 'in {n}'], today: ['aujourd’hui', 'today'], d: ['j', 'd'], mo: ['mois', 'mo'], y: ['an(s)', 'y']
+    refresh: ['Actualiser', 'Refresh'], asView: ['Affichage', 'View'], v_vertical: ['Cartes', 'Cards'], v_horizontal: ['Cartes larges', 'Wide cards'], v_compact: ['Liste', 'List'],
+    asc: ['Croissant', 'Ascending'], desc: ['Décroissant', 'Descending'], create: ['Créer', 'Create'], inGroup: ['{n} fiche(s)', '{n} record(s)'], noGroup: ['(vide)', '(empty)'], changed: ['Des données ont changé depuis.', 'Data changed since.'], auto: ['Mis à jour automatiquement', 'Updated automatically'], ago: ['il y a {n}', '{n} ago'], inT: ['dans {n}', 'in {n}'], today: ['aujourd’hui', 'today'], d: ['j', 'd'], mo: ['mois', 'mo'], y: ['an(s)', 'y']
   };
   var S_ = function (k, args) { var v = (STR[k] || [k, k])[LANG === 'fr' ? 0 : 1]; for (var a in args || {}) v = v.split('{' + a + '}').join(args[a]); return v; };
   var nf = function (n, opts) { try { return new Intl.NumberFormat(LOC, opts || {}).format(n); } catch (x) { return String(n); } };
 
   // --- state, kept per EBX user and explorer for the browser tab ---------------------------------------------------
   var STORE = 'ldx:' + B.user + ':' + B.explorer;
-  var S = {q: '', sel: {}, tile: null, sort: 0, more: {}, fq: {}, collapsed: {}, noSide: false, selLabels: {}};
+  var S = {q: '', sel: {}, tile: null, sort: 0, dir: '', lay: '', more: {}, fq: {}, collapsed: {}, noSide: false, selLabels: {}};
   try {
     for (var i = sessionStorage.length - 1; i >= 0; i--) { var k = sessionStorage.key(i); if (k && k.indexOf('ldx:') === 0 && k.indexOf('ldx:' + B.user + ':') !== 0) sessionStorage.removeItem(k); }
     var saved = JSON.parse(sessionStorage.getItem(STORE) || 'null');
-    if (saved) { S.q = saved.q || ''; S.sel = saved.sel || {}; S.tile = saved.tile || null; S.sort = saved.sort || 0; S.collapsed = saved.collapsed || {}; S.selLabels = saved.selLabels || {}; }
+    if (saved) { S.q = saved.q || ''; S.sel = saved.sel || {}; S.tile = saved.tile || null; S.sort = saved.sort || 0; S.dir = saved.dir || ''; S.collapsed = saved.collapsed || {}; S.selLabels = saved.selLabels || {}; }
+    var savedLay = localStorage.getItem(STORE + ':lay'); if (savedLay) S.lay = savedLay;
   } catch (x) { /* no storage */ }
   (C.facets || []).forEach(function (f) { if (!(f.id in S.collapsed) && f.open === false) S.collapsed[f.id] = true; });
-  var save = function () { try { sessionStorage.setItem(STORE, JSON.stringify({q: S.q, sel: S.sel, tile: S.tile, sort: S.sort, collapsed: S.collapsed, selLabels: S.selLabels})); } catch (x) {} };
+  var save = function () { try { sessionStorage.setItem(STORE, JSON.stringify({q: S.q, sel: S.sel, tile: S.tile, sort: S.sort, dir: S.dir, collapsed: S.collapsed, selLabels: S.selLabels})); if (S.lay) localStorage.setItem(STORE + ':lay', S.lay); } catch (x) {} };
+  /* the layouts the user may switch between (the configurator's list), and the one shown */
+  var LAYS = (CARD.layouts || []).filter(function (l) { return l === 'vertical' || l === 'horizontal' || l === 'compact'; });
+  var lay = function () { return S.lay && LAYS.indexOf(S.lay) >= 0 ? S.lay : CARD.layout || 'vertical'; };
+  var sortDef = function () { return (C.sorts || []).filter(function (x) { return x.i === +S.sort; })[0] || (C.sorts || [])[0]; };
+  var isDesc = function () { var d = sortDef(); return S.dir ? S.dir === 'desc' : !!(d && d.desc); };
   var on = function (m) { return Object.keys(m || {}).filter(function (k) { return m[k]; }); };
 
   // --- server calls -------------------------------------------------------------------------------------------------
@@ -73,14 +80,14 @@
   var closed = function () { return (C.facets || []).filter(function (f) { return S.collapsed[f.id]; }).map(function (f) { return f.id; }).join(';'); };
   var params = function (off, lim, part, force) {
     return {
-      part: part || 'all', closed: closed(), refresh: force ? 1 : '',
+      part: part || 'all', closed: closed(), refresh: force ? 1 : '', dir: S.dir,
       q: S.q, tile: S.tile || '', sort: S.sort, off: off, lim: lim,
       f: Object.keys(S.sel).map(function (id) { var v = on(S.sel[id]); return v.length ? id + '=' + v.map(escV).join('|') : null; }).filter(Boolean).join(';'),
       more: Object.keys(S.more).map(function (id) { return id + ':' + S.more[id]; }).join(';'),
       fq: Object.keys(S.fq).filter(function (id) { return S.fq[id]; }).map(function (id) { return id + ':' + escV(S.fq[id]); }).join(';')
     };
   };
-  var R = null, CARDS = [];
+  var R = null, CARDS = [], GROUPS = {};
   var PAGE = C.pageSize || 48;
   /* two steps: the count, the records and the tiles first, then the facets (the slow part on a big table) */
   var facetsOnly = function (keepFocus) {
@@ -94,6 +101,8 @@
       var old = R && R.facets;
       R = d; R.facets = old || {}; R.waiting = !add && !!(C.facets || []).length;
       CARDS = add ? CARDS.concat(d.cards || []) : d.cards || [];
+      if (!add) GROUPS = {};
+      (d.groups || []).forEach(function (g) { GROUPS[g.v] = g; });
       if (R.computedAt) R.at = R.computedAt;
       draw(keepFocus);
       if (!add) facetsOnly(keepFocus);
@@ -223,11 +232,14 @@
       if (a.action === 'open') return '<button type="button" class="ldx-btn ' + (a.style || 'primary') + '" data-open="' + esc(JSON.stringify(c.pk)) + '">' + esc(lb || S_('open')) + '</button>';
       if (a.action === 'favorite') return B.ajax.fav ? '<button type="button" class="ldx-btn star' + (c.fav ? ' on' : '') + '" data-star="' + esc(c.k) + '" aria-pressed="' + !!c.fav + '" title="' + esc(c.fav ? S_('rmFav') : S_('addFav')) + '">' + (c.fav ? '★' : '☆') + (lb ? ' ' + esc(lb) : '') + '</button>' : '';
       if (!B.actions || !B.actions[i]) return '';
-      return '<button type="button" class="ldx-btn ' + (a.style || 'ghost') + '" data-act="' + i + '" data-pk="' + esc(JSON.stringify(c.pk)) + '">' + esc(lb) + '</button>';
+      /* a linked-records button may show its count, and is left out when there is none */
+      var cnt = a.count ? ((c.v || {})['derived:' + a.count] || {}).n : null;
+      if (a.count && cnt != null && +cnt === 0 && a.hideWhenNone !== false) return '';
+      return '<button type="button" class="ldx-btn ' + (a.style || 'ghost') + '" data-act="' + i + '" data-pk="' + esc(JSON.stringify(c.pk)) + '" data-k="' + esc(c.k) + '">' + esc(lb) + (cnt != null ? ' <span class="n">' + nf(cnt) + '</span>' : '') + '</button>';
     }).filter(Boolean).join('');
     if (acts) h += '<div class="ldx-actions">' + acts + '</div>';
-    var lay = CARD.layout || 'vertical', edge = CARD.edge === 'pill' && pTone;
-    return '<article class="ldx-card ' + esc(lay) + (edge ? ' edge' : '') + (c.fav ? ' fav' : '') + '"' + (edge ? ' style="--edge:var(--ldx-' + pTone + ')"' : '') + '>'
+    var ly = lay(), edge = CARD.edge === 'pill' && pTone;
+    return '<article class="ldx-card ' + esc(ly) + (edge ? ' edge' : '') + (c.fav ? ' fav' : '') + '"' + (edge ? ' style="--edge:var(--ldx-' + pTone + ')"' : '') + '>'
       + image(c, 'top') + image(c, 'side') + '<div class="cin">' + h + '</div></article>';
   };
 
@@ -304,11 +316,26 @@
     var total = R ? R.total || 0 : 0, all = R ? R.all || 0 : 0;
     var main = '<div class="ldx-bar">' + (side ? '<button type="button" class="ldx-toggle" data-side="1">' + esc(S.noSide ? S_('showF') : S_('hideF')) + '</button>' : '')
       + '<span class="ldx-count">' + nf(total) + ' ' + esc(total > 1 ? S_('records') : S_('record')) + (R ? ' <small>/ ' + nf(all) + '</small>' : '') + '</span>'
-      + ((C.sorts || []).length > 1 ? '<select id="ldx-sort" aria-label="' + esc(S_('sort')) + '">' + C.sorts.map(function (s) { return '<option value="' + s.i + '"' + (+S.sort === s.i ? ' selected' : '') + '>' + esc(T(s.label)) + '</option>'; }).join('') + '</select>' : '') + '</div>' + chips();
+      + ((C.sorts || []).length > 1 ? '<select id="ldx-sort" aria-label="' + esc(S_('sort')) + '">' + C.sorts.map(function (s) { return '<option value="' + s.i + '"' + (+S.sort === s.i ? ' selected' : '') + '>' + esc(T(s.label)) + '</option>'; }).join('') + '</select>' : '')
+      + ((C.sorts || []).length ? '<button type="button" class="ldx-dir" data-dir="1" title="' + esc(isDesc() ? S_('desc') : S_('asc')) + '" aria-label="' + esc(isDesc() ? S_('desc') : S_('asc')) + '">' + (isDesc() ? '↓' : '↑') + '</button>' : '')
+      + (LAYS.length > 1 ? '<span class="ldx-views" role="group" aria-label="' + esc(S_('asView')) + '">' + LAYS.map(function (l) { return '<button type="button" data-lay="' + l + '" aria-pressed="' + (lay() === l) + '" title="' + esc(S_('v_' + l)) + '" aria-label="' + esc(S_('v_' + l)) + '">' + (l === 'compact' ? '☰' : l === 'horizontal' ? '▤' : '▦') + '</button>'; }).join('') + '</span>' : '')
+      + (B.header && B.header.create ? '<button type="button" class="ldx-btn primary ldx-create" data-create="1">+ ' + esc(T(B.header.create.label) || S_('create')) + '</button>' : '')
+      + '</div>'
+      + (B.header && (B.header.links || []).length ? '<div class="ldx-links">' + B.header.links.map(function (l, i) { return '<a href="#" data-hlink="' + i + '">' + esc(T(l.label)) + '</a>'; }).join('') + '</div>' : '')
+      + chips();
     main += fresh();
     if (R && R.error) main += '<div class="ldx-error">' + esc(R.error) + '</div>';
-    var lay = CARD.layout || 'vertical', minW = +CARD.minWidth || 260;
-    main += CARDS.length ? '<div class="ldx-grid' + (lay === 'compact' ? ' compact' : '') + '" style="' + (lay === 'compact' ? '' : 'grid-template-columns:repeat(auto-fill,minmax(min(100%,' + minW + 'px),1fr))') + '">' + CARDS.map(card).join('') + '</div>'
+    var ly = lay(), minW = +CARD.minWidth || 260, prevG = null;
+    /* in groups: a heading before the first record of each group, with the group's count */
+    var withGroups = function (c) {
+      var h = '';
+      if (C.group && c.g != null && c.g !== prevG) {
+        prevG = c.g; var g = GROUPS[c.g] || {l: c.g, n: 0};
+        h = '<h3 class="ldx-group">' + esc(g.l || T(C.group.emptyLabel) || S_('noGroup')) + ' <small>' + esc(S_('inGroup', {n: nf(g.n)})) + '</small></h3>';
+      }
+      return h + card(c);
+    };
+    main += CARDS.length ? '<div class="ldx-grid' + (ly === 'compact' ? ' compact' : '') + '" style="' + (ly === 'compact' ? '' : 'grid-template-columns:repeat(auto-fill,minmax(min(100%,' + minW + 'px),1fr))') + '">' + CARDS.map(withGroups).join('') + '</div>'
       + (total > CARDS.length ? '<button type="button" class="ldx-more">' + esc(S_('more')) + ' (' + nf(total - CARDS.length) + ')</button>' : '')
       : R ? '<div class="ldx-empty">' + esc(S_('none')) + '</div>' : '<p class="ldx-loading">…</p>';
     var oldSide = root.querySelector('.ldx-side'), scroll = oldSide ? oldSide.scrollTop : 0;
@@ -320,10 +347,10 @@
 
   // --- record pop-ups ------------------------------------------------------------------------------------------------
   var enc = function (v) { return encodeURIComponent(String(v == null ? '' : v).replace(/'/g, "''")).replace(/'/g, '%27'); };
-  var fill = function (cmd, pk) { return cmd.replace(/LDXMARK(\d+)/g, function (m, i) { return enc(pk[+i]); }); };
-  var run = function (cmd, pk) {
+  var fill = function (cmd, pk, k) { return cmd.replace(/LDXMARK(\d+)/g, function (m, i) { return enc(pk[+i]); }).replace(/LDXKEY/g, function () { return enc(k); }); };
+  var run = function (cmd, pk, k) {
     if (!cmd) return;
-    try { new Function(fill(cmd, pk))(); watchPopup(); } catch (x) { if (window.console) console.warn('[explorer] pop-up not opened', x); }
+    try { new Function(fill(cmd, pk || [], k))(); watchPopup(); } catch (x) { if (window.console) console.warn('[explorer] pop-up not opened', x); }
   };
   /* EBX's record pop-up is an iframe whose address carries closeUniqueModal: once it is gone, the cards are read again */
   var watchPopup = function () {
@@ -340,6 +367,25 @@
       return found;
     };
     var t = setInterval(function () { n++; if (open()) { seen = true; return; } if (seen) { clearInterval(t); reload(); } else if (n > 20) clearInterval(t); }, 700);
+  };
+  /* a header link: another table of the dataset (in the current perspective when there is one) or an address */
+  var goLink = function (l) {
+    if (!l) return;
+    if (l.url) { if (l.newTab) window.open(l.url, '_blank', 'noopener'); else { try { window.top.location.href = l.url; } catch (x) { window.location.href = l.url; } } return; }
+    var key = null;
+    try { var m = window.top.location.pathname.match(/\/ebx-ui\/ui\/custom\/([^/]+)\//); if (m) key = m[1]; } catch (x) { /* other origin */ }
+    var u;
+    if (key) {
+      u = '/ebx-ui/ui/custom/' + encodeURIComponent(key) + '/data/B' + encodeURIComponent(l.ds) + '/' + encodeURIComponent(l.dataset) + l.table;
+      var q = [];
+      if (l.predicate) q.push('predicate=' + encodeURIComponent(l.predicate));
+      if (l.service) q.push('service=' + encodeURIComponent(l.service), 'serviceMode=TABLE_VIEW');
+      if (q.length) u += '?' + q.join('&');
+    } else {
+      u = '/ebx/?branch=' + encodeURIComponent(l.ds) + '&instance=' + encodeURIComponent(l.dataset) + '&xpath=' + encodeURIComponent(l.table + (l.predicate ? '[' + l.predicate + ']' : ''))
+        + (l.service ? '&service=' + encodeURIComponent(l.service) : '');
+    }
+    try { window.top.location.href = u; } catch (x) { window.location.href = u; }
   };
   var toast = function (msg) {
     var t = document.createElement('div'); t.className = 'ldx-toast'; t.textContent = msg; document.body.appendChild(t);
@@ -358,13 +404,17 @@
     var t = e.target;
     if (t.dataset.f) { (S.sel[t.dataset.f] = S.sel[t.dataset.f] || {})[t.dataset.v] = t.checked; refresh(); }
     else if (t.dataset.sf) { S.sel[t.dataset.sf] = {}; if (t.value) S.sel[t.dataset.sf][t.value] = true; refresh(); }
-    else if (t.id === 'ldx-sort') { S.sort = +t.value; refresh(); }
+    else if (t.id === 'ldx-sort') { S.sort = +t.value; S.dir = ''; refresh(); }
   });
   root.addEventListener('click', function (e) {
     var t = e.target, el;
     if ((el = t.closest('[data-open]'))) { e.preventDefault(); run(B.open && B.open.cmd, JSON.parse(el.dataset.open)); return; }
     if ((el = t.closest('[data-link]'))) { e.preventDefault(); run(B.links[el.dataset.link], JSON.parse(el.dataset.pk)); return; }
-    if ((el = t.closest('[data-act]'))) { run(B.actions[+el.dataset.act], JSON.parse(el.dataset.pk)); return; }
+    if ((el = t.closest('[data-act]'))) { run(B.actions[+el.dataset.act], JSON.parse(el.dataset.pk), el.dataset.k); return; }
+    if (t.closest('[data-create]')) { run(B.header.create.cmd, []); return; }
+    if ((el = t.closest('[data-hlink]'))) { e.preventDefault(); goLink((B.header.links || [])[+el.dataset.hlink]); return; }
+    if ((el = t.closest('[data-lay]'))) { S.lay = el.dataset.lay; draw(); return; }
+    if (t.closest('[data-dir]')) { S.dir = isDesc() ? 'asc' : 'desc'; refresh(); return; }
     if ((el = t.closest('[data-star]'))) {
       var key = el.dataset.star;
       ask(url(B.ajax.fav, {k: key}), function (d) { CARDS.forEach(function (c) { if (c.k === key) c.fav = !!d.favorite; }); if ((C.facets || []).some(function (f) { return f.kind === 'favorites'; })) reload(); else draw(); });

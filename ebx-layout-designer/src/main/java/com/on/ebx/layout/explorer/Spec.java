@@ -69,6 +69,8 @@ public final class Spec
 	public final List<String> search = new ArrayList<String>();
 	public final List<Sort> sorts = new ArrayList<Sort>();
 	public final int pageSize;
+	/** The records are shown in groups of this source's values, with a count per group (null: no groups). */
+	public final Sort group;
 
 	/**
 	 * @param pRoles true when the user holds one of the role names of the given array (an empty array never reaches it)
@@ -172,6 +174,12 @@ public final class Spec
 			}
 		}
 		this.pageSize = Math.max(6, Math.min(96, layout.path("pageSize").asInt(48)));
+		final JsonNode g = layout.path("group");
+		final Sort group = new Sort();
+		group.source = g.isObject() ? Spec.source(g) : null;
+		group.desc = "desc".equals(g.path("dir").asText("asc"));
+		group.label = g.get("label");
+		this.group = group.source == null ? null : group;
 	}
 
 	static boolean forRoles(final JsonNode pElement, final Predicate<JsonNode> pRoles)

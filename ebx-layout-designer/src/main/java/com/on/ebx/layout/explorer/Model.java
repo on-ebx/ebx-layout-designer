@@ -48,6 +48,8 @@ public final class Model
 		public final String sql;
 		/** The computed value's definition, else null. */
 		public final JsonNode def;
+		/** A Match and Merge linked field: its column in the metadataset's RecordMetadata table (SQL reads it there). */
+		SchemaNode mdsColumn;
 
 		Src(final String pSource, final SchemaNode pNode, final String pType, final String pXPath, final String pSql, final JsonNode pDef)
 		{
@@ -203,7 +205,55 @@ public final class Model
 		{
 			sql = "fk".equals(type) ? "FK_AS_STRING(" + this.t + "." + path + ")" : "list".equals(type) ? null : this.t + "." + path;
 		}
-		return new Src(pSource, n, type, "." + n.getPathInAdaptation().format(), sql, null);
+		final Src out = new Src(pSource, n, type, "." + n.getPathInAdaptation().format(), sql, null);
+		if (!sqlOk)
+		{
+			out.mdsColumn = this.metadataColumn(n);
+		}
+		return out;
+	}
+
+	/** {@code Linked_Field_State} → {@code /root/RecordMetadata/state} of the metadataset, when it exists. */
+	private SchemaNode metadataColumn(final SchemaNode pNode)
+	{
+		final String name = pNode.getPathInAdaptation().getLastStep() == null ? "" : pNode.getPathInAdaptation().getLastStep().format();
+		if (this.mds == null || !name.startsWith("Linked_Field_") || name.length() <= "Linked_Field_".length())
+		{
+			return null;
+		}
+		final String rest = name.substring("Linked_Field_".length());
+		final String column = Character.toLowerCase(rest.charAt(0)) + rest.substring(1);
+		try
+		{
+			final SchemaNode c = this.mds.getSchemaNode().getNode(Path.parse("/root/RecordMetadata/" + column));
+			return c != null && c.isTerminalValue() ? c : null;
+		}
+		catch (final RuntimeException ex)
+		{
+			return null;
+		}
+	}
+
+	/**
+	 * A condition on a Match and Merge linked field: XPath reads the field on the record; SQL reads the same value in the
+	 * metadataset (one row per record, {@code functionalId} = the record's key), as the set of keys that satisfy it.
+	 */
+	private Pred viaMetadata(final Src pSrc, final java.util.function.Function<Src, Pred> pCondition)
+	{
+		final Pred x = pCondition.apply(pSrc);
+		final String a = this.alias("r");
+		final Src inner = new Src(pSrc.source, pSrc.mdsColumn, Model.type(pSrc.mdsColumn), null, a + "." + pSrc.mdsColumn.getPathInAdaptation().getLastStep().format(), null);
+		final Pred y = pCondition.apply(inner);
+		if (y == Pred.FALSE || x == Pred.FALSE)
+		{
+			return Pred.FALSE;
+		}
+		if (y == null || y.isTrue() || y.sql == null)
+		{
+			return x;
+		}
+		final String sql = this.t + ".\"$pk\" IN (SELECT " + a + ".functionalId FROM mds." + Model.quote("/root/RecordMetadata") + " " + a + " WHERE " + y.sql + ")";
+		return new Pred(sql, x == null ? null : x.xpath);
 	}
 
 	static String type(final SchemaNode pNode)
@@ -593,11 +643,25 @@ public final class Model
 			final Pred p = this.pred(pCond.get("not"));
 			return p == null ? null : Model.not(p);
 		}
+		if (pCond.has("days"))
+		{
+			return this.pred(Cond.days(pCond));
+		}
 		final Src s = this.src(pCond.has("derived") ? Spec.DERIVED + pCond.path("derived").asText() : pCond.path("field").asText(""));
 		if (s == null)
 		{
 			return null;
 		}
+		if (s.mdsColumn != null && s.sql == null)
+		{
+			return this.viaMetadata(s, x -> this.leafCondition(pCond, x));
+		}
+		return this.leafCondition(pCond, s);
+	}
+
+	/** One simple condition on a source (no all / any / not / days). */
+	private Pred leafCondition(final JsonNode pCond, final Src s)
+	{
 		if (pCond.has("in"))
 		{
 			return this.in(s, Model.texts(pCond.get("in")));
@@ -642,6 +706,15 @@ public final class Model
 		{
 			return Pred.FALSE;
 		}
+		if (pSrc.mdsColumn != null && pSrc.sql == null)
+		{
+			return this.viaMetadata(pSrc, x -> x.mdsColumn == null ? this.in(x, pKeys) : this.inDirect(x, pKeys));
+		}
+		return this.inDirect(pSrc, pKeys);
+	}
+
+	private Pred inDirect(final Src pSrc, final Collection<String> pKeys)
+	{
 		if ("list".equals(pSrc.type) && pSrc.def != null && "suspects".equals(pSrc.def.path("type").asText()))
 		{
 			// the records suspect of one of these records, as two sets of keys
@@ -1229,7 +1302,8 @@ public final class Model
 					p = null;
 				}
 				final String pk = Cond.key(p);
-				if (pk != null && !pk.isEmpty())
+				// a row that is its own parent (a NACE section carries its own code) is a root
+				if (pk != null && !pk.isEmpty() && !pk.equals(k))
 				{
 					tree.parent.put(k, pk);
 				}

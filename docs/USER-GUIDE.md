@@ -264,6 +264,10 @@ then **Actions › Design the explorer** (or *The explorer* in the form designer
 - **Who sees what**: a facet, a tile, a card attribute or an action can be kept for some roles; a *variant* is another
   version of the whole explorer for some roles. *Preview as* shows a role's explorer. EBX permissions come on top, on
   the real page: a user only sees, counts and finds the records and fields EBX lets them read.
+- **Version 1.20.0**: in the card panel, *Views the user may switch to* (cards, wide cards, list); in the search panel,
+  *Group by* (a heading and a count per value) and the *Page header* (create button, links to other tables or addresses);
+  a *Linked records* button per count of linked records (contacts, subsidiaries…); date conditions *within days*
+  (from today, negative = past); the page has a ↑/↓ button next to the sort.
 - **Freshness** (explorer settings): *On demand* (default) shares the computed results and keeps them until someone
   presses **Refresh** on the page or until the maximum age (60 minutes by default); the page shows when they were
   computed and says when data changed since. *Automatic* recomputes as soon as the data changes: keep it for small tables

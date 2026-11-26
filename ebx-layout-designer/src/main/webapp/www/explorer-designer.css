@@ -256,3 +256,4 @@
 .ldx-app .hidden-by-role{opacity:.45}
 @media (max-width:1200px){.ldx-app .bench{grid-template-columns:250px minmax(0,1fr)}.ldx-app .bench .inspector{grid-column:1/-1;position:static;max-height:none}}
 @media (max-width:820px){.ldx-app .bench{grid-template-columns:1fr}.ldx-app .side{position:static;max-height:none}.ldx-app .xbody{grid-template-columns:1fr}.ldx-app .steps .spacer{margin-left:0}}
+.cdays{display:inline-flex;align-items:center;gap:4px}.cdays input{width:64px}

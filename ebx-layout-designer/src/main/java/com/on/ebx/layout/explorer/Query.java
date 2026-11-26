@@ -54,6 +54,9 @@ public final class Query
 		public final Map<String, Integer> tiles = new LinkedHashMap<String, Integer>();
 		public final Map<String, FacetPage> facets = new LinkedHashMap<String, FacetPage>();
 		/** When the oldest answer used was computed (ms); whether the data changed since (on-demand mode); the mode. */
+		/** Groups of the page, in the page's order: value, label, number of matching records; each record's group value. */
+		public final List<Item> groups = new ArrayList<Item>();
+		public final Map<String, String> groupOf = new HashMap<String, String>();
 		public long computedAt;
 		public boolean changed;
 		public String mode;
@@ -66,6 +69,8 @@ public final class Query
 		public final Map<String, Set<String>> selected = new HashMap<String, Set<String>>();
 		public String tile;
 		public int sort;
+		/** The user's direction for the sort ("asc", "desc"), or null for the explorer's own. */
+		public String dir;
 		public final Map<String, Integer> shown = new HashMap<String, Integer>();
 		public final Map<String, String> facetSearch = new HashMap<String, String>();
 		public Set<String> favorites = new TreeSet<String>();

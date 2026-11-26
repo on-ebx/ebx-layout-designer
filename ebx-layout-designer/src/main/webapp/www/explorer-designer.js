@@ -69,7 +69,12 @@ const C = {
  visibleTo:['Visible pour','Visible to'], rolesSome:['Seuls ces rôles le voient. L’administrateur voit tout.','Only these roles see it. The administrator sees everything.'], rolesNone:['Aucun rôle coché : tout le monde le voit.','No role ticked: everyone sees it.'], noRoles:['Aucun rôle dans l’annuaire.','No role in the directory.'],
  field:['Champ','Field'], op:['Opérateur','Operator'], value:['Valeur','Value'], typeVal:['Tapez : {0} valeurs','Type: {0} values'], addValue:['+ valeur…','+ value…'], always:['Toujours','Always'], addCond:['+ Condition','+ Condition'], noCond:['Aucune condition','No condition'], rmCond:['Retirer la condition','Remove the condition'],
  compound:['Condition composée (toutes / l’une / non) : lisible ici, modifiable dans le JSON. « Simplifier » la remplace par sa première condition simple.','Compound condition (all / any / not): readable here, editable in the JSON. “Simplify” replaces it with its first simple condition.'], simplify:['Simplifier','Simplify'],
- o_in:['est parmi','is one of'], o_notIn:['n’est pas parmi','is not one of'], o_filled:['renseigné','filled'], o_empty:['vide','empty'], o_gt:['>','>'], o_lt:['<','<'], o_ge:['≥','≥'], o_le:['≤','≤'], o_eq:['=','='], o_ne:['≠','≠'],
+ o_in:['est parmi','is one of'], o_notIn:['n’est pas parmi','is not one of'], o_filled:['renseigné','filled'], o_empty:['vide','empty'], o_gt:['>','>'], o_lt:['<','<'], o_ge:['≥','≥'], o_le:['≤','≤'], o_eq:['=','='], o_ne:['≠','≠'], o_days:['dans les jours','within days'], dFrom:['à partir de J+','from day'], dTo:['jusqu’à J+ (exclu)','to day (excluded)'], daysHint:['Jours comptés depuis aujourd’hui (négatif = passé). Laisser vide : sans limite.','Days counted from today (negative = past). Empty: no limit.'],
+ userLays:['Affichages au choix de l’utilisateur','Views the user may switch to'], userLaysHint:['Deux ou plus : la page montre un bouton pour passer de l’un à l’autre ; le choix est retenu par utilisateur.','Two or more: the page shows a switch; the choice is remembered per user.'],
+ aLinked:['Fiches liées','Linked records'], linkedD:['Ouvre la table liée d’EBX filtrée sur cette fiche. Le nombre s’affiche sur le bouton ; sans fiche liée, le bouton est masqué.','Opens EBX’s linked table filtered on this record. The count shows on the button; with no linked record, the button is hidden.'], hideNone:['Masquer quand il n’y en a aucune','Hide when there is none'],
+ groupBy:['Grouper par','Group by'], groupEmpty:['Titre du groupe sans valeur','Heading of the group without a value'], noGroupVal:['(vide)','(empty)'], noGroupBy:['(pas de groupes)','(no groups)'], groupHint:['Chaque groupe a son titre et son nombre de fiches ; le tri choisi s’applique dans chaque groupe.','Each group has a heading and its record count; the chosen sort applies inside each group.'],
+ header:['En-tête de la page','Page header'], hCreate:['Bouton de création (formulaire EBX, si l’utilisateur peut créer)','Create button (EBX form, when the user may create)'], hLinks:['Liens','Links'], hAddLink:['+ Lien','+ Link'],
+ hlTable:['Table du dataset (vide : celle-ci)','Table of the dataset (empty: this one)'], hlPred:['Filtre XPath (facultatif)','XPath filter (optional)'], hlSvc:['Service (facultatif, module@Service)','Service (optional, module@Service)'], hlUrl:['ou adresse (/… ou https://…)','or address (/… or https://…)'],
  colours:['Couleur par valeur','Colour per value'], coloursLong:['{0} valeurs : seules celles que vous choisissez ont une couleur, toutes les autres prennent la couleur par défaut. La liste n’est jamais chargée en entier.','{0} values: only those you pick get a colour, every other one takes the default colour. The list is never loaded whole.'],
  otherVals:['Toutes les autres valeurs','Every other value'], giveColour:['Donner une couleur à une valeur','Give a value a colour'], colourBtn:['+ Couleur','+ Colour'], foundN:['{0} trouvée(s)','{0} found'], mostFirst:['Les plus fréquentes d’abord.','Most frequent first.'],
  tone_ok:['Vert','Green'], tone_warn:['Orange','Amber'], tone_bad:['Rouge','Red'], tone_info:['Bleu','Blue'], tone_accent:['Violet','Purple'], tone_muted:['Gris','Grey'], neutral:['Neutre','Neutral'],
@@ -153,7 +158,7 @@ const M = B.model || {};
 const TABLE = T(M.tableLabel) || M.table || '';
 const LISTS = ['overline','subtitle','lines','tags','kpis'];
 const TONES = ['ok','warn','bad','info','accent','muted'];
-const OPS = ['in','notIn','filled','empty','gt','lt','ge','le','eq','ne'];
+const OPS = ['in','notIn','filled','empty','gt','lt','ge','le','eq','ne','days'];
 const TOP = 10, MAXLIST = 50;
 const DT = {count:'int', sameValue:'int', test:'bool', suspects:'list', lookup:'str', firstOf:'str', case:'str', provided:'str'};
 
@@ -370,6 +375,10 @@ function test(row, cd){
   if (cd.empty) ok = ok && !v;
   [['gt', (a, b) => a > b], ['lt', (a, b) => a < b], ['ge', (a, b) => a >= b], ['le', (a, b) => a <= b]].forEach(([op, f]) => { if (op in cd){ const y = parseFloat(cd[op]); ok = ok && x != null && isFinite(y) && f(x, y); } });
   const same = y => { const ny = parseFloat(y); return x != null && /^-?\d+(\.\d+)?$/.test(String(y).trim()) ? x === ny : ks.indexOf(String(y)) >= 0; };
+  if ('days' in cd){
+    const k = ks[0] ? String(ks[0]).slice(0, 10) : null, d = cd.days || {}, day = n => { const t = new Date(); t.setHours(12, 0, 0, 0); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); };
+    ok = ok && !!k && (d.from == null || d.from === '' || k >= day(+d.from)) && (d.to == null || d.to === '' || k < day(+d.to));
+  }
   if ('eq' in cd) ok = ok && same(cd.eq);
   if ('ne' in cd) ok = ok && !same(cd.ne);
   return ok;
@@ -488,7 +497,13 @@ function mediaHtml(row, where){
   }
   return `<img class="${cls}${fit}${on}"${dp} src="${esc(img.url)}" alt="${esc(titleOf(row))}" title="${esc('DAMA · ' + (img.name || ''))}" loading="lazy">`;
 }
+/* the computed counts reading a linked table: each can back a "linked records" button */
+function linkedDefs(){
+  const names = Object.keys(SUGG).concat(Object.keys(D.derived || {}).filter(n => !SUGG[n]));
+  return names.filter(n => { const d = defOf(n); return d && d.type === 'count' && (d.association || d.table && d.fk) && !d.where; });
+}
 function actionLabel(a){
+  if (a.action === 'linked') return T(a.label) || (a.count ? labelOf('derived:' + a.count) : c('aLinked'));
   if (a.action === 'open') return c('openRec');
   if (a.action === 'favorite') return c('aFav');
   if (a.workflow){ const w = WFS.find(x => x.pub === a.workflow); return T(a.label) || (w ? T(w.lab) : a.workflow); }
@@ -685,7 +700,7 @@ const toneOpts = (cur, none) => (none ? `<option value="">${esc(none)}</option>`
 function opsFor(ref){
   const k = kindOf(ref);
   if (k === 'num') return ['gt','ge','lt','le','eq','ne','filled','empty'];
-  if (k === 'date') return ['filled','empty','eq','ne'];
+  if (k === 'date') return ['days','filled','empty','eq','ne'];
   if (k === 'list') return ['in','notIn','filled','empty','eq','ne'];
   return ['filled','empty','eq','ne','in','notIn'];
 }
@@ -726,10 +741,13 @@ function condEd(owner, key, optional){
     if (kindOf(ref) === 'list' && !long) v = `<select data-cvset="${i}" aria-label="${esc(c('value'))}">${shortValues(ref).map(x => `<option value="${esc(x.v)}"${x.v === cur ? ' selected' : ''}>${esc(x.l)}</option>`).join('')}${cur && !shortValues(ref).some(x => x.v === cur) ? `<option value="${esc(cur)}" selected>${esc(cur)}</option>` : ''}</select>`;
     else if (long) v = `<input type="text" id="ldx-cq-${i}" data-cvq="${i}" data-one="1" list="ldx-dl-${i}" value="${esc(cur ? vlabel(ref, cur) : '')}" placeholder="${esc(c('typeVal', fmtN(distinctTotal(ref))))}" aria-label="${esc(c('value'))}"><datalist id="ldx-dl-${i}"></datalist>`;
     else v = `<input type="${kindOf(ref) === 'num' ? 'number' : kindOf(ref) === 'date' ? 'date' : 'text'}" data-cvset="${i}" value="${esc(cur)}" aria-label="${esc(c('value'))}">`;
+  } else if (op === 'days'){
+    const d = cd.days || {};
+    v = `<span class="cdays"><input type="number" data-cdays="${i}" data-b="from" value="${esc(d.from == null ? '' : d.from)}" title="${esc(c('dFrom'))}" aria-label="${esc(c('dFrom'))}"> → <input type="number" data-cdays="${i}" data-b="to" value="${esc(d.to == null ? '' : d.to)}" title="${esc(c('dTo'))}" aria-label="${esc(c('dTo'))}"></span>`;
   } else if (op !== 'filled' && op !== 'empty') v = `<input type="number" data-cvset="${i}" value="${esc(cd[op] == null ? '' : cd[op])}" aria-label="${esc(c('value'))}">`;
   const opsel = `<select data-cop="${i}" aria-label="${esc(c('op'))}">${ops.map(o => `<option value="${o}"${o === op ? ' selected' : ''}>${esc(c('o_' + o))}</option>`).join('')}</select>`;
   const inl = op === 'in' || op === 'notIn';
-  return `<div class="cond3"><select data-cref="${i}" aria-label="${esc(c('field'))}">${refOptions(ref)}</select>${opsel}${inl ? '<span></span>' + v : v || '<span></span>'}</div>${optional ? `<button type="button" class="btn tiny ghost" data-crm="${i}">${esc(c('rmCond'))}</button>` : ''}`;
+  return `<div class="cond3"><select data-cref="${i}" aria-label="${esc(c('field'))}">${refOptions(ref)}</select>${opsel}${inl ? '<span></span>' + v : v || '<span></span>'}</div>${op === 'days' ? `<span class="hint">${esc(c('daysHint'))}</span>` : ''}${optional ? `<button type="button" class="btn tiny ghost" data-crm="${i}">${esc(c('rmCond'))}</button>` : ''}`;
 }
 const segO = (key, cur, opts) => '<div class="seg">' + opts.map(x => `<button type="button" data-oset="${esc(key)}" data-val="${esc(x[0])}" aria-pressed="${String(cur) === String(x[0])}">${esc(x[1])}</button>`).join('') + '</div>';
 const numO = (key, lab, val, id) => `<div class="fld"><label for="ldx-on-${id || key}">${esc(lab)}</label><input type="number" id="ldx-on-${id || key}" data-onum="${esc(key)}" value="${esc(val == null ? '' : val)}"></div>`;
@@ -821,6 +839,8 @@ function renderInspector(){
   if (p.k === 'card'){
     h += `<h3>${esc(c('cardShort'))}</h3><div class="where">${esc(c('cardD'))}</div>`;
     h += `<div class="sechd">${esc(c('layout'))}</div><div class="seg">${[['vertical', c('lVertical')], ['horizontal', c('lHorizontal')], ['compact', c('lCompact')]].map(x => `<button type="button" data-cset="layout" data-val="${x[0]}" aria-pressed="${(cd.layout || 'vertical') === x[0]}">${esc(x[1])}</button>`).join('')}</div>`;
+    const uls = Array.isArray(cd.layouts) ? cd.layouts : [];
+    h += `<div class="fld"><span class="l">${esc(c('userLays'))}</span><div class="rolechips">${[['vertical', c('lVertical')], ['horizontal', c('lHorizontal')], ['compact', c('lCompact')]].map(x => `<label><input type="checkbox" data-clays="${x[0]}"${uls.indexOf(x[0]) >= 0 ? ' checked' : ''}>${esc(x[1])}</label>`).join('')}</div><span class="hint">${esc(c('userLaysHint'))}</span></div>`;
     h += `<div class="fld"><span class="l">${esc(c('minWidth'))}</span><div class="seg">${[220, 260, 300, 360].map(x => `<button type="button" data-cset="minWidth" data-val="${x}" aria-pressed="${(+cd.minWidth || 250) === x}">${x}</button>`).join('')}</div></div>`;
     h += `<label class="chk"><input type="checkbox" data-cedge="1"${cd.edge === 'pill' ? ' checked' : ''}${refOf(cd.pill) ? '' : ' disabled'}>${esc(c('edge'))}</label>`;
     const media = FIELDS.filter(f => f.t === 'media');
@@ -838,7 +858,7 @@ function renderInspector(){
     h += `<div class="fld"><label for="ldx-gaugesel">${esc(c('gaugeSel'))}</label><select id="ldx-gaugesel" data-gauge="1">${refOptions(refOf(cd.gauge), r => kindOf(r) === 'num', c('none'))}</select></div>`;
     h += `<div class="sechd">${esc(c('actions'))}</div>` + cd.actions.map((a, i) => `<div class="part partrow${p.k === 'action' && p.i === i ? ' on' : ''}" data-pickact="${i}"><span>${esc(actionLabel(a))}${a.workflow ? ` <span class="wl">· ${esc(a.workflow)}</span>` : ''}${rolesOf(a).length ? ` <span class="aud">${esc(rolesOf(a).map(roleLab).join(', '))}</span>` : ''}</span><button type="button" data-pickact="${i}" aria-label="${esc(c('edit'))}">✎</button><button type="button" data-amv="${i}" data-d="-1"${i ? '' : ' disabled'} aria-label="${esc(c('up'))}">↑</button><button type="button" data-amv="${i}" data-d="1"${i < cd.actions.length - 1 ? '' : ' disabled'} aria-label="${esc(c('down'))}">↓</button><button type="button" data-arm="${i}" aria-label="${esc(c('remove'))}">✕</button></div>`).join('');
     const hasA = k => cd.actions.some(a => a.action === k);
-    h += `<select data-addact="1" aria-label="${esc(c('addAction'))}"><option value="">${esc(c('addAction'))}</option>${hasA('open') ? '' : `<option value="open">${esc(c('aOpen'))}</option>`}${hasA('favorite') ? '' : `<option value="favorite">${esc(c('aFav'))}</option>`}${WFS.map(w => `<option value="wf:${esc(w.pub)}">${esc(c('aWf') + ' · ' + (T(w.lab) || w.pub))}</option>`).join('')}<option value="service">${esc(c('aSvc'))}</option></select>`;
+    h += `<select data-addact="1" aria-label="${esc(c('addAction'))}"><option value="">${esc(c('addAction'))}</option>${hasA('open') ? '' : `<option value="open">${esc(c('aOpen'))}</option>`}${hasA('favorite') ? '' : `<option value="favorite">${esc(c('aFav'))}</option>`}${WFS.map(w => `<option value="wf:${esc(w.pub)}">${esc(c('aWf') + ' · ' + (T(w.lab) || w.pub))}</option>`).join('')}<option value="service">${esc(c('aSvc'))}</option>${linkedDefs().map(n => `<option value="link:${esc(n)}">${esc(c('aLinked') + ' · ' + labelOf('derived:' + n))}</option>`).join('')}</select>`;
     h += `<div class="where">${esc(c('permCard'))}</div>`;
   } else if (p.k === 'part'){
     const part = X.card[p.list] && X.card[p.list][p.i];
@@ -887,6 +907,11 @@ function renderInspector(){
       h += `<div class="fld"><span class="l">${esc(c('btnLabel'))}</span>${locIn(a, 'label', actionLabel(Object.assign({}, a, {label:null})))}</div>`;
       h += `<div class="fld"><span class="l">${esc(c('shownIf'))}</span>${condEd(a, 'cond', true)}</div>`;
       h += `<div class="where">${esc(c('actionD'))}</div>`;
+    } else if (a.action === 'linked'){
+      h += `<div class="fld"><span class="l">${esc(c('btnLabel'))}</span>${locIn(a, 'label', actionLabel(Object.assign({}, a, {label:null})))}</div>`;
+      h += `<label class="chk"><input type="checkbox" data-ahide="1"${a.hideWhenNone !== false ? ' checked' : ''}>${esc(c('hideNone'))}</label>`;
+      h += `<div class="fld"><span class="l">${esc(c('shownIf'))}</span>${condEd(a, 'cond', true)}</div>`;
+      h += `<div class="where">${esc(c('linkedD'))}</div>`;
     } else if (a.service != null){
       h += `<div class="fld"><label for="ldx-svc">${esc(c('svcKey'))}</label><input type="text" id="ldx-svc" data-aval="service" value="${esc(a.service)}" placeholder="module@Service"></div>`;
       h += `<div class="fld"><span class="l">${esc(c('btnLabel'))}</span>${locIn(a, 'label', a.service)}</div>`;
@@ -947,6 +972,18 @@ function renderInspector(){
     h += `<div class="fld"><span class="l">${esc(c('placeholder'))}</span>${locIn(X.search, 'placeholder', X.search.fields.map(labelOf).join(', ') + '…')}</div>`;
     h += `<div class="sechd">${esc(c('sorts'))}</div>` + X.sorts.map((s, i) => `<div class="rule"><div class="part"><span>${esc(labelOf(refOf(s)))}</span><button type="button" data-sdir="${i}" title="${esc(s.dir === 'desc' ? c('desc') : c('asc'))}" aria-label="${esc(s.dir === 'desc' ? c('desc') : c('asc'))}">${s.dir === 'desc' ? '↓' : '↑'}</button><button type="button" data-smv="${i}" data-d="-1"${i ? '' : ' disabled'} aria-label="${esc(c('up'))}">⇡</button><button type="button" data-smv="${i}" data-d="1"${i < X.sorts.length - 1 ? '' : ' disabled'} aria-label="${esc(c('down'))}">⇣</button><button type="button" data-sortrm="${i}" aria-label="${esc(c('remove'))}">✕</button></div><span class="hint">${esc(c('sortLabel'))}</span>${locIn(s, 'label', labelOf(refOf(s)))}${rolesEd(s)}</div>`).join('');
     h += `<select data-sortadd="1" aria-label="${esc(c('sorts'))}"><option value="">${esc(c('addDots'))}</option>${refOptions('', r => kindOf(r) !== 'media' && meta(r).t !== 'list')}</select>`;
+    const gref = X.group ? refOf(X.group) : '';
+    h += `<div class="sechd">${esc(c('groupBy'))}</div><select data-groupby="1" aria-label="${esc(c('groupBy'))}"><option value="">${esc(c('noGroupBy'))}</option>${refOptions(gref, r => kindOf(r) === 'list' && meta(r).t !== 'list')}</select><div class="hint">${esc(c('groupHint'))}</div>`;
+    if (X.group) h += `<div class="fld"><span class="l">${esc(c('groupEmpty'))}</span>${locIn(X.group, 'emptyLabel', c('noGroupVal'))}</div>`;
+    const hd = X.header || {};
+    h += `<div class="sechd">${esc(c('header'))}</div><label class="chk"><input type="checkbox" data-hcreate="1"${hd.create ? ' checked' : ''}>${esc(c('hCreate'))}</label>`;
+    h += `<div class="sechd">${esc(c('hLinks'))}</div>` + (hd.links || []).map((l, i) => `<div class="rule">${locIn(l, 'label', l.table || l.url || '')}`
+      + `<input type="text" data-hl="${i}|table" value="${esc(l.table || '')}" placeholder="/root/…" aria-label="${esc(c('hlTable'))}" title="${esc(c('hlTable'))}">`
+      + `<input type="text" data-hl="${i}|predicate" value="${esc(l.predicate || '')}" placeholder="${esc(c('hlPred'))}" aria-label="${esc(c('hlPred'))}">`
+      + `<input type="text" data-hl="${i}|service" value="${esc(l.service || '')}" placeholder="${esc(c('hlSvc'))}" aria-label="${esc(c('hlSvc'))}">`
+      + `<input type="text" data-hl="${i}|url" value="${esc(l.url || '')}" placeholder="${esc(c('hlUrl'))}" aria-label="${esc(c('hlUrl'))}">`
+      + `${rolesEd(l)}<button type="button" class="btn tiny ghost danger" data-hlrm="${i}">${esc(c('remove'))}</button></div>`).join('');
+    h += `<button type="button" class="btn tiny ghost" data-hladd="1">${esc(c('hAddLink'))}</button>`;
     h += `<div class="where">${esc(c('permSearch'))}</div>`;
   } else if (p.k === 'variant'){
     const V = D.variants[vi];
@@ -1103,6 +1140,11 @@ function addPart(what){
   } else if (what.indexOf('wf:') === 0){
     const w = WFS.find(x => x.pub === what.slice(3));
     X.card.actions.push({workflow:what.slice(3), var:'', single:true, label:w ? txt(w.lab) : {}}); S.pick = {k:'action', i:X.card.actions.length - 1};
+  } else if (what.indexOf('link:') === 0){
+    const n = what.slice(5), d = defOf(n) || {}; useRef('derived:' + n);
+    const a = {action:'linked', count:n, label:{}};
+    if (d.association) a.association = d.association; else { a.table = d.table; a.fk = d.fk; }
+    X.card.actions.push(a); S.pick = {k:'action', i:X.card.actions.length - 1};
   } else if (what === 'service'){
     X.card.actions.push({service:'', label:{}}); S.pick = {k:'action', i:X.card.actions.length - 1};
   } else if (what === 'flagtags'){
@@ -1151,7 +1193,7 @@ function useDerivedOf(l){ const s = JSON.stringify(l); Object.keys(SUGG).forEach
 /* ======================= clicks and inputs ======================= */
 const getReg = i => REG[+i] || {};
 function onCondChanged(){ flush(); renderCanvas(); renderInspector(); renderSteps(); }
-const ACTMSG = a => a.action === 'open' ? c('wouldOpen') : a.action === 'favorite' ? c('wouldFav') : a.workflow ? c('wouldWf', a.workflow) : c('wouldSvc', a.service || '?');
+const ACTMSG = a => a.action === 'linked' ? c('aLinked') + ' · ' + actionLabel(a) : a.action === 'open' ? c('wouldOpen') : a.action === 'favorite' ? c('wouldFav') : a.workflow ? c('wouldWf', a.workflow) : c('wouldSvc', a.service || '?');
 root.addEventListener('click', e => {
   const t = e.target;
   let el;
@@ -1190,6 +1232,8 @@ root.addEventListener('click', e => {
     if (k === 'minWidth') cd.minWidth = +v;
     else { cd.layout = v; const m = cd.image; if (m){ if (v === 'horizontal') m.shape = 'side'; else if (v === 'compact') m.shape = 'avatar'; else if (m.shape === 'side' || m.shape === 'avatar') m.shape = 'logo'; } }
     return commit(''); }
+  if (t.closest('[data-hladd]')){ snap(); X.header = Object.assign({}, X.header || {}); X.header.links = (X.header.links || []).concat([{label:{}}]); return commit(''); }
+  if ((el = t.closest('[data-hlrm]'))){ snap(); X.header.links.splice(+el.dataset.hlrm, 1); if (!X.header.links.length) delete X.header.links; return commit(''); }
   if (t.closest('[data-rmimage]')){ snap(); delete X.card.image; S.pick = {k:'card'}; return commit(''); }
   if ((el = t.closest('[data-amv]'))){ const a = X.card.actions, i = +el.dataset.amv, j = i + +el.dataset.d; snap(); a.splice(j, 0, a.splice(i, 1)[0]); return commit(''); }
   if ((el = t.closest('[data-arm]'))){ snap(); X.card.actions.splice(+el.dataset.arm, 1); if (S.pick.k === 'action') S.pick = {k:'card'}; return commit(''); }
@@ -1260,7 +1304,12 @@ root.addEventListener('change', e => {
   if (t.matches('[data-pill]')){ snap(); if (!t.value) delete X.card.pill; else { const old = X.card.pill; X.card.pill = old && refOf(old) === t.value ? old : {colors:autoTones(t.value), default:'muted'}; setRef(X.card.pill, t.value); } if (!X.card.pill && X.card.edge === 'pill') delete X.card.edge; return commit(''); }
   if (t.matches('[data-gauge]')){ snap(); if (!t.value) delete X.card.gauge; else { const old = X.card.gauge || {widget:'bar', max:100, green:80, amber:50}; X.card.gauge = old; setRef(old, t.value); } return commit(''); }
   if (t.matches('[data-cedge]')){ snap(); if (t.checked) X.card.edge = 'pill'; else delete X.card.edge; return commit(''); }
-  if (t.matches('[data-addact]') && t.value){ const v = t.value; if (v === 'open' || v === 'favorite' || v === 'service' || v.indexOf('wf:') === 0) return addPart(v); return; }
+  if (t.matches('[data-addact]') && t.value){ const v = t.value; if (v === 'open' || v === 'favorite' || v === 'service' || v.indexOf('wf:') === 0 || v.indexOf('link:') === 0) return addPart(v); return; }
+  if (t.matches('[data-clays]')){ snap(); const cd = X.card, set = new Set(Array.isArray(cd.layouts) ? cd.layouts : []); if (t.checked) set.add(t.dataset.clays); else set.delete(t.dataset.clays); cd.layouts = ['vertical','horizontal','compact'].filter(x => set.has(x)); if (cd.layouts.length && cd.layouts.indexOf(cd.layout || 'vertical') < 0) cd.layout = cd.layouts[0]; if (!cd.layouts.length) delete cd.layouts; return commit(''); }
+  if (t.matches('[data-ahide]')){ snap(); X.card.actions[S.pick.i].hideWhenNone = t.checked; return commit(''); }
+  if (t.matches('[data-groupby]')){ snap(); if (t.value){ useRef(t.value); X.group = Object.assign({}, X.group || {}); setRef(X.group, t.value); } else delete X.group; return commit(''); }
+  if (t.matches('[data-hcreate]')){ snap(); X.header = Object.assign({}, X.header || {}); if (t.checked) X.header.create = true; else delete X.header.create; return commit(''); }
+  if (t.matches('[data-hl]')){ snap(); const [i, k] = t.dataset.hl.split('|'), l = X.header.links[+i], v = t.value.trim(); if (v) l[k] = v; else delete l[k]; return commit(''); }
   if (t.matches('[data-aval]')){ snap(); X.card.actions[S.pick.i][t.dataset.aval] = t.value; return commit(''); }
   if (t.matches('[data-asingle]')){ snap(); X.card.actions[S.pick.i].single = t.checked; return commit(''); }
   if (t.matches('[data-odef]')){ snap(); optTarget().default = t.value; return commit(''); }
@@ -1289,11 +1338,13 @@ root.addEventListener('change', e => {
   if (t.matches('[data-cop]')){ g = getReg(t.dataset.cop); const cd = g.owner[g.key], old = opsOf(cd)[0], prev = old != null ? cd[old] : null; snap(); OPS.forEach(o => { delete cd[o]; });
     const op = t.value, first = Array.isArray(prev) ? prev[0] : prev;
     if (op === 'filled' || op === 'empty') cd[op] = true;
+    else if (op === 'days') cd.days = {from: 0, to: 30};
     else if (op === 'in' || op === 'notIn') cd[op] = Array.isArray(prev) ? prev : prev != null && prev !== true ? [String(prev)] : [];
     else if (['gt','lt','ge','le'].indexOf(op) >= 0) cd[op] = first != null && first !== true && isFinite(parseFloat(first)) ? parseFloat(first) : 0;
     else cd[op] = first != null && first !== true ? first : '';
     return onCondChanged(); }
   if (t.matches('[data-cvadd]') && t.value){ g = getReg(t.dataset.cvadd); const cd = g.owner[g.key], op = opsOf(cd)[0]; snap(); if (!Array.isArray(cd[op])) cd[op] = cd[op] != null ? [String(cd[op])] : []; cd[op].push(t.value); return onCondChanged(); }
+  if (t.matches('[data-cdays]')){ g = getReg(t.dataset.cdays); const cd = g.owner[g.key]; snap(); cd.days = Object.assign({}, cd.days || {}); if (t.value === '') delete cd.days[t.dataset.b]; else cd.days[t.dataset.b] = Math.round(+t.value); return onCondChanged(); }
   if (t.matches('[data-cvset]')){ g = getReg(t.dataset.cvset); const cd = g.owner[g.key], op = opsOf(cd)[0]; snap(); cd[op] = t.type === 'number' ? (t.value === '' ? 0 : +t.value) : t.value; return onCondChanged(); }
   if (t.matches('[data-cvq]')) return takeTypeahead(t);
 });

@@ -205,6 +205,11 @@ Dans l'inspecteur de chaque bloc, et de chaque bouton d'un bloc *Actions*, *Selo
 
 ## 8. Enregistrer, déclarer, utiliser
 
+- **Version 1.20.0** : dans le panneau de la carte, *Affichages au choix de l’utilisateur* (cartes, cartes larges, liste) ;
+  dans le panneau de recherche, *Grouper par* (un titre et un nombre par valeur) et l’*En-tête de la page* (bouton de
+  création, liens vers d’autres tables ou des adresses) ; un bouton *Fiches liées* par comptage de fiches liées
+  (contacts, filiales…) ; les conditions de date *dans les jours* (depuis aujourd’hui, négatif = passé) ; la page a un
+  bouton ↑/↓ à côté du tri.
 - **Fraîcheur** (réglages de l’explorateur) : *À la demande* (par défaut) partage les résultats calculés et les garde
   jusqu’à ce qu’un utilisateur clique **Actualiser** sur la page ou jusqu’à l’âge maximum (60 minutes par défaut) ; la page
   indique quand ils ont été calculés et signale si des données ont changé depuis. *Automatique* recalcule dès que les

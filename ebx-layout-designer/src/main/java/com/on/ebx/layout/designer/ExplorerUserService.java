@@ -61,6 +61,8 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 {
 	/** In a pop-up command, replaced by the page with the n-th primary key value of the record. */
 	static final String MARK = "LDXMARK";
+	/** In a linked-records command: the record's formatted key. */
+	static final String KEY_MARK = "LDXKEY";
 	/** Per user, explorer and open page: the number of its latest request. */
 	private static final java.util.Map<String, java.util.concurrent.atomic.AtomicLong> LATEST = new java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicLong>();
 
@@ -278,6 +280,11 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 					final ServiceKey key = ServiceKey.parse(service);
 					actions.add(this.popup(pWriter, this.table.getTablePath(), this.table.getPrimaryKeySpec(), wc -> wc.setService(key)));
 				}
+				else if ("linked".equals(a.path("action").asText("")))
+				{
+					// the linked records (contacts, subsidiaries…) in EBX's own table view, filtered on this record
+					actions.add(this.linkedPopup(pWriter, pSession, a));
+				}
 				else
 				{
 					actions.addNull();
@@ -290,6 +297,7 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 				actions.addNull();
 			}
 		}
+		boot.set("header", this.header(pWriter, pSession, pView));
 		boot.put("pk", this.table.getPrimaryKeySpec().length);
 		try
 		{
@@ -304,6 +312,117 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 			// no perspective theme
 		}
 		return boot;
+	}
+
+	/**
+	 * The page's header: the creation button (EBX's own creation form, when the user may create) and the links
+	 * (another table of the dataset, possibly filtered and with a service; or an address).
+	 */
+	private ObjectNode header(final UserServicePaneWriter pWriter, final Session pSession, final View pView)
+	{
+		final ObjectNode out = LayoutStore.json().createObjectNode();
+		final JsonNode h = pView.spec.layout.path("header");
+		final com.orchestranetworks.service.SessionPermissions perms = pSession.getPermissions();
+		if (h.path("create").isObject() || h.path("create").asBoolean(false))
+		{
+			try
+			{
+				if (perms.getTableActionPermissionToCreateRootOccurrence(this.table).isEnabled())
+				{
+					final UIHttpManagerComponent wc = pWriter.createWebComponentForSubSession();
+					wc.select(this.dataset.getHome().getKey(), this.dataset.getAdaptationName(), this.table.getTablePath().format());
+					wc.setService(ServiceKey.CREATE);
+					final ObjectNode c = out.putObject("create");
+					c.put("cmd", pWriter.buildButtonPreview(wc).getJavaScriptCommand());
+					if (h.path("create").has("label"))
+					{
+						c.set("label", h.path("create").get("label"));
+					}
+				}
+			}
+			catch (final RuntimeException ex)
+			{
+				LoggingCategory.getKernel().warn("[layout-designer] explorer: no creation button: " + ex.getMessage());
+			}
+		}
+		final ArrayNode links = out.putArray("links");
+		for (final JsonNode l : h.path("links"))
+		{
+			final JsonNode roles = l.get("roles");
+			if (roles != null && roles.isArray() && roles.size() > 0 && !com.on.ebx.layout.explorer.Views.inAnyRole(pSession, roles))
+			{
+				continue;
+			}
+			final ObjectNode o = links.addObject();
+			if (l.has("label"))
+			{
+				o.set("label", l.get("label"));
+			}
+			final String url = l.path("url").asText("").trim();
+			if (!url.isEmpty())
+			{
+				// an address of this server, or an https one
+				if (url.startsWith("/") && !url.startsWith("//") || url.startsWith("https://"))
+				{
+					o.put("url", url);
+					o.put("newTab", l.path("newTab").asBoolean(!url.startsWith("/")));
+				}
+				else
+				{
+					links.remove(links.size() - 1);
+				}
+				continue;
+			}
+			// no table, or a blank one: the explorer's own table (the format says "empty = this one")
+			final String named = l.path("table").asText("").trim();
+			final String table = named.isEmpty() ? this.table.getTablePath().format() : named;
+			try
+			{
+				final AdaptationTable t = this.dataset.getTable(Path.parse(table));
+				if (t == null || perms.getNodeAccessPermission(t.getTableNode(), this.dataset).isHidden())
+				{
+					links.remove(links.size() - 1);
+					continue;
+				}
+				o.put("ds", this.dataset.getHome().getKey().getName());
+				o.put("dataset", this.dataset.getAdaptationName().getStringName());
+				o.put("table", t.getTablePath().format());
+				if (!o.has("label"))
+				{
+					o.put("label", t.getTableNode().getLabel(pSession.getLocale()));
+				}
+				if (l.hasNonNull("predicate"))
+				{
+					o.put("predicate", l.get("predicate").asText());
+				}
+				if (l.hasNonNull("service"))
+				{
+					o.put("service", ServiceKey.parse(l.get("service").asText().trim()).format());
+				}
+			}
+			catch (final RuntimeException ex)
+			{
+				LoggingCategory.getKernel().warn("[layout-designer] explorer: link to " + table + " not drawn: " + ex.getMessage());
+				links.remove(links.size() - 1);
+			}
+		}
+		return out;
+	}
+
+	/** A pop-up on the records of a linked table whose foreign key holds this record's key (LDXKEY in the command). */
+	private String linkedPopup(final UserServicePaneWriter pWriter, final Session pSession, final JsonNode pAction)
+	{
+		final AdaptationTable child = com.on.ebx.layout.explorer.IndexBuilderAccess.linkedTable(this.dataset, this.table, pAction);
+		final Path fk = child == null ? null : com.on.ebx.layout.explorer.IndexBuilderAccess.linkedKey(this.table, pAction, child);
+		if (child == null || fk == null || pSession.getPermissions().getNodeAccessPermission(child.getTableNode(), this.dataset).isHidden())
+		{
+			return null;
+		}
+		final String f = fk.format();
+		final UIHttpManagerComponent wc = pWriter.createWebComponentForSubSession();
+		wc.select(this.dataset.getHome().getKey(), this.dataset.getAdaptationName(),
+			child.getTablePath().format() + "[" + (f.startsWith(".") ? f : "." + (f.startsWith("/") ? f : "/" + f)) + "='" + ExplorerUserService.KEY_MARK + "']");
+		return pWriter.buildButtonPreview(wc).getJavaScriptCommand();
 	}
 
 	private interface Setup
@@ -394,12 +513,25 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 		{
 			final ObjectNode o = sorts.addObject();
 			o.put("i", pView.spec.sorts.indexOf(s));
+			o.put("desc", s.desc);
 			if (s.label != null)
 			{
 				o.set("label", s.label);
 			}
 		}
 		out.put("pageSize", pView.spec.pageSize);
+		if (pView.spec.group != null && !pView.hidden.contains(pView.spec.group.source))
+		{
+			final ObjectNode group = out.putObject("group");
+			if (pView.spec.group.label != null)
+			{
+				group.set("label", pView.spec.group.label);
+			}
+			if (pView.spec.layout.path("group").has("emptyLabel"))
+			{
+				group.set("emptyLabel", pView.spec.layout.path("group").get("emptyLabel"));
+			}
+		}
 		final ObjectNode card = layout.path("card").isObject() ? ((ObjectNode) layout.get("card")).deepCopy() : out.objectNode();
 		for (final String list : new String[] { "overline", "subtitle", "lines", "tags", "kpis" })
 		{
@@ -470,6 +602,14 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 				{
 					out.add(s);
 				}
+			}
+		}
+		// the count a linked-records button shows ("Contacts (2)")
+		for (final JsonNode a : pCard.path("actions"))
+		{
+			if (a.hasNonNull("count"))
+			{
+				out.add(Spec.DERIVED + a.get("count").asText());
 			}
 		}
 		return out;
@@ -547,6 +687,7 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 					}
 				}
 				request.refresh = "1".equals(pContext.getParameter("refresh"));
+				request.dir = pContext.getParameter("dir");
 				// a newer request of the same page (the user kept typing) makes this one useless: it stops between two statements
 				final String tab = session.getUserReference().getUserId() + "|" + this.explorerId + "|" + pContext.getParameter("tab");
 				final long gen = ExplorerUserService.integer(pContext.getParameter("gen"), 0, 0, Integer.MAX_VALUE);
@@ -586,11 +727,23 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 				result.tiles.forEach((k, v) -> tiles.put(k, v.intValue()));
 				final ObjectNode facets = out.putObject("facets");
 				result.facets.forEach((k, page) -> facets.set(k, ExplorerUserService.page(page)));
+				if (!"facets".equals(request.part) && view.spec.group != null)
+				{
+					final ArrayNode groups = out.putArray("groups");
+					for (final Query.Item g : result.groups)
+					{
+						groups.addObject().put("v", g.v).put("l", g.l).put("n", g.n);
+					}
+				}
 				final ArrayNode cards = out.putArray("cards");
 				final Engine.Cards extra = ExplorerUserService.cardExtras(view, result.keys);
 				for (final String k : result.keys)
 				{
 					final ObjectNode c = this.card(view, k, session, request.favorites, extra);
+					if (c != null && result.groupOf.containsKey(k))
+					{
+						c.put("g", result.groupOf.get(k));
+					}
 					if (c != null)
 					{
 						cards.add(c);

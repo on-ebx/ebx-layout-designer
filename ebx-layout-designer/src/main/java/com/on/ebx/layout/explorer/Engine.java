@@ -497,11 +497,13 @@ public final class Engine
 		final Model.Pred where = Model.and(all);
 
 		final boolean main = !"facets".equals(pRequest.part), withFacets = !"main".equals(pRequest.part);
-		final Spec.Sort sort = pView.sorts.isEmpty() ? null : pView.sorts.get(Math.max(0, Math.min(pView.sorts.size() - 1, Engine.sortIndex(pView, pRequest.sort))));
+		final Spec.Sort sort = Engine.direction(pView.sorts.isEmpty() ? null : pView.sorts.get(Math.max(0, Math.min(pView.sorts.size() - 1, Engine.sortIndex(pView, pRequest.sort)))),
+			pRequest.dir);
+		final Map<String, String> groupOf = new java.util.concurrent.ConcurrentHashMap<String, String>();
 		final List<java.util.concurrent.Callable<Object>> tasks = new ArrayList<java.util.concurrent.Callable<Object>>();
 		// the page first (total, records, tiles), the facets in the same call or in a second one ("two steps")
 		tasks.add(() -> main ? Integer.valueOf(Engine.count(pView, where)) : null);
-		tasks.add(() -> main ? Engine.page(pView, where, sort, pOffset, pLimit) : null);
+		tasks.add(() -> main ? Engine.page(pView, where, Engine.group(pView), sort, pOffset, pLimit, groupOf) : null);
 		tasks.add(() -> main ? Integer.valueOf(Engine.count(pView, Model.Pred.TRUE)) : null);
 		for (final Spec.Tile t : pView.tiles)
 		{
@@ -542,6 +544,10 @@ public final class Engine
 			for (int i = 0; i < pView.tiles.size(); i++)
 			{
 				out.tiles.put(pView.tiles.get(i).id, (Integer) done.get(3 + i));
+			}
+			if (Engine.group(pView) != null)
+			{
+				Engine.groups(pView, where, keys, groupOf, out);
 			}
 		}
 		if (withFacets)
@@ -739,6 +745,71 @@ public final class Engine
 	/** Keys of the records {@code pOffset}..{@code pOffset + pLimit} in the sort's order (then the primary key). */
 	static List<String> page(final View pView, final Model.Pred pWhere, final Spec.Sort pSort, final int pOffset, final int pLimit)
 	{
+		return Engine.page(pView, pWhere, null, pSort, pOffset, pLimit, null);
+	}
+
+	/** The explorer's groups, unless the user may not read the source they group by. */
+	static Spec.Sort group(final View pView)
+	{
+		final Spec.Sort g = pView.spec.group;
+		return g == null || pView.hidden.contains(g.source) ? null : g;
+	}
+
+	/** The sort in the direction the user chose ("asc", "desc"), or as the explorer defines it. */
+	private static Spec.Sort direction(final Spec.Sort pSort, final String pDir)
+	{
+		if (pSort == null || pDir == null || !("asc".equals(pDir) || "desc".equals(pDir)) || pSort.desc == "desc".equals(pDir))
+		{
+			return pSort;
+		}
+		final Spec.Sort out = new Spec.Sort();
+		out.source = pSort.source;
+		out.label = pSort.label;
+		out.desc = "desc".equals(pDir);
+		return out;
+	}
+
+	/** The groups the page's records fall in, in the page's order, each with its count of matching records (one count each). */
+	private static void groups(final View pView, final Model.Pred pWhere, final List<String> pKeys, final Map<String, String> pGroupOf, final Query.Result pOut)
+	{
+		final Model m = pView.model;
+		final Model.Src g = m.src(Engine.group(pView).source);
+		final List<String> values = new ArrayList<String>();
+		for (final String k : pKeys)
+		{
+			final String v = pGroupOf.get(k);
+			if (v != null && !values.contains(v))
+			{
+				values.add(v);
+			}
+		}
+		final List<java.util.concurrent.Callable<Object>> tasks = new ArrayList<java.util.concurrent.Callable<Object>>();
+		for (final String v : values)
+		{
+			tasks.add(() -> {
+				final Model.Pred one = v.isEmpty() ? m.leaf(g, "empty", null) : m.in(g, Collections.singletonList(v));
+				final List<Model.Pred> both = new ArrayList<Model.Pred>();
+				both.add(pWhere);
+				both.add(one == null ? Model.Pred.FALSE : one);
+				return Integer.valueOf(Engine.count(pView, Model.and(both)));
+			});
+		}
+		final List<Object> counts = Engine.all(tasks);
+		for (int i = 0; i < values.size(); i++)
+		{
+			final String v = values.get(i);
+			pOut.groups.add(new Query.Item(v, v.isEmpty() ? "" : m.label(g, v), ((Integer) counts.get(i)).intValue(), 0, false));
+		}
+		pOut.groupOf.putAll(pGroupOf);
+	}
+
+	/**
+	 * One page of record keys, sorted by the group's source first (when there is one), then by the sort. Each record's
+	 * group value goes into {@code pGroupOf} (key → value, "" when empty).
+	 */
+	static List<String> page(final View pView, final Model.Pred pWhere, final Spec.Sort pGroup, final Spec.Sort pSort, final int pOffset, final int pLimit,
+		final Map<String, String> pGroupOf)
+	{
 		final List<String> out = new ArrayList<String>();
 		if (pWhere == Model.Pred.FALSE)
 		{
@@ -746,7 +817,9 @@ public final class Engine
 		}
 		final Model m = pView.model;
 		final Model.Src s = pSort == null ? null : m.src(pSort.source);
-		final boolean onField = s == null || s.node != null && !s.node.isLinkedNode() && !"list".equals(s.type);
+		final Model.Src g = pGroup == null ? null : m.src(pGroup.source);
+		final boolean onField = (s == null || s.node != null && !s.node.isLinkedNode() && !"list".equals(s.type))
+			&& (g == null || g.node != null && !g.node.isLinkedNode() && !"list".equals(g.type));
 		final boolean sqlFirst = Boolean.TRUE.equals(Engine.PREFER_SQL.get()) && pWhere.sql != null;
 		if (pWhere.xpath != null && onField && !sqlFirst || pWhere.sql == null)
 		{
@@ -757,9 +830,18 @@ public final class Engine
 				r.setXPathFilter(pWhere.xpath);
 			}
 			r.setSession(pView.session);
-			if (s != null && onField)
+			if ((s != null || g != null) && onField)
 			{
-				r.setSortCriteria(new RequestSortCriteria().add(s.node.getPathInAdaptation(), !pSort.desc));
+				final RequestSortCriteria criteria = new RequestSortCriteria();
+				if (g != null)
+				{
+					criteria.add(g.node.getPathInAdaptation(), !pGroup.desc);
+				}
+				if (s != null)
+				{
+					criteria.add(s.node.getPathInAdaptation(), !pSort.desc);
+				}
+				r.setSortCriteria(criteria);
 			}
 			final RequestResult rr = r.execute();
 			try
@@ -769,7 +851,13 @@ public final class Engine
 				{
 					if (i >= pOffset)
 					{
-						out.add(a.getOccurrencePrimaryKey().format());
+						final String k = a.getOccurrencePrimaryKey().format();
+						out.add(k);
+						if (g != null && pGroupOf != null)
+						{
+							final String v = Cond.key(a.get(g.node));
+							pGroupOf.put(k, v == null ? "" : v);
+						}
 					}
 				}
 			}
@@ -780,11 +868,19 @@ public final class Engine
 			}
 			return out;
 		}
-		final String order = s == null || s.sql == null ? "" : s.sql + (pSort.desc ? " DESC" : " ASC") + " NULLS LAST, ";
-		for (final Object[] row : Engine.select(pView, "SELECT t.\"$pk\" AS k FROM " + m.from + " t WHERE " + pWhere.sql + " ORDER BY " + order + "t.\"$pk\" OFFSET "
-			+ Math.max(0, pOffset) + " ROWS FETCH NEXT " + Math.max(1, pLimit) + " ROWS ONLY", pLimit))
+		final boolean grouped = g != null && g.sql != null;
+		final String order = (grouped ? g.sql + (pGroup.desc ? " DESC" : " ASC") + " NULLS LAST, " : "")
+			+ (s == null || s.sql == null ? "" : s.sql + (pSort.desc ? " DESC" : " ASC") + " NULLS LAST, ");
+		for (final Object[] row : Engine.select(pView, "SELECT t.\"$pk\" AS k" + (grouped ? ", " + g.sql + " AS g" : "") + " FROM " + m.from + " t WHERE " + pWhere.sql
+			+ " ORDER BY " + order + "t.\"$pk\" OFFSET " + Math.max(0, pOffset) + " ROWS FETCH NEXT " + Math.max(1, pLimit) + " ROWS ONLY", pLimit))
 		{
-			out.add(String.valueOf(row[0]));
+			final String k = String.valueOf(row[0]);
+			out.add(k);
+			if (grouped && pGroupOf != null)
+			{
+				final String v = Cond.key(row[1]);
+				pGroupOf.put(k, v == null ? "" : v);
+			}
 		}
 		return out;
 	}

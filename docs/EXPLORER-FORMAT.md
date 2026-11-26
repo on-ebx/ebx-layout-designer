@@ -56,7 +56,9 @@ Used by flags, tiles, `case` values and actions' `cond`:
 | `{"field": "/p", "in": ["A","B"]}`, `"notIn"` | the stored value (enumeration code, foreign key, `true`/`false`) is / is not in the list |
 | `{"field": "/p", "filled": true}`, `{"field": "/p", "empty": true}` | the value is / is not empty |
 | `{"field": "/p", "gt": 70}`, `lt`, `ge`, `le`, `eq`, `ne` | numeric comparison (`eq`/`ne` compare as text when not numbers) |
+| `{"field": "/d", "days": {"from": 0, "to": 90}}` | (1.20.0) a date from today + `from` days (included) to today + `to` days (excluded); either bound may be left out (`{"to": 0}` = before today) |
 | `{"derived": "name", …}` | same tests on a computed value |
+| a Match and Merge linked field (`/Linked_Field_State`, `GroupId`, `GoldenId`, `AutoCreated`, `HasSuspects`) | read by XPath on the record, and in SQL from the metadataset's `RecordMetadata` (1.20.0), so it combines with computed values |
 | `{"all": [c, …]}`, `{"any": [c, …]}`, `{"not": c}` | combinations |
 
 ### Computed values (`derived`)
@@ -102,7 +104,30 @@ A click applies the tile as a filter. Tones: `ok`, `warn`, `bad`, `info`, `accen
 
 ### Sorts
 
-`[{"field": "/p" | "derived": "name", "dir": "asc" | "desc", "label"}]`; the first is the default.
+`[{"field": "/p" | "derived": "name", "dir": "asc" | "desc", "label"}]`; the first is the default. Since 1.20.0 the page
+shows a ↑/↓ button that reverses the chosen sort for the user.
+
+### Groups (1.20.0)
+
+`"group": {"field": "/p" | "derived": "name", "dir": "asc" | "desc"}`: the records come in groups of that value (a list
+field: enumeration, foreign key, boolean), each under a heading with its number of matching records; the chosen sort
+applies inside each group. One count per group shown on the page. `emptyLabel` (texts per locale): the heading of the
+records without a value ("(empty)" by default).
+
+### Header (1.20.0)
+
+```json
+"header": {"create": true,
+  "links": [{"label": {"en-US": "All contacts"}, "table": "/root/Contact"},
+            {"label": "Location map", "service": "my-module@Map"},
+            {"label": "E-invoicing", "table": "/root/EInvoicingAddress", "predicate": "./active = true", "roles": ["Finance"]},
+            {"label": "Help", "url": "https://example.com/help"}]}
+```
+
+`create`: a button opening EBX's creation form for the table, shown only to users EBX lets create a record
+(`true`, or `{"label": …}`). `links`: another table of the dataset (`table`, empty = this one; optional XPath `predicate`
+and `service`), opened in the current perspective when there is one, shown only when the user may read that table; or an
+address (`url`: this server's `/…` in the same tab, `https://…` in a new one, `newTab` to choose).
 
 ### Card
 
@@ -116,7 +141,9 @@ A click applies the tile as a filter. Tones: `ok`, `warn`, `bad`, `info`, `accen
  "actions": [action]}
 ```
 
-`layout`: `vertical`, `horizontal` (image on the left), `compact` (one line per record). `edge: "pill"` colours the top
+`layout`: `vertical`, `horizontal` (image on the left), `compact` (one line per record). `layouts` (1.20.0): the layouts
+the user may switch between (`["vertical", "compact"]`); with two or more the page shows a switch and remembers the choice
+per user in the browser. `edge: "pill"` colours the top
 edge like the pill. `image.shape`: `cover`, `side`, `logo`, `avatar`; `whenMissing`: `initials` or `hide`. `title` is a
 path or `{"derived": "name"}`; without it the record's label is used.
 
@@ -142,7 +169,10 @@ only names the values that get a colour; every other value takes `default`.
 
 An **action**: `{"action": "open"}`, `{"action": "favorite"}`, `{"workflow": "<publication>", "var": "<variable>", "single": true,
 "label", "cond", "roles"}` (asks for confirmation, launches as the user with the record's XPath in `var`, opens the first
-task; same rules as the form's Actions block), `{"service": "<module>@<Service>", "label"}`.
+task; same rules as the form's Actions block), `{"service": "<module>@<Service>", "label"}`,
+`{"action": "linked", "association": "/contacts" | "table" + "fk", "count": "<count computed value>", "hideWhenNone": true, "label", "cond"}`
+(1.20.0: opens EBX's own view of the linked table filtered on this record, shows the count on the button and hides the
+button when there is none — `hideWhenNone` is `true` unless set to `false`; only for users who may read that table).
 
 ## How the answers are computed (1.18.0)
 

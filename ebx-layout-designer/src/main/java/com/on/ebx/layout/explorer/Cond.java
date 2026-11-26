@@ -59,6 +59,10 @@ public final class Cond
 		{
 			return !Cond.test(pCond.get("not"), pValues);
 		}
+		if (pCond.has("days"))
+		{
+			return Cond.test(Cond.days(pCond), pValues);
+		}
 		final Object v = pCond.has("derived") ? pValues.derived(pCond.path("derived").asText()) : pValues.field(pCond.path("field").asText(""));
 		if (pCond.has("in"))
 		{
@@ -84,6 +88,44 @@ public final class Cond
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * {@code {"field": "/d", "days": {"from": 0, "to": 90}}}: a date from today + {@code from} days (included) to today +
+	 * {@code to} days (excluded); either bound may be left out ({@code {"to": 0}} = before today). Rewritten as the same
+	 * condition with {@code ge} / {@code lt} on yyyy-MM-dd dates, as of today on the server.
+	 */
+	public static JsonNode days(final JsonNode pCond)
+	{
+		final com.fasterxml.jackson.databind.node.ObjectNode out = com.on.ebx.layout.runtime.LayoutStore.json().createObjectNode();
+		final com.fasterxml.jackson.databind.node.ArrayNode all = out.putArray("all");
+		final JsonNode d = pCond.path("days");
+		final java.time.LocalDate today = java.time.LocalDate.now();
+		for (final String[] bound : new String[][] { { "from", "ge" }, { "to", "lt" } })
+		{
+			if (d.path(bound[0]).isNumber() || d.path(bound[0]).isTextual() && Cond.number(d.path(bound[0]).asText()) != null)
+			{
+				final com.fasterxml.jackson.databind.node.ObjectNode leaf = all.addObject();
+				if (pCond.has("derived"))
+				{
+					leaf.set("derived", pCond.get("derived"));
+				}
+				else
+				{
+					leaf.set("field", pCond.path("field"));
+				}
+				leaf.put(bound[1], today.plusDays(Math.round(d.path(bound[0]).asDouble())).toString());
+			}
+		}
+		if (all.size() == 0)
+		{
+			// no bound: the date is filled
+			final com.fasterxml.jackson.databind.node.ObjectNode leaf = all.addObject();
+			leaf.setAll((com.fasterxml.jackson.databind.node.ObjectNode) pCond.deepCopy());
+			leaf.remove("days");
+			leaf.put("filled", true);
+		}
+		return out;
 	}
 
 	public static boolean isEmpty(final Object pValue)

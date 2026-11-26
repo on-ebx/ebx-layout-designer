@@ -81,6 +81,16 @@ public final class ExplorerTest
 		final Map<String, Object> d = new HashMap<String, Object>();
 		d.put("rib", Double.valueOf(0));
 		final Cond.Lookup l = ExplorerTest.values(f, d);
+		// dates relative to today (1.20.0)
+		final java.util.Calendar cal = java.util.Calendar.getInstance();
+		cal.add(java.util.Calendar.DAY_OF_MONTH, 30);
+		f.put("/renew", cal.getTime());
+		cal.add(java.util.Calendar.DAY_OF_MONTH, -60);
+		f.put("/past", cal.getTime());
+		ExplorerTest.check(Cond.test(ExplorerTest.j("{'field':'/renew','days':{'from':0,'to':90}}"), l), "days within 90");
+		ExplorerTest.check(!Cond.test(ExplorerTest.j("{'field':'/renew','days':{'from':0,'to':10}}"), l), "days not within 10");
+		ExplorerTest.check(Cond.test(ExplorerTest.j("{'field':'/past','days':{'to':0}}"), l), "days before today");
+		ExplorerTest.check(!Cond.test(ExplorerTest.j("{'field':'/none','days':{'to':0}}"), l), "days on an empty date");
 		ExplorerTest.check(Cond.test(ExplorerTest.j("{'field':'/st','in':['ACTIF','BLOQUE']}"), l), "in");
 		ExplorerTest.check(!Cond.test(ExplorerTest.j("{'field':'/st','notIn':['ACTIF']}"), l), "notIn");
 		ExplorerTest.check(Cond.test(ExplorerTest.j("{'field':'/sc','lt':70}"), l), "lt");
