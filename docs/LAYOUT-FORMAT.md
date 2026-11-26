@@ -191,7 +191,7 @@ A **condition** is `{"field": path, "in": [values]}`, or `"notIn"`, or `{"field"
 | field | `showIf`, `onHide` | the same for one field of a panel |
 | field | `mandatoryIf` | the mandatory asterisk follows the condition, live (`ebx_form_setMandatoryIndicator`) |
 | field | `readOnlyIf` | read only when the condition holds, and/or for `roles`, never for `exceptRoles`; computed when the form opens |
-| panel | `attributesBy` | `{table, key, familyCol, attributeCol, mandatoryCol, hideEmpty}`: a table of the same dataset says which fields go with each value of `key` (a family); a field the table lists shows only for its families (mandatory when `mandatoryCol` is true), a field it never lists always shows; `hideEmpty` (true) hides the panel with no field left. The attribute column holds a path (`/Dimensions/length`) or a field name |
+| panel | `attributesBy` | `{table, key, familyCol, attributeCol, mandatoryCol, hideEmpty}`: a table of the same dataset says which fields go with each value of `key` (a family); a field the table lists shows only for its families (mandatory when `mandatoryCol` is true), a field it never lists always shows; `hideEmpty` (true) hides the panel with no field left. The attribute column holds a path (`/Dimensions/length`) or a field name. Families in a tree: `familyParent` (field of the families table holding the parent family) and `familyTable` (default: the table `key` points to); a sub-family then also gets its ancestors' attributes, the closest level deciding *mandatory* |
 
 The live part uses the documented JavaScript API of EBX forms (`ebx_form_getValue`, `ebx_form_setValue`,
 `ebx_form_setMandatoryIndicator`), called after each change of the controlling field

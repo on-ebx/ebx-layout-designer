@@ -282,7 +282,8 @@ final class Behaviors
 		{
 			return null;
 		}
-		final String cacheKey = "fam|" + tablePath + "|" + familyCol + "|" + attributeCol + "|" + pBy.path("mandatoryCol").asText("");
+		final String cacheKey = "fam|" + tablePath + "|" + familyCol + "|" + attributeCol + "|" + pBy.path("mandatoryCol").asText("") + "|" + pBy.path("familyTable").asText("") + "|"
+			+ pBy.path("familyParent").asText("");
 		@SuppressWarnings("unchecked")
 		final Map<String, List<String[]>> known = (Map<String, List<String[]>>) pRc.cache.get(cacheKey);
 		if (known != null)
@@ -326,8 +327,109 @@ final class Behaviors
 			LoggingCategory.getKernel().warn("[layout-designer] configuration table " + tablePath + " not read: " + ex.getMessage());
 			return null;
 		}
+		final String parentCol = pBy.path("familyParent").asText("");
+		if (!parentCol.isEmpty())
+		{
+			final Map<String, String> parents = Behaviors.familyParents(pRc, pBy, parentCol);
+			if (parents != null)
+			{
+				final Map<String, List<String[]>> expanded = Behaviors.inherit(map, parents);
+				pRc.cache.put(cacheKey, expanded);
+				return expanded;
+			}
+		}
 		pRc.cache.put(cacheKey, map);
 		return map;
+	}
+
+	/**
+	 * The parent of every family: the table of the families is "familyTable", else the table the key field points to (a
+	 * foreign key); "familyParent" is its field holding the parent family. Keys are formatted primary keys, as the
+	 * foreign keys hold them. Null when the table cannot be read.
+	 */
+	static Map<String, String> familyParents(final RenderContext pRc, final JsonNode pBy, final String pParentCol)
+	{
+		try
+		{
+			final Adaptation dataset = pRc.context.getCurrentTable().getContainerAdaptation();
+			AdaptationTable families = null;
+			final String familyTable = pBy.path("familyTable").asText("");
+			if (!familyTable.isEmpty())
+			{
+				families = dataset.getTable(Path.parse(familyTable));
+			}
+			else
+			{
+				final SchemaNode key = pRc.node(pBy.path("key").asText(""));
+				if (key != null && key.getFacetOnTableReference() != null)
+				{
+					families = key.getFacetOnTableReference().getTable(pRc.context.getValueContext());
+				}
+			}
+			if (families == null)
+			{
+				return null;
+			}
+			final Map<String, String> parents = new java.util.HashMap<String, String>();
+			final RequestResult rows = families.createRequest().execute();
+			try
+			{
+				for (Adaptation r = rows.nextAdaptation(); r != null; r = rows.nextAdaptation())
+				{
+					final String parent = Values.key(Values.raw(r, pParentCol));
+					if (!parent.isEmpty())
+					{
+						parents.put(r.getOccurrencePrimaryKey().format(), parent);
+					}
+				}
+			}
+			finally
+			{
+				rows.close();
+			}
+			return parents;
+		}
+		catch (final RuntimeException ex)
+		{
+			LoggingCategory.getKernel().warn("[layout-designer] families of " + pBy.path("table").asText("") + " not read: " + ex.getMessage());
+			return null;
+		}
+	}
+
+	/**
+	 * Each family gets the attributes of its ancestors too; when a level and an ancestor both list an attribute, the
+	 * closest level decides whether it is mandatory. A loop in the parents stops the walk.
+	 */
+	static Map<String, List<String[]>> inherit(final Map<String, List<String[]>> pOwn, final Map<String, String> pParents)
+	{
+		final java.util.Set<String> families = new java.util.LinkedHashSet<String>(pOwn.keySet());
+		families.addAll(pParents.keySet());
+		final Map<String, List<String[]>> out = new LinkedHashMap<String, List<String[]>>();
+		for (final String family : families)
+		{
+			final Map<String, String[]> merged = new LinkedHashMap<String, String[]>();
+			final java.util.Set<String> seen = new java.util.HashSet<String>();
+			for (String f = family; f != null && seen.add(f) && seen.size() <= 50; f = pParents.get(f))
+			{
+				final List<String[]> own = pOwn.get(f);
+				if (own == null)
+				{
+					continue;
+				}
+				for (final String[] a : own)
+				{
+					if (!merged.containsKey(a[0]))
+					{
+						merged.put(a[0], a);
+					}
+				}
+			}
+			if (!merged.isEmpty())
+			{
+				out.put(family, new ArrayList<String[]>(merged.values()));
+			}
+		}
+		return out;
 	}
 
 	/** An attribute named in a configuration table: a path ("/Dimensions/length", "Dimensions/length") or a field name. */

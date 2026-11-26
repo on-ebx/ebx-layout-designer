@@ -1,5 +1,14 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.4.2 (2026-10-08)
+
+- **Fields driven by a configuration table, families in a tree**: `attributesBy.familyParent` names the field holding a
+  family's parent (in `familyTable`, or by default in the table the driving foreign key points to). A sub-family then also
+  gets the attributes of its ancestors; when two levels list the same attribute, the closest one decides whether it is
+  mandatory. A loop in the parents stops the walk.
+- Release checks now test the freshly built runtime jar first (the server's installed copy used to come first on the
+  class path).
+
 ## 1.4.1 (2026-10-08)
 
 - **Formatted address**: a `number` field goes on the first street line, before or after the street after the country

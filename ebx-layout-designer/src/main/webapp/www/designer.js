@@ -126,6 +126,8 @@ const C = {
  displayHint:['Widget d’affichage : utilisé quand le champ est en lecture seule ; sinon la fiche garde la saisie d’EBX.','Display widget: used when the field is read only; otherwise the form keeps EBX’s input.'],
  explDisplayRo:['Widget d’affichage : le champ est passé en lecture seule.','Display widget: the field is now read only.'], sectionTitle:['Section','Section'],
  liveIf:['si {0} (en direct)','if {0} (live)'], famTag:['piloté par une table','driven by a table'], condX:['Afficher seulement si (XPath, à l’ouverture)','Show only if (XPath, when opened)'],
+ famTree:['Familles en arbre (facultatif)','Families in a tree (optional)'], famParent:['Champ « famille parente »','“Parent family” field'], famNoTree:['— pas d’héritage —','— no inheritance —'],
+ famTreeHint:['Une sous-famille reçoit aussi les attributs de ses familles parentes ; si deux niveaux citent le même attribut, le plus proche décide s’il est obligatoire.','A sub-family also gets the attributes of its parent families; when two levels list the same attribute, the closest one decides whether it is mandatory.'],
  newTag:['nouveau','new'], noBlockMatch:['Aucun bloc ne correspond.','No block matches.'],
  wbHint:['Widgets d’affichage et comportements se règlent dans l’inspecteur d’un champ ou d’un panneau.','Display widgets and behaviours are set in the inspector of a field or a panel.']
 };
@@ -356,10 +358,19 @@ function behaviourBlockHtml(b){
     const by = b.attributesBy || {};
     h += `<div class="fld"><span class="l">${esc(c('famTitle'))}</span><div class="rule">` + specHtml([{k:'table', key:'attributesBy.table', l:['Table de configuration','Configuration table']}, {k:'field', key:'attributesBy.key', l:['Champ de la fiche qui pilote (la famille)','Field of the record that drives (the family)']}], b)
       + (by.table ? specHtml([{k:'col', key:'familyCol', of:'table', l:['Colonne famille','Family column']}, {k:'col', key:'attributeCol', of:'table', l:['Colonne attribut (chemin ou nom du champ)','Attribute column (path or field name)']},
-        {k:'col', key:'mandatoryCol', of:'table', types:['bool'], l:['Colonne obligatoire (facultatif)','Mandatory column (optional)']}, {k:'bool', key:'hideEmpty', def:true, l:['Cacher le panneau sans champ','Hide the panel with no field']}], by, 'attributesBy.') : '')
+        {k:'col', key:'mandatoryCol', of:'table', types:['bool'], l:['Colonne obligatoire (facultatif)','Mandatory column (optional)']}, {k:'bool', key:'hideEmpty', def:true, l:['Cacher le panneau sans champ','Hide the panel with no field']}], by, 'attributesBy.')
+        + famTreeHtml(by) : '')
       + `</div><p class="hint">${esc(c('famHint'))}</p></div>`;
   }
   return h;
+}
+/* families in a tree: the table of the families (default: the one the driving key points to) and its parent field */
+function famTreeHtml(by){
+  const ft = by.familyTable || (F[by.key] || {}).target || '';
+  const t = tableOf(ft);
+  return `<div class="fld"><span class="l">${esc(c('famTree'))}</span>` + specHtml([{k:'table', key:'attributesBy.familyTable', l:['Table des familles (vide : celle de la clé étrangère)','Families table (empty: the foreign key’s)']}], S.blocks[sel.id])
+    + (t ? `<div class="fld"><label for="ld-s-fampar">${esc(c('famParent'))}</label><select id="ld-s-fampar" data-sk="attributesBy.familyParent"><option value="">${esc(c('famNoTree'))}</option>${t.fields.map(f => opt(f.p, by.familyParent, T(f.lab) + '  ' + f.p)).join('')}</select></div>` : '')
+    + `<p class="hint">${esc(c('famTreeHint'))}</p></div>`;
 }
 function behaviourFieldHtml(f){
   return `<h3 class="sub">${esc(c('behaviours'))}</h3>` + condHtml('showIf', f.showIf, ['Afficher seulement si (en direct)','Show only if (live)'],
