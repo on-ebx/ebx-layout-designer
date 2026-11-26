@@ -1,5 +1,11 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.1.1 (2026-10-07)
+
+- Designer on a screen under 1280 px wide: the inspector (the settings of the selected tab, row, block or field) opens
+  as a drawer on the right while something is selected, with a Close button (and Escape). It used to drop below the
+  form, out of sight, and the palette slid over it.
+
 ## 1.1.0 (2026-10-07)
 
 - **About** page (service `ebx-layout-designer@About`, on the `FormLayout` table, for every user): version, commit, build

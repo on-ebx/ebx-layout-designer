@@ -18,7 +18,7 @@ function L(fr, en, it){ const o = {}; LOCALES.forEach(l => { const k = l.slice(0
 
 /* the designer's own words */
 const C = {
- title:['Designer de fiche','Form designer'], help:['Aide','Help'], preview:['Aperçu avec','Preview with'], language:['Langue','Language'], texts:['Textes','Texts'],
+ title:['Designer de fiche','Form designer'], help:['Aide','Help'], closeInsp:['Fermer','Close'], preview:['Aperçu avec','Preview with'], language:['Langue','Language'], texts:['Textes','Texts'],
  translations:['Traductions','Translations'], todo:['{0} à faire','{0} to do'], complete:['complètes','complete'], mode:['Mode','Mode'], design:['Concevoir','Design'],
  previewMode:['Aperçu','Preview'], width:['Largeur','Width'], undo:['Annuler','Undo'], save:['Enregistrer','Save'], saved:['Enregistré','Saved'],
  dirty:['Modifié, non enregistré','Changed, not saved'], draft:['Brouillon (non enregistré)','Draft (not saved)'], generated:['Mise en page de départ, générée depuis le modèle','Starting layout, built from the model'],
@@ -458,6 +458,8 @@ function renderInspector(){
       ${fd.req ? `<div class="info">${esc(c('reqInfo'))}</div>` : ''}${moveBtns()}</div>`;
   }
   $('#ld-insp').innerHTML = h;
+  /* on a narrow screen the inspector is a drawer: open while something is selected */
+  const bench = root.querySelector('.bench'); if (bench) bench.classList.toggle('has-sel', !!sel);
 }
 
 /* ======================= output ======================= */
@@ -687,7 +689,9 @@ function goTo(node){
   if (el) el.scrollIntoView({block:'center'});
   setTimeout(() => { flash = null; root.querySelectorAll('#ld-canvas .flash').forEach(e => e.classList.remove('flash')); }, 1800);
 }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sel && window.matchMedia('(max-width:1280px)').matches && !e.target.closest('input,textarea,select')){ sel = null; explain = ''; renderAll(); } });
 root.addEventListener('click', e => {
+  if (e.target.closest('#ld-insp-close')){ sel = null; explain = ''; return renderAll(); }
   const t = e.target;
   if (t.closest('[data-noop]')){ e.preventDefault(); return; }
   if (t.closest('#ld-m-design')){ mode = 'design'; return renderAll(); }
@@ -780,7 +784,7 @@ root.innerHTML = `<div class="wrap">
   <div class="bench">
     <aside class="side palette"><div class="side-hd"><h2>${esc(c('palette'))}</h2><div class="ptabs" role="tablist"><button type="button" role="tab" id="ld-pt-fields">${esc(c('fields'))}</button><button type="button" role="tab" id="ld-pt-assoc">${esc(c('assocs'))}</button><button type="button" role="tab" id="ld-pt-blocks">${esc(c('blocks'))}</button></div><input type="search" class="search" id="ld-psearch" placeholder="${esc(c('search'))}"></div><div class="side-bd" id="ld-palette"></div></aside>
     <section class="canvas-wrap"><div class="canvas-bar" id="ld-cbar"></div><div class="canvas design" id="ld-canvas"></div></section>
-    <aside class="side inspector"><div class="side-hd"><h2>${esc(c('selection'))}</h2></div><div class="side-bd" id="ld-insp"></div></aside>
+    <aside class="side inspector" aria-label="${esc(c('selection'))}"><div class="side-hd"><div class="insp-hd"><h2>${esc(c('selection'))}</h2><button type="button" class="btn small ghost insp-close" id="ld-insp-close">${esc(c('closeInsp'))}</button></div></div><div class="side-bd" id="ld-insp"></div></aside>
   </div>
   <section class="out"><div class="out-hd"><h2>${esc(c('outTitle'))}</h2><div class="seg"><button type="button" id="ld-o-json" aria-pressed="true">${esc(c('outJson'))}</button><button type="button" id="ld-o-xsd" aria-pressed="false">${esc(c('outXsd'))}</button><button type="button" id="ld-o-java" aria-pressed="false">${esc(c('outJava'))}</button></div></div>
     <div class="out-bd"><div style="display:flex;flex-direction:column;gap:8px;min-width:0"><div id="ld-outx"></div><pre class="code" id="ld-code"></pre><div><button type="button" class="btn small ghost" id="ld-copy">${esc(c('copy'))}</button></div></div><div class="how" id="ld-how"></div></div></section>

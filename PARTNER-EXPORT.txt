@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit 13514f1e4abb871f02b78cc14a90b18499f8227f
-Merge feature/about-page: About page, documentation served by the module, version stamp
+Exported from EBX-Layout-Designer commit 01654945846598d0ea5d8755f69198c280922285
+Release 1.1.1
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.
