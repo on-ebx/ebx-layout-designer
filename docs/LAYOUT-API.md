@@ -21,7 +21,7 @@ One class, `com.on.ebx.layout.designer.api.LayoutService`, with no UI dependency
 | Surface | For | How |
 |---|---|---|
 | in-JVM contract | sibling modules (the Factory) | a Standard MBean `com.on.ebx.layout:type=Contract`, operations `handle(Object session, String jsonRpc)`, the caller's `Session` passed as `Object` — the pattern of `ebx-connectors`' `Contract` (`ebx-connectors/docs/CONTRACT.md`): versioned (`layout-designer.sibling` 1.0.0), `contract.describe` first |
-| JSON-RPC endpoint | agents | `POST /ebx-layout-designer/rest/mcp` (Streamable HTTP, JSON answers; `GET`/`DELETE` answer `405` + `Allow: POST,OPTIONS`, CLAUDE.md §1), EBX authentication, the same operations as `tools/list` / `tools/call` |
+| JSON-RPC endpoint | agents | `POST /ebx-layout-designer/rest/mcp` (Streamable HTTP, JSON answers; `GET`/`DELETE` answer `405` + `Allow: POST,OPTIONS`, as the MCP Streamable HTTP transport requires for a client to fall back to plain request/response), EBX authentication, the same operations as `tools/list` / `tools/call` |
 
 A custom module cannot register a real EBX MCP server (`ModuleName.isCoreOrAddonModule`), hence the hand-rolled endpoint, copied
 from `ebx-perspective-admin`'s `McpEndpoint`.

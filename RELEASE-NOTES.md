@@ -1,5 +1,10 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.22.1 (2026-10-20)
+
+- Release package: the worked explorer examples (`docs/examples/`) are shipped, as the README and the MCP guide link to
+  them; the API page no longer refers to an internal note.
+
 ## 1.22.0 (2026-10-19)
 
 - **Four new blocks over an association's rows** ([LAYOUT-FORMAT.md](docs/LAYOUT-FORMAT.md#blocks-added-in-1220)):

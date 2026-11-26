@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit 7baa9a561399e35ef6d4010c2e0bc88958e16002
-Merge feature/demo-blocks: heatmap, gantt, compare, coverage blocks; hero meterLabel; neutral org chart counts (1.22.0)
+Exported from EBX-Layout-Designer commit 92760a9987fc9b2ce6095a28a6fac26d65256613
+1.22.1: ship the worked explorer examples in the release; no internal note referenced in the API page
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

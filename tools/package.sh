@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds a release of the Layout Designer into dist/ (git-ignored, nothing built is committed):
 #   ebx-layout-designer-<version>.zip          what is shared: the war, the runtime jar, Jackson for a server without it,
-#                                              the documentation, the release notes and SHA256SUMS of all of it
+#                                              the documentation (worked examples included), the release notes and SHA256SUMS of all of it
 #   ebx-layout-designer-<version>.zip.sha256
 # Usage: EBX_LIB_DIR=<server>/lib tools/package.sh
 # ALLOW_DIRTY=1 packages a working tree with uncommitted changes (the version then ends in -dirty).
@@ -42,7 +42,7 @@ manifest="$work/MANIFEST.MF"
 } > "$manifest"
 
 stage="$work/$name"
-mkdir -p "$stage/server-lib/if-missing" "$stage/docs"
+mkdir -p "$stage/server-lib/if-missing" "$stage/docs/examples"
 
 printf '== checks\n'
 "${java_home:+$java_home/bin/}javac" --release 11 -cp "$root/dist/ebx-layout-designer-runtime.jar:$lib/*" -d "$work/checks" "$root/runtime/test/com/on/ebx/layout/runtime/OpeningHoursCheck.java" "$root/runtime/test/com/on/ebx/layout/runtime/BarcodeCheck.java" "$root/runtime/test/com/on/ebx/layout/runtime/FamilyCheck.java"
@@ -76,6 +76,7 @@ printf '== documentation\n'
 cp "$root/README.md" "$root/RELEASE-NOTES.md" "$root/LICENSE" "$stage/"
 cp "$root/docs/"*.md "$stage/docs/"
 cp "$root/docs/tomcat-context.xml" "$stage/docs/"
+cp "$root/docs/examples/"*.json "$stage/docs/examples/"
 
 (cd "$stage" && find . -type f ! -name SHA256SUMS | sort | sed 's|^\./||' | while read -r f; do sha256 "$f"; done > SHA256SUMS)
 
