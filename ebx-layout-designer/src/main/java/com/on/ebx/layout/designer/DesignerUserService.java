@@ -39,8 +39,9 @@ import com.orchestranetworks.userservice.UserServiceValidateContext;
 public final class DesignerUserService implements UserService<TableViewEntitySelection>
 {
 	static final String SUBMIT_ID = "ldSubmit";
+	static final String CLOSE_ID = "ldClose";
 	/** Changed at each release, so that browsers fetch the new page script. */
-	static final String ASSET_VERSION = "1.4.3";
+	static final String ASSET_VERSION = "1.4.4";
 
 	private AdaptationTable table;
 	private String recordKey;
@@ -87,6 +88,7 @@ public final class DesignerUserService implements UserService<TableViewEntitySel
 		pConfigurator.setTitle(Messages.get(locale, "service.title", this.table.getTableNode().getLabel(locale)));
 		final UIButtonSpecNavigation close = pConfigurator.newCloseButton();
 		close.setAskBeforeLeavingModifiedForm(false);
+		close.setId(DesignerUserService.CLOSE_ID);
 		pConfigurator.setRightButtons(close);
 		if (!session.isUserInRole(Profile.ADMINISTRATOR))
 		{

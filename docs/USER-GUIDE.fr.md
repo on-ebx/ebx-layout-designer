@@ -55,7 +55,8 @@ La liste ne propose que les widgets qui conviennent au type du champ, en deux gr
   GTIN (barres et clé de contrôle), identifiant copiable, puces, valeur masquée (certains rôles peuvent tout afficher),
   lien vers la fiche d'une clé étrangère, vignette, coordonnées GPS, oui / non en icône. Leurs réglages (devise, unité,
   couleurs par valeur…) apparaissent sous la liste. En choisir un coche *Lecture seule* : un widget d'affichage sert
-  quand le champ est en lecture seule, un champ modifiable garde la saisie d'EBX.
+  toujours sur un enregistrement existant depuis la 1.4.4 (le champ passe en lecture seule, même dans une fiche
+  enregistrée avant sans la case cochée) ; à la création d'un enregistrement, le champ garde la saisie d'EBX.
 
 ### Comportements d'un champ
 

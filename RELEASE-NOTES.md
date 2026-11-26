@@ -1,5 +1,16 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.4.4 (2026-10-09)
+
+Fixes from the "layout module tests" report.
+
+- **Back to the table**: a *Close* button in the designer's bar (it asks first when changes are not saved).
+- **Activation**: the module's folder is also found when Tomcat declares it in `conf/server.xml` (a Tomcat run by
+  Eclipse), with a relative `docBase`, or under `wtpwebapps`. A table missing from the XSD now says so.
+- **Display widgets** (highlighted figure, badge…) make the field read only on an existing record even when *Read only*
+  was not ticked: a layout saved before 1.4.0, or a key field, used to show the plain input.
+- **Labels above the field** (and labels of display rows) use the same size and colour as EBX's own form labels.
+
 ## 1.4.3 (2026-10-09)
 
 - **Activation**: the table is found in the model's XSD by its real nesting. A table whose name is also the name of a

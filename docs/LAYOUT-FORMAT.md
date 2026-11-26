@@ -155,8 +155,10 @@ Tones (`color.map`, `colors`): `ok` (green), `warn` (orange), `bad` (red), `acce
 
 ## Display widgets of a field (1.4.0)
 
-Set `w` and the widget's keys on the field. A display widget applies when the field is read only (`ro`, a computed
-field or a read-only panel); an editable field keeps EBX's input. The designer ticks *Read only* when one is chosen.
+Set `w` and the widget's keys on the field. A display widget makes the field read only on an existing record, with or
+without `ro` (since 1.4.4; before, it applied only to a field read only by `ro`, a computed field or a read-only panel).
+While a record is created, the field keeps EBX's input unless it is read only for another reason. The designer ticks
+*Read only* when one is chosen.
 
 | `w` | For | Keys |
 |---|---|---|

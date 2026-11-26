@@ -284,7 +284,10 @@ final class LayoutPane implements UIFormPane
 			final Path path = LayoutPaths.relative(stored);
 			final String anchor = RenderContext.fieldAnchor(id, i);
 			final String kind = f.path("w").asText("");
-			final boolean ro = allReadOnly || f.path("ro").asBoolean(false) || node.isValueFunction() || Behaviors.readOnly(this.rc, f.get("readOnlyIf"));
+			// a display widget (figure, badge…) only shows a value: it makes the field read only, except while a record is created
+			final boolean displayKind = "badge".equals(kind) || "fig".equals(kind) || "link".equals(kind) || "mono".equals(kind) || DisplayWidgets.isDisplay(kind);
+			final boolean ro = allReadOnly || f.path("ro").asBoolean(false) || node.isValueFunction() || Behaviors.readOnly(this.rc, f.get("readOnlyIf"))
+				|| (displayKind && !this.rc.creating);
 			final JsonNode fShow = f.get("showIf");
 			if (fShow != null && !fShow.path("field").asText("").isEmpty())
 			{
@@ -300,7 +303,7 @@ final class LayoutPane implements UIFormPane
 				familyFields.add(new String[] { anchor, stored });
 			}
 			final String label = LText.hasText(f.get("label")) ? this.rc.text(f.get("label")) : node.getLabel(this.rc.locale);
-			final boolean displayOnly = ro && ("badge".equals(kind) || "fig".equals(kind) || "link".equals(kind) || "mono".equals(kind) || DisplayWidgets.isDisplay(kind));
+			final boolean displayOnly = ro && displayKind;
 			if (displayOnly)
 			{
 				if (table)

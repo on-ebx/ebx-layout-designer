@@ -240,39 +240,62 @@ final class XsdActivator
 			return null;
 		}
 		final List<File> candidates = new ArrayList<File>();
-		final File contexts = new File(base, "conf/Catalina/localhost");
-		final File[] xmls = contexts.listFiles();
+		// contexts of conf/Catalina/localhost/*.xml, and those declared in conf/server.xml (a Tomcat run by Eclipse)
+		final List<File> configs = new ArrayList<File>();
+		final File[] xmls = new File(base, "conf/Catalina/localhost").listFiles();
 		if (xmls != null)
 		{
 			for (final File xml : xmls)
 			{
-				if (!xml.getName().endsWith(".xml"))
+				if (xml.getName().endsWith(".xml"))
 				{
-					continue;
-				}
-				try
-				{
-					final String text = new String(Files.readAllBytes(xml.toPath()), StandardCharsets.UTF_8);
-					final Matcher m = Pattern.compile("docBase=\"([^\"]+)\"").matcher(text);
-					if (m.find())
-					{
-						candidates.add(new File(m.group(1).replace("${catalina.base}", base).replace("${catalina.home}", System.getProperty("catalina.home", base))));
-					}
-				}
-				catch (final Exception ex)
-				{
-					// unreadable context file
+					configs.add(xml);
 				}
 			}
 		}
-		final File[] webapps = new File(base, "webapps").listFiles();
-		if (webapps != null)
+		configs.add(new File(base, "conf/server.xml"));
+		final Pattern docBase = Pattern.compile("<Context\\b[^>]*?\\bdocBase=\"([^\"]+)\"");
+		for (final File xml : configs)
 		{
-			for (final File w : webapps)
+			if (!xml.isFile())
 			{
-				if (w.isDirectory())
+				continue;
+			}
+			try
+			{
+				final Matcher m = docBase.matcher(new String(Files.readAllBytes(xml.toPath()), StandardCharsets.UTF_8));
+				while (m.find())
 				{
-					candidates.add(w);
+					final String path = m.group(1).replace("${catalina.base}", base).replace("${catalina.home}", System.getProperty("catalina.home", base));
+					final File dir = new File(path);
+					// a relative docBase is read against the host's appBase: webapps, or wtpwebapps for a Tomcat run by Eclipse
+					if (dir.isAbsolute())
+					{
+						candidates.add(dir);
+					}
+					else
+					{
+						candidates.add(new File(new File(base, "webapps"), path));
+						candidates.add(new File(new File(base, "wtpwebapps"), path));
+					}
+				}
+			}
+			catch (final Exception ex)
+			{
+				// unreadable context file
+			}
+		}
+		for (final String appBase : new String[] { "webapps", "wtpwebapps" })
+		{
+			final File[] webapps = new File(base, appBase).listFiles();
+			if (webapps != null)
+			{
+				for (final File w : webapps)
+				{
+					if (w.isDirectory())
+					{
+						candidates.add(w);
+					}
 				}
 			}
 		}

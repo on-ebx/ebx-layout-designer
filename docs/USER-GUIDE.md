@@ -51,7 +51,8 @@ The list offers only the widgets that suit the field's type, in two groups.
   flag), phone and e-mail (with Copy), web address, colour, EAN / GTIN barcode (bars and check digit), copyable
   identifier, tags, masked value (some roles may show it all), link to the record of a foreign key, thumbnail, GPS
   coordinates, yes / no as an icon. Their settings (currency, unit, colours per value…) appear under the list. Choosing
-  one ticks *Read only*: a display widget is used when the field is read only, an editable field keeps EBX's input.
+  one ticks *Read only*. Since 1.4.4 a display widget always makes the field read only on an existing record (a layout
+  saved earlier without the box ticked shows it too); while a record is created the field keeps EBX's input.
 
 ### Behaviours of a field
 

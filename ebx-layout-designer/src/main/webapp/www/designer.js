@@ -27,7 +27,7 @@ const C = {
  deployRestart:['La déclaration est écrite dans le modèle, mais EBX ne l’a pas encore relue : redémarrez le serveur une fois.','The declaration is written in the model, but EBX has not read it yet: restart the server once.'],
  deployOff:['La table n’utilise pas encore cette mise en page : les enregistrements ne changent rien à la fiche tant qu’elle n’est pas déclarée.','The table does not use this layout yet: saving changes nothing on the form until it is declared.'],
  deployNofile:['Le designer ne peut pas écrire la déclaration dans le fichier du modèle : faites-la à la main (voir ci-dessous), puis redémarrez.','The designer cannot write the declaration into the model file: make it by hand (see below), then restart.'], deployUnknown:['Pour un modèle DMA, la déclaration se fait et se vérifie dans l’écran du modèle (ou avec set_form_layout) : ouvrez ensuite un enregistrement pour voir la fiche.','For a DMA model, the declaration is made and checked in the model screen (or with set_form_layout): then open a record to see the form.'],
- closeDlg:['Fermer','Close'], codeTitle:['Ce que le designer produit','What the designer produces'], closeInsp:['Fermer','Close'], preview:['Aperçu avec','Preview with'], language:['Langue','Language'], texts:['Textes','Texts'],
+ closeDlg:['Fermer','Close'], closeDesigner:['Fermer','Close'], closeTip:['Revenir à la table','Back to the table'], closeDirty:['Des modifications ne sont pas enregistrées. Fermer quand même ?','Some changes are not saved. Close anyway?'], codeTitle:['Ce que le designer produit','What the designer produces'], closeInsp:['Fermer','Close'], preview:['Aperçu avec','Preview with'], language:['Langue','Language'], texts:['Textes','Texts'],
  translations:['Traductions','Translations'], todo:['{0} à faire','{0} to do'], complete:['complètes','complete'], mode:['Mode','Mode'], design:['Concevoir','Design'],
  previewMode:['Aperçu','Preview'], width:['Largeur','Width'], undo:['Annuler','Undo'], save:['Enregistrer','Save'], saved:['Enregistré','Saved'],
  dirty:['Modifié, non enregistré','Changed, not saved'], draft:['Brouillon (non enregistré)','Draft (not saved)'], generated:['Mise en page de départ, générée depuis le modèle','Starting layout, built from the model'],
@@ -1075,6 +1075,13 @@ root.addEventListener('drop', e => {
 });
 
 /* ======================= posting through EBX's form ======================= */
+/* back to the table: EBX's own Close button of the service (kept in its button bar, given an id) */
+function closeDesigner(){
+  if (dirty && !confirm(c('closeDirty'))) return;
+  const holder = document.getElementById('ldClose');
+  const btn = holder && (/^(BUTTON|INPUT|A)$/.test(holder.tagName) ? holder : holder.querySelector('button,input,a'));
+  if (btn){ dirty = false; btn.click(); } else window.history.back();
+}
 function submit(action, record){
   document.getElementById('ldAction').value = action;
   document.getElementById('ldLayout').value = JSON.stringify(toLayout());
@@ -1112,6 +1119,7 @@ root.addEventListener('click', e => {
   if (t.closest('#ld-codebtn')){ const d = $('#ld-dlg'); if (d.showModal) d.showModal(); else d.setAttribute('open', ''); return renderCode(); }
   if (t.closest('#ld-dlg-close')){ $('#ld-dlg').close ? $('#ld-dlg').close() : $('#ld-dlg').removeAttribute('open'); return; }
   if (t.closest('#ld-undo')){ const s = history.pop(); if (s){ const o = JSON.parse(s); S = o.S; cur = o.cur; sel = null; dirty = history.length > 0; commit(c('explUndo')); } return; }
+  if (t.closest('#ld-close')) return closeDesigner();
   if (t.closest('#ld-save')) return submit('save');
   const sb = t.closest('[data-submit]'); if (sb) return submit(sb.dataset.submit);
   if (t.closest('#ld-copy')){ const txt = $('#ld-code').textContent; try { navigator.clipboard.writeText(txt).then(() => toast(c('copied'))); } catch (_){ /* no clipboard */ } return; }
@@ -1216,7 +1224,7 @@ root.innerHTML = `<div class="wrap">
     <div class="pick"><label>${esc(c('texts'))}</label><button type="button" class="btn ghost" id="ld-i18n" aria-pressed="false">${esc(c('translations'))}</button></div>
     <div class="pick"><label>${esc(c('mode'))}</label><div class="seg"><button type="button" id="ld-m-design" aria-pressed="true">${esc(c('design'))}</button><button type="button" id="ld-m-preview" aria-pressed="false">${esc(c('previewMode'))}</button></div></div>
     <div class="pick"><label>${esc(c('width'))}</label><div class="seg"><button type="button" id="ld-w-wide" aria-pressed="true">1 440 px</button><button type="button" id="ld-w-narrow" aria-pressed="false">890 px</button></div></div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${B.helpUrl ? `<a class="btn ghost" href="${esc(B.helpUrl)}" target="_blank" rel="noopener">${esc(c('help'))}</a>` : ''}<span class="status" id="ld-use" role="status"></span><button type="button" class="btn ghost" id="ld-deploy">${esc(c('activation'))}</button><button type="button" class="btn ghost" id="ld-codebtn">${esc(c('code'))}</button><span class="status saved" id="ld-status"></span><button type="button" class="btn ghost" id="ld-undo" disabled>${esc(c('undo'))}</button><button type="button" class="btn primary" id="ld-save">${esc(c('save'))}</button></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${B.helpUrl ? `<a class="btn ghost" href="${esc(B.helpUrl)}" target="_blank" rel="noopener">${esc(c('help'))}</a>` : ''}<span class="status" id="ld-use" role="status"></span><button type="button" class="btn ghost" id="ld-deploy">${esc(c('activation'))}</button><button type="button" class="btn ghost" id="ld-codebtn">${esc(c('code'))}</button><span class="status saved" id="ld-status"></span><button type="button" class="btn ghost" id="ld-undo" disabled>${esc(c('undo'))}</button><button type="button" class="btn primary" id="ld-save">${esc(c('save'))}</button><button type="button" class="btn ghost" id="ld-close" title="${esc(c('closeTip'))}">${esc(c('closeDesigner'))}</button></div>
   </header>
   <div class="bench">
     <aside class="side palette"><div class="side-hd"><h2>${esc(c('palette'))}</h2><div class="ptabs" role="tablist"><button type="button" role="tab" id="ld-pt-fields">${esc(c('fields'))}</button><button type="button" role="tab" id="ld-pt-assoc">${esc(c('assocs'))}</button><button type="button" role="tab" id="ld-pt-blocks">${esc(c('blocks'))}</button></div><input type="search" class="search" id="ld-psearch" placeholder="${esc(c('search'))}"></div><div class="side-bd" id="ld-palette"></div></aside>
