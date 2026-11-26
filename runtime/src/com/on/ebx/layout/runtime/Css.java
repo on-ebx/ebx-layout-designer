@@ -116,6 +116,7 @@ final class Css
 		+ ".ldf-ct{display:flex;gap:10px;align-items:flex-start}.ldf-ct.ldf-main{border-color:#CDB8F5;background:#FBF8FF}"
 		+ ".ldf-av{width:34px;height:34px;border-radius:50%;background:#F1E8FF;color:#5B12C7;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex:none}"
 		+ ".ldf-ct-b{min-width:0;flex:1}.ldf-ct-l{font-size:12px;margin-top:3px;overflow-wrap:anywhere}"
+		+ ".ldf-cards-ct .ldf-ct-l{overflow-wrap:break-word}.ldf-cards-ct .ldf-ct-b>b{overflow-wrap:break-word}"
 		+ ".ldf-cp-b{font:inherit;font-size:11px;font-weight:600;color:#5B12C7;background:#fff;border:1px solid #CDB8F5;border-radius:6px;padding:1px 7px;cursor:pointer;vertical-align:middle}"
 		+ ".ldf-gal{display:grid;gap:10px}.ldf-gal-i{display:flex;flex-direction:column;gap:4px;text-decoration:none;color:#6B6575;font-size:11.5px;min-width:0}"
 		+ ".ldf-gal-i img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid #E2DEE6;background:#FAF9FB}.ldf-gal-i span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"

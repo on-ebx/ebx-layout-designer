@@ -864,17 +864,27 @@ final class MoreBlocks
 		{
 			return MoreBlocks.creatingNote(rc);
 		}
-		final List<Adaptation> rows = rc.rows(a, 60);
+		// max (default 60) cards; one more row is read to know whether to say "+ N more"
+		final int max = Math.max(1, Math.min(500, b.path("max").asInt(60)));
+		final List<Adaptation> rows = rc.rows(a, max + 1);
 		if (rows.isEmpty())
 		{
 			return MoreBlocks.empty(MoreBlocks.t("noRow", rc));
+		}
+		final boolean truncated = rows.size() > max;
+		if (truncated)
+		{
+			rows.remove(rows.size() - 1);
 		}
 		final String main = b.path("main").asText("");
 		if (!main.isEmpty())
 		{
 			rows.sort((x, y) -> Boolean.compare(Boolean.TRUE.equals(Values.raw(y, main)), Boolean.TRUE.equals(Values.raw(x, main))));
 		}
-		final StringBuilder h = new StringBuilder("<div class=\"ldf-cards\">");
+		// cards wide enough for a name and an e-mail address on one line (cardWidth in px, default 320)
+		final int width = Math.max(180, Math.min(640, b.path("cardWidth").asInt(320)));
+		final StringBuilder h = new StringBuilder("<div class=\"ldf-cards ldf-cards-ct\" style=\"grid-template-columns:repeat(auto-fill,minmax(")
+			.append(width).append("px,1fr))\">");
 		for (final Adaptation r : rows)
 		{
 			final String name = b.path("name").asText("").isEmpty() ? r.getLabel(rc.locale) : Values.display(r, b.path("name").asText(), rc.locale);
@@ -902,7 +912,12 @@ final class MoreBlocks
 			}
 			h.append("</div></div>");
 		}
-		return h.append("</div>").toString();
+		h.append("</div>");
+		if (truncated)
+		{
+			h.append(MoreBlocks.empty(RuntimeText.get("moreAtLeast", rc.locale, Integer.valueOf(max))));
+		}
+		return h.toString();
 	}
 
 	static String initials(final String pName)

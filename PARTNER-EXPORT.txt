@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit 505d3c851ffcb50a41c9ed7c9cb01c95ebc7346b
-1.6.1: change history shows a creation without its values
+Exported from EBX-Layout-Designer commit 98d979ab655673b3322545accb1821e63aeed0d9
+1.6.2: help pages regenerated
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

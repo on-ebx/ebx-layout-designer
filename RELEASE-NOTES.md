@@ -1,5 +1,11 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.6.2 (2026-10-11)
+
+- **Contacts block**: wider cards (320 px minimum, `cardWidth` to change it) so that a name and an e-mail address stay on
+  one line, and no more breaking in the middle of a word. `max` sets how many contacts are shown (60 by default, as
+  before); when there are more, the block now says so instead of cutting the list silently.
+
 ## 1.6.1 (2026-10-09)
 
 - **Change history**: a creation now shows who and when only, not every value of the new record (they are the form

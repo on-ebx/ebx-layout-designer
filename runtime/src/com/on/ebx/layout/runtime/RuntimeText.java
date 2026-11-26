@@ -112,6 +112,9 @@ public final class RuntimeText
 		RuntimeText.put("offForm", "Not on this form", "Hors de la fiche", "Fuori dalla scheda");
 		RuntimeText.put("more", "{n} more", "{n} autres", "altri {n}");
 		RuntimeText.put("noRow", "No rows.", "Aucune ligne.", "Nessuna riga.");
+		RuntimeText.put("moreAtLeast", "Only the first {n} are shown: open the related table to see them all.",
+			"Seuls les {n} premiers sont affichés : ouvrez la table liée pour les voir tous.",
+			"Sono mostrati solo i primi {n}: aprire la tabella collegata per vederli tutti.");
 		RuntimeText.put("manageRows", "Manage the rows", "Gérer les lignes", "Gestisci le righe");
 		RuntimeText.put("noParent", "No parent · head of group", "Aucune maison mère · tête de groupe", "Nessuna controllante · capogruppo");
 		RuntimeText.put("noCoords", "No coordinates yet", "Pas encore de coordonnées", "Nessuna coordinata");
