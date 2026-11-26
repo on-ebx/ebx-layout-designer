@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.on.ebx.layout.runtime.Audience;
+import com.on.ebx.layout.runtime.BlockAccess;
 import com.on.ebx.layout.runtime.BlockTitles;
 import com.on.ebx.layout.runtime.LText;
 import com.on.ebx.layout.runtime.LayoutPaths;
@@ -129,7 +130,8 @@ public final class PersonalizeUserService implements UserService<RecordEntitySel
 				final ArrayNode blocks = tab.putArray("blocks");
 				for (final JsonNode b : byTab.get(id))
 				{
-					if (b.path("id").asText("").isEmpty())
+					// a block the user may not read (EBX permissions) is not even named here
+					if (b.path("id").asText("").isEmpty() || !BlockAccess.readable(b, pSession, this.record))
 					{
 						continue;
 					}

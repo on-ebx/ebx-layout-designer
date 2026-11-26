@@ -106,10 +106,17 @@ final class RenderContext
 	}
 
 	/** The value as EBX displays it in this locale (foreign key label, enumeration label, formatted date). */
+	/** Whether the user may read this field of the record (EBX permissions); a path that is not a field of the record is not judged here. */
+	boolean canRead(final String pStoredPath)
+	{
+		final SchemaNode n = this.node(pStoredPath);
+		return n == null || Access.canRead(n, this.record);
+	}
+
 	String display(final String pStoredPath)
 	{
 		final SchemaNode n = this.node(pStoredPath);
-		if (n == null)
+		if (n == null || !Access.canRead(n, this.record))
 		{
 			return "";
 		}
@@ -132,6 +139,10 @@ final class RenderContext
 
 	Object raw(final String pStoredPath)
 	{
+		if (!this.canRead(pStoredPath))
+		{
+			return null;
+		}
 		try
 		{
 			return this.context.getValueContext().getValue(LayoutPaths.relative(pStoredPath));
@@ -155,14 +166,20 @@ final class RenderContext
 		}
 		int n = 0;
 		final SchemaNode a = this.node(pAssociation);
-		if (a != null && a.getAssociationLink() != null)
+		if (a != null && a.getAssociationLink() != null && Access.canRead(a, this.record))
 		{
 			try
 			{
 				final RequestResult rows = a.getAssociationLink().getAssociationResult(this.record);
 				try
 				{
-					n = rows.getSize();
+					for (Adaptation r = rows.nextAdaptation(); r != null; r = rows.nextAdaptation())
+				{
+					if (Access.canSee(r))
+					{
+						n++;
+					}
+				}
 				}
 				finally
 				{
@@ -182,7 +199,7 @@ final class RenderContext
 	{
 		final List<Adaptation> out = new ArrayList<Adaptation>();
 		final SchemaNode a = this.node(pAssociation);
-		if (this.record == null || a == null || a.getAssociationLink() == null)
+		if (this.record == null || a == null || a.getAssociationLink() == null || !Access.canRead(a, this.record))
 		{
 			return out;
 		}
@@ -193,7 +210,10 @@ final class RenderContext
 			{
 				for (Adaptation r = rows.nextAdaptation(); r != null && out.size() < pMax; r = rows.nextAdaptation())
 				{
-					out.add(r);
+					if (Access.canSee(r))
+					{
+						out.add(r);
+					}
 				}
 			}
 			finally
@@ -222,7 +242,16 @@ final class RenderContext
 				LoggingCategory.getKernel().warn("[layout-designer] validation report not read: " + ex.getMessage());
 				items = new ArrayList<ReportItems.Item>();
 			}
-			this.report = items;
+			// a message about a field the user may not read is not shown (its text often quotes the value)
+			final List<ReportItems.Item> readable = new ArrayList<ReportItems.Item>();
+			for (final ReportItems.Item i : items)
+			{
+				if (i.node == null || this.canRead(i.node))
+				{
+					readable.add(i);
+				}
+			}
+			this.report = readable;
 		}
 		return this.report;
 	}

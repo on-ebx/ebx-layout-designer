@@ -76,6 +76,7 @@ final class MdmBlocks
 				}
 			}
 		}
+		out.removeIf(p -> !rc.canRead(p));
 		return out;
 	}
 

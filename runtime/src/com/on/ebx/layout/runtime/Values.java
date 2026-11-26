@@ -42,7 +42,7 @@ final class Values
 	static Object raw(final Adaptation pRow, final String pStored)
 	{
 		final SchemaNode n = Values.node(pRow, pStored);
-		if (n == null)
+		if (n == null || !Access.canRead(n, pRow))
 		{
 			return null;
 		}
@@ -60,7 +60,7 @@ final class Values
 	static String display(final Adaptation pRow, final String pStored, final Locale pLocale)
 	{
 		final SchemaNode n = Values.node(pRow, pStored);
-		if (n == null)
+		if (n == null || !Access.canRead(n, pRow))
 		{
 			return "";
 		}

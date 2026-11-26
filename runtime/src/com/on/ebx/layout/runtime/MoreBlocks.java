@@ -244,6 +244,7 @@ final class MoreBlocks
 		{
 			MoreBlocks.terminals(rc.root, fields);
 		}
+		fields.removeIf(f -> !rc.canRead(f));
 		final List<Adaptation> rows = hist.rows;
 		final SchemaNode whenNode = hist.when;
 		final SchemaNode who = hist.who;
@@ -394,6 +395,14 @@ final class MoreBlocks
 				}
 			}
 			Collections.sort(paths);
+		}
+		for (int i = paths.size() - 1; i >= 0; i--)
+		{
+			if (!rc.canRead(paths.get(i)))
+			{
+				paths.remove(i);
+				weights.remove(i);
+			}
 		}
 		if (paths.isEmpty())
 		{
@@ -830,14 +839,15 @@ final class MoreBlocks
 	static Adaptation linked(final RenderContext rc, final String pFk)
 	{
 		final SchemaNode n = rc.node(pFk);
-		if (n == null || n.getFacetOnTableReference() == null)
+		if (n == null || n.getFacetOnTableReference() == null || !rc.canRead(pFk))
 		{
 			return null;
 		}
 		try
 		{
 			final SchemaFacetTableRef ref = n.getFacetOnTableReference();
-			return ref.getLinkedRecord(rc.context.getValueContext());
+			final Adaptation target = ref.getLinkedRecord(rc.context.getValueContext());
+			return target != null && Access.canSee(target) ? target : null;
 		}
 		catch (final RuntimeException ex)
 		{
@@ -1313,10 +1323,20 @@ final class MoreBlocks
 		{
 			return "<div class=\"ldf-val\"><span class=\"ldf-badge ldf-t-info\">" + MoreBlocks.esc(MoreBlocks.t("chCreated", rc)) + "</span></div>";
 		}
-		final List<com.orchestranetworks.service.comparison.NodeDifference> diffs;
+		final List<com.orchestranetworks.service.comparison.NodeDifference> diffs = new ArrayList<com.orchestranetworks.service.comparison.NodeDifference>();
 		try
 		{
-			diffs = com.orchestranetworks.service.comparison.DifferenceHelper.compareOccurrences(before, r, true).getNodeDifferences();
+			// only the fields the user may read (EBX permissions)
+			for (final com.orchestranetworks.service.comparison.NodeDifference d : com.orchestranetworks.service.comparison.DifferenceHelper.compareOccurrences(before, r, true)
+				.getNodeDifferences())
+			{
+				final com.orchestranetworks.schema.Path dp = d.getRightValuePath() != null ? d.getRightValuePath() : d.getLeftValuePath();
+				final SchemaNode dn = MoreBlocks.diffNode(r, dp);
+				if (dn != null && Access.canRead(dn, r))
+				{
+					diffs.add(d);
+				}
+			}
 		}
 		catch (final RuntimeException ex)
 		{
@@ -1466,10 +1486,18 @@ final class MoreBlocks
 					}
 					try
 					{
-						count += rr.getSize();
-						for (Adaptation a = rr.nextAdaptation(); a != null && labels.size() < samples; a = rr.nextAdaptation())
+						// only the records the user may see are counted and named (EBX permissions)
+						for (Adaptation a = rr.nextAdaptation(); a != null; a = rr.nextAdaptation())
 						{
-							labels.add(a.getLabel(rc.locale));
+							if (!Access.canSee(a))
+							{
+								continue;
+							}
+							count++;
+							if (labels.size() < samples)
+							{
+								labels.add(a.getLabel(rc.locale));
+							}
 						}
 					}
 					finally

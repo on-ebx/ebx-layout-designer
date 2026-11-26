@@ -237,7 +237,9 @@ final class OrgChart
 	{
 		try
 		{
-			return pTable.lookupAdaptationByPrimaryKey(PrimaryKey.parseString(pKey));
+			final Adaptation r = pTable.lookupAdaptationByPrimaryKey(PrimaryKey.parseString(pKey));
+			// an entity the user may not see is left out of the chart (EBX permissions)
+			return r != null && Access.canSee(r) ? r : null;
 		}
 		catch (final RuntimeException ex)
 		{

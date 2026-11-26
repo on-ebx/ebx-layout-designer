@@ -55,7 +55,7 @@ final class ValueHistory
 		for (final JsonNode fp : b.path("fields"))
 		{
 			final String path = fp.asText();
-			if (rc.node(path) == null)
+			if (rc.node(path) == null || !rc.canRead(path))
 			{
 				continue;
 			}

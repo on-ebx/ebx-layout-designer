@@ -1,5 +1,17 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.10.1 (2026-10-12)
+
+- **EBX permissions are applied to every block, not only to the fields.** Fields have always gone through EBX's own
+  widgets, which apply the user's permissions; the blocks around them read values through the Java API, which does
+  not, so a header, key figures, a display widget, the history, the changes, values by source, a validation message, the
+  rows of an association or a linked record could show a value the user may not read. Every read now asks EBX
+  (`SessionPermissions.getNodeAccessPermission` / `getAdaptationAccessPermission`): a field the user may not read is left
+  out of a panel and of every list, a record they may not see is left out of rows, counts, the hierarchy and "Used by",
+  and a block whose fields are all out of reach is not drawn at all; *Arrange my form* does not even name such a block.
+  Checked on EBX 6.2.3 with a buyer account and dataset permissions hiding a group, one field of a panel and one field of
+  another tab. The designer itself is for administrators only.
+
 ## 1.10.0 (2026-10-12)
 
 - **Who sees what, by role.** By default nothing changes: everyone sees the whole form. A tab, block or field can now be

@@ -42,6 +42,19 @@ public class ConfigurableForm extends UIForm
 			return;
 		}
 		layout = ConfigurableForm.forUser(layout, pContext);
+		Access.begin(pContext.getSession(), pContext.isCreatingRecord() ? null : pContext.getCurrentRecord(), pContext.getCurrentTable());
+		try
+		{
+			ConfigurableForm.body(pBody, pContext, layout);
+		}
+		finally
+		{
+			Access.end();
+		}
+	}
+
+	private static void body(final UIFormBody pBody, final UIFormContext pContext, final JsonNode layout)
+	{
 		final RenderContext rc = new RenderContext(pContext, layout);
 		final JsonNode tabs = layout.path("tabs");
 		if (tabs.size() == 1)

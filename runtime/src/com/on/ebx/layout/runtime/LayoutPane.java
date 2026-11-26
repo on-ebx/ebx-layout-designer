@@ -45,6 +45,19 @@ final class LayoutPane implements UIFormPane
 	@Override
 	public void writePane(final UIFormPaneWriter pWriter, final UIFormContext pContext)
 	{
+		Access.begin(pContext.getSession(), this.rc.record, pContext.getCurrentTable());
+		try
+		{
+			this.write(pWriter);
+		}
+		finally
+		{
+			Access.end();
+		}
+	}
+
+	private void write(final UIFormPaneWriter pWriter)
+	{
 		pWriter.add("<style>").add(Css.STYLE).add("</style><div class=\"ldf\">");
 		this.rules = new Behaviors.Rules(pWriter);
 		this.drawn = 0;
@@ -123,6 +136,10 @@ final class LayoutPane implements UIFormPane
 		{
 			return;
 		}
+		if (!this.readable(b))
+		{
+			return;
+		}
 		this.drawn++;
 		final JsonNode showIf = b.get("showIf");
 		final boolean dynamic = showIf != null && !showIf.path("field").asText("").isEmpty();
@@ -155,6 +172,12 @@ final class LayoutPane implements UIFormPane
 		{
 			w.add("</div>");
 		}
+	}
+
+	/** Whether the block has something the user may see (EBX permissions): {@link BlockAccess}. */
+	private boolean readable(final JsonNode b)
+	{
+		return BlockAccess.readable(b, this.rc.root, this.rc.record);
 	}
 
 	/** "Arrange my form": the user's own arrangement, in EBX's pop-up (a module service on the record, documented API). */
@@ -343,7 +366,7 @@ final class LayoutPane implements UIFormPane
 			final JsonNode f = fields.get(i);
 			final String stored = f.path("p").asText();
 			final SchemaNode node = this.rc.node(stored);
-			if (node == null)
+			if (node == null || !Access.canRead(node, this.rc.record))
 			{
 				continue;
 			}
@@ -554,7 +577,7 @@ final class LayoutPane implements UIFormPane
 		}
 		w.add("</div></div><div class=\"ldf-hero-r\">");
 		final String meter = b.path("meter").asText("");
-		if (!meter.isEmpty() && !this.rc.creating)
+		if (!meter.isEmpty() && !this.rc.creating && this.rc.canRead(meter))
 		{
 			final Object raw = this.rc.raw(meter);
 			int m = raw instanceof Number ? ((Number) raw).intValue() : raw instanceof BigDecimal ? ((BigDecimal) raw).intValue() : 0;
@@ -579,12 +602,16 @@ final class LayoutPane implements UIFormPane
 		w.add("<div class=\"ldf-facts\" id=\"").add(RenderContext.blockAnchor(id)).add("\">");
 		for (final JsonNode p : b.path("items"))
 		{
+			if (!this.rc.canRead(p.asText()))
+			{
+				continue;
+			}
 			final String v = this.rc.creating ? "" : this.rc.display(p.asText());
 			w.add("<div class=\"ldf-fact\"><b title=\"").add(LayoutPane.esc(v)).add("\">").add(LayoutPane.esc(v.isEmpty() ? "—" : v)).add("</b><span>")
 				.add(LayoutPane.esc(this.rc.label(p.asText()))).add("</span></div>");
 		}
 		final String count = b.path("count").asText("");
-		if (!count.isEmpty())
+		if (!count.isEmpty() && this.rc.canRead(count))
 		{
 			w.add("<div class=\"ldf-fact\"><b>").add(this.rc.creating ? "—" : String.valueOf(this.rc.count(count))).add("</b><span>")
 				.add(LayoutPane.esc(this.rc.label(count))).add("</span></div>");
