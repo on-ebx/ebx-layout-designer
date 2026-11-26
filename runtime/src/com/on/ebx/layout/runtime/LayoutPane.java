@@ -971,6 +971,7 @@ final class LayoutPane implements UIFormPane
 				}
 			}
 			address = String.join(", ", parts);
+			Geocoder.warnIfLarge(this.rc.record.getContainerTable(), id);
 			// never wait for the geocoding service while the form is drawn (1.15.0): looked up in the background, shown next time
 			final double[] at = Geocoder.known(address);
 			if (at != null)
@@ -992,6 +993,15 @@ final class LayoutPane implements UIFormPane
 			{
 				w.add(" · <a href=\"https://www.openstreetmap.org/search?query=").add(LayoutPane.esc(java.net.URLEncoder.encode(address, java.nio.charset.StandardCharsets.UTF_8)))
 					.add("\" target=\"_blank\" rel=\"noopener\">").add(LayoutPane.esc(RuntimeText.get("openMap", this.rc.locale))).add("</a>");
+			}
+			if (pendingPosition)
+			{
+				// "Locate now" (1.15.1): the browser asks the module for this address, then draws the map in place
+				w.add(" <button type=\"button\" class=\"ldf-btn ldf-map-locate\" data-g=\"").add(LayoutPane.esc(Geocoding.url())).add("\" data-t=\"")
+					.add(LayoutPane.esc(GeoTicket.issue(this.rc.context.getSession().getUserReference().getUserId()))).add("\" data-q=\"").add(LayoutPane.esc(address))
+					.add("\" data-h=\"").add(String.valueOf(b.path("tall").asBoolean(false) ? 560 : 360)).add("\" data-wait=\"")
+					.add(LayoutPane.esc(RuntimeText.get("locatingOne", this.rc.locale))).add("\" data-miss=\"").add(LayoutPane.esc(RuntimeText.get("addressNotFound", this.rc.locale)))
+					.add("\">").add(LayoutPane.esc(RuntimeText.get("sm.locate", this.rc.locale))).add("</button>");
 			}
 			w.add("</div></section>");
 			return;

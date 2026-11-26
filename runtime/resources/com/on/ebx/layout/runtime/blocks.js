@@ -107,15 +107,40 @@
         + '<div class="ldf-sm-attr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></div>';
       map.innerHTML = h;
     }
+    // "Locate now" (1.15.1): the addresses not known yet, asked one by one to the module (the service takes one a second)
+    var left = 0;
+    function ask(q) {
+      return fetch(D.g + '?q=' + encodeURIComponent(q) + '&t=' + encodeURIComponent(D.tk), { credentials: 'same-origin' })
+        .then(function (r) { return r.ok ? r.json() : { found: false }; }).catch(function () { return { found: false }; });
+    }
+    function locateAll() {
+      if (left) return;
+      var todo = S.filter(function (s) { return s.pending && s.q; });
+      left = todo.length;
+      var next = function () {
+        var s = todo.shift();
+        if (!s) { left = 0; return render(); }
+        render();
+        ask(s.q).then(function (a) {
+          if (a.lat != null) { s.lat = a.lat; s.lon = a.lon; s.pending = false; return; }
+          if (!s.tq) { s.pending = false; s.miss = true; return; }
+          return ask(s.tq).then(function (b) { s.pending = false; if (b.lat != null) { s.lat = b.lat; s.lon = b.lon; s.approx = true; } else s.miss = true; });
+        }).then(function () { left--; placed = S.filter(function (x) { return x.lat != null; }); z = null; next(); });
+      };
+      next();
+    }
     function render() {
       var n = placed.length, hq = S.filter(function (s) { return s.hq; }).length, ap = S.filter(function (s) { return s.approx; }).length;
-      body.innerHTML = '<div class="ldf-more ldf-sm-sum">' + esc(T.sites.replace('{n}', S.length).replace('{m}', n)) + (hq ? ' · ' + hq + ' ' + esc(T.hq.toLowerCase()) : '') + (ap ? ' · ' + ap + ' ' + esc(T.approx.toLowerCase()) : '') + '</div>'
+      var waiting = D.g ? S.filter(function (s) { return s.pending && s.q; }).length : 0;
+      body.innerHTML = '<div class="ldf-more ldf-sm-sum">' + esc(T.sites.replace('{n}', S.length).replace('{m}', n)) + (hq ? ' · ' + hq + ' ' + esc(T.hq.toLowerCase()) : '') + (ap ? ' · ' + ap + ' ' + esc(T.approx.toLowerCase()) : '')
+        + (waiting ? ' <button type="button" class="ldf-btn ldf-sm-locate" data-locate' + (left ? ' disabled' : '') + '>' + esc(left ? T.locating.replace('{n}', left) : T.locate) + '</button>' : '') + '</div>'
         + '<div class="ldf-sm-grid"><div class="ldf-sm-map" style="height:' + H + 'px"></div><div class="ldf-sm-list" style="max-height:' + H + 'px">' + list() + '</div></div>';
       drawMap();
     }
     box.addEventListener('click', function (e) {
       var t = e.target, b;
       if (t.closest('a')) return;
+      if (t.closest('[data-locate]')) return locateAll();
       if ((b = t.closest('[data-z]'))) { var nz = Math.max(2, Math.min(18, z + +b.getAttribute('data-z'))), f = Math.pow(2, nz - z); cx *= f; cy *= f; z = nz; return drawMap(); }
       if ((b = t.closest('[data-i]'))) {
         sel = +b.getAttribute('data-i'); var s = S[sel];
@@ -133,6 +158,23 @@
     // the form's tab may be hidden at first: draw again once the map has a width
     if (window.ResizeObserver) { var last = 0; new ResizeObserver(function () { var m = body.querySelector('.ldf-sm-map'); if (m && m.clientWidth && m.clientWidth !== last) { if (!last) z = null; last = m.clientWidth; drawMap(); } }).observe(box); }
   }
+
+  // the "Locate now" button of a map block placed by its address (1.15.1): asks the module, then draws the map
+  function locateMap(btn) {
+    if (btn.disabled) return;
+    btn.disabled = true; btn.textContent = btn.getAttribute('data-wait');
+    fetch(btn.getAttribute('data-g') + '?q=' + encodeURIComponent(btn.getAttribute('data-q')) + '&t=' + encodeURIComponent(btn.getAttribute('data-t')), { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : { found: false }; }).catch(function () { return { found: false }; })
+      .then(function (a) {
+        var box = btn.closest('.ldf-more');
+        if (a.lat == null) { box.textContent = btn.getAttribute('data-miss'); return; }
+        var bbox = (a.lon - 0.012) + ',' + (a.lat - 0.007) + ',' + (a.lon + 0.012) + ',' + (a.lat + 0.007);
+        var m = document.createElement('div'); m.className = 'ldf-map'; m.style.setProperty('--ldf-map-h', btn.getAttribute('data-h') + 'px');
+        m.innerHTML = '<iframe loading="lazy" title="map" src="https://www.openstreetmap.org/export/embed.html?bbox=' + bbox + '&amp;layer=mapnik&amp;marker=' + a.lat + ',' + a.lon + '"></iframe>';
+        box.parentNode.replaceChild(m, box);
+      });
+  }
+  document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.ldf-map-locate'); if (b) { e.preventDefault(); locateMap(b); } });
 
   window.ldfBlocks = { scan: function () {
     [].forEach.call(document.querySelectorAll('.ldf-vh[data-vh]:not([data-done])'), function (box) { box.setAttribute('data-done', '1'); try { valueHistory(box, json(box)); } catch (e) { box.querySelector('.ldf-vh-body').textContent = String(e); } });

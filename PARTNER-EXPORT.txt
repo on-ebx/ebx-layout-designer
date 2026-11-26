@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit 236bbcf975266c7344904397a6afebf5cf32072b
-1.15.0: maps never wait for the geocoding service while a form is drawn; positions kept across restarts
+Exported from EBX-Layout-Designer commit dfdec873b02ef2ed2f4f918cbb6a17c85c2b2454
+1.15.1: a Locate now button on maps waiting for positions (module /geocode, signed ticket)
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

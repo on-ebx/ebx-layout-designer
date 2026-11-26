@@ -98,6 +98,9 @@ public final class RuntimeText
 		RuntimeText.put("sm.hq", "Head office", "Si\u00e8ge", "Sede");
 		RuntimeText.put("sm.approx", "Town position", "Position de la ville", "Posizione della citt\u00e0");
 		RuntimeText.put("sm.pending", "Position at the next display", "Position \u00e0 l'affichage suivant", "Posizione alla prossima apertura");
+		RuntimeText.put("sm.locate", "Locate now", "Localiser maintenant", "Localizza ora");
+		RuntimeText.put("locatingOne", "Locating\u2026", "Localisation\u2026", "Localizzazione\u2026");
+		RuntimeText.put("sm.locating", "Locating\u2026 {n} left (one a second)", "Localisation\u2026 encore {n} (une par seconde)", "Localizzazione\u2026 ancora {n} (una al secondo)");
 		RuntimeText.put("sm.notFound", "Address not found", "Adresse introuvable", "Indirizzo non trovato");
 		RuntimeText.put("sm.sites", "{n} sites, {m} on the map", "{n} sites, {m} sur la carte", "{n} sedi, {m} sulla mappa");
 		RuntimeText.put("sm.openMap", "Open the map", "Ouvrir la carte", "Apri la mappa");

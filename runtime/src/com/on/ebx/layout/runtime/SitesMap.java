@@ -48,11 +48,12 @@ final class SitesMap
 		final ObjectNode data = LayoutStore.json().createObjectNode();
 		data.put("tall", b.path("tall").asBoolean(false));
 		final ObjectNode t = data.putObject("t");
-		for (final String k : new String[] { "hq", "approx", "pending", "notFound", "sites", "openMap", "zoomIn", "zoomOut", "open", "inactive" })
+		for (final String k : new String[] { "hq", "approx", "pending", "notFound", "sites", "openMap", "zoomIn", "zoomOut", "open", "inactive", "locate", "locating" })
 		{
 			t.put(k, RuntimeText.get("sm." + k, rc.locale));
 		}
 		final ArrayNode sites = data.putArray("sites");
+		boolean anyPending = false;
 		boolean cut = false;
 		final List<Adaptation> rows = rc.rows(a, SitesMap.MAX_ROWS + 1);
 		for (final Adaptation r : rows)
@@ -78,6 +79,10 @@ final class SitesMap
 				}
 			}
 			final String adr = String.join(", ", parts);
+			if (!adr.isEmpty() && (lat.isEmpty() || lng.isEmpty()))
+			{
+				Geocoder.warnIfLarge(r.getContainerTable(), pId);
+			}
 			final String name = label.isEmpty() ? "" : Values.display(r, label, rc.locale);
 			s.put("n", name.isEmpty() ? r.getLabel(rc.locale) : name);
 			s.put("a", adr);
@@ -126,7 +131,14 @@ final class SitesMap
 			}
 			if (at == null && pending)
 			{
+				// the "Locate now" button asks for these (1.15.1): the address, then its town
 				s.put("pending", true);
+				s.put("q", adr);
+				if (parts.size() > 1)
+				{
+					s.put("tq", String.join(", ", parts.subList(Math.max(0, parts.size() - (address.size() > 2 ? 2 : 1)), parts.size())));
+				}
+				anyPending = true;
 				continue;
 			}
 			if (at == null)
@@ -138,6 +150,11 @@ final class SitesMap
 			s.put("lon", at[1]);
 		}
 		data.put("cut", cut);
+		if (anyPending && Geocoder.enabled())
+		{
+			data.put("g", Geocoding.url());
+			data.put("tk", GeoTicket.issue(rc.context.getSession().getUserReference().getUserId()));
+		}
 		final String json = data.toString().replace("</", "<\\/");
 		return "<div class=\"ldf-sm\" data-sm=\"" + LayoutPane.esc(pId) + "\"><div class=\"ldf-sm-body\"></div><script type=\"application/json\">" + json + "</script></div>";
 	}

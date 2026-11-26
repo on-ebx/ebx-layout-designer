@@ -95,6 +95,53 @@ final class Geocoder
 		}
 	}
 
+	/** Tables over this many rows placed by their address get one line in the log (1.15.1). */
+	static final int LARGE_TABLE = 1000;
+	private static final java.util.Set<String> CHECKED = new java.util.HashSet<String>();
+
+	/**
+	 * Once per table and per server start: a WARN line when a map block places the rows of a table of more than
+	 * {@link #LARGE_TABLE} rows by their address instead of latitude and longitude fields.
+	 */
+	static void warnIfLarge(final com.onwbp.adaptation.AdaptationTable pTable, final String pBlock)
+	{
+		if (pTable == null)
+		{
+			return;
+		}
+		final String key = pTable.getContainerAdaptation().getHome().getKey().getName() + "/" + pTable.getContainerAdaptation().getAdaptationName().getStringName()
+			+ pTable.getTablePath().format();
+		synchronized (Geocoder.CHECKED)
+		{
+			if (!Geocoder.CHECKED.add(key))
+			{
+				return;
+			}
+		}
+		try
+		{
+			final com.onwbp.adaptation.RequestResult all = pTable.createRequestResult(null);
+			final int n;
+			try
+			{
+				n = all.getSize();
+			}
+			finally
+			{
+				all.close();
+			}
+			if (n > Geocoder.LARGE_TABLE)
+			{
+				LoggingCategory.getKernel().warn("[layout-designer] block " + pBlock + " places the rows of " + key + " (" + n
+					+ " rows) by their address: each unknown address is sent to the geocoding service, one a second at most. Add latitude and longitude fields to the table and choose them in the block.");
+			}
+		}
+		catch (final RuntimeException ex)
+		{
+			// the count is only advice
+		}
+	}
+
 	/** Queues the address for the background thread, once; the form that asked does not wait. */
 	static void lookLater(final String pAddress, final Locale pLocale)
 	{
@@ -192,7 +239,7 @@ final class Geocoder
 		}
 	}
 
-	private static void save(final String pKey, final double[] pAt)
+	static void save(final String pKey, final double[] pAt)
 	{
 		final java.io.File f = Geocoder.file();
 		if (f == null || pKey.indexOf('\t') >= 0 || pKey.indexOf('\n') >= 0)

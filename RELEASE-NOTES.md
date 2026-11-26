@@ -1,5 +1,18 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.15.1 (2026-10-13)
+
+- **The designer warns when a map is computed from the address.** In the inspector of a *map* or *sites on a map* block
+  whose latitude and longitude fields are empty and whose address fields are set, a notice says that each unknown address
+  is looked up in a geocoding service (one request a second at most on the public service) and kept in a cache, and
+  advises latitude and longitude fields for many records. The same text is in the user guides and the format reference.
+  A table of more than 1,000 rows placed by its address gets one WARN line in `kernel.log` per server start.
+- **"Locate now" on a map waiting for positions.** A *map* or *sites on a map* block whose addresses are not known yet
+  shows a *Locate now* button: the browser asks the module (`/ebx-layout-designer/geocode`, with a ticket signed by the
+  form, valid four hours, since that address does not see the EBX session) for each address in turn, at the service's
+  pace, and places it on the map without reloading the form; an address not found falls back on its town. Positions
+  found go to the same cache as the background lookups.
+
 ## 1.15.0 (2026-10-13)
 
 - **A form never waits for the geocoding service any more.** The *map* and *sites on a map* blocks placed an address

@@ -186,6 +186,7 @@ final class Css
 		+ ".ldf-vh-list{display:flex;flex-direction:column;margin-top:10px;border-top:1px solid #F0EDF3}"
 		+ ".ldf-vh-row{display:grid;grid-template-columns:160px minmax(0,1fr) auto;gap:10px;padding:6px 0;border-bottom:1px solid #F0EDF3;font-size:13px;align-items:baseline}"
 		+ ".ldf-vh-d{color:#6B6575;font-variant-numeric:tabular-nums}.ldf-vh-row s{color:#909090}.ldf-vh-u{font-size:12px;color:#6B6575}.ldf-vh-note{background:#F8F6FA;border-radius:8px;padding:9px 11px}"
+		+ ".ldf-sm-locate,.ldf-map-locate{margin-left:6px}.ldf-btn:disabled{opacity:.6;cursor:default}"
 		+ ".ldf-sm-sum{margin-bottom:8px}.ldf-sm-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px;align-items:start}"
 		+ "@media (max-width:760px){.ldf-sm-grid{grid-template-columns:minmax(0,1fr)}}"
 		+ ".ldf-sm-map{position:relative;overflow:hidden;border:1px solid #E2DEE6;border-radius:10px;background:#E3ECF1;cursor:grab;touch-action:none;user-select:none}"

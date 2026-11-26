@@ -20,6 +20,11 @@ public final class GeocoderTest
 		Geocoder.lookLater("nowhere", null);
 		Thread.sleep(200);
 		fail += GeocoderTest.check("service off: nothing looked up", Geocoder.known("nowhere") == null && !Geocoder.isKnown("nowhere"));
+		final String t = GeoTicket.issue("alice");
+		fail += GeocoderTest.check("ticket valid", GeoTicket.valid(t));
+		fail += GeocoderTest.check("ticket altered", !GeoTicket.valid(t.substring(0, t.length() - 2) + "xx"));
+		fail += GeocoderTest.check("no ticket", !GeoTicket.valid(null) && !GeoTicket.valid("abc"));
+		fail += GeocoderTest.check("forged expiry", !GeoTicket.valid(t.replaceFirst("\\.\\d+\\.", ".99999999999999.")));
 		Files.deleteIfExists(f);
 		if (fail > 0)
 		{
