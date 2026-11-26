@@ -65,7 +65,8 @@ Since 1.10.0 the document may also hold `personal`, `adminSeesAll` and `variants
 
 **`panel`**: `fields` (array of fields), `ro` (whole panel read only), since 1.13.0 `tone` (`ok`, `warn`, `bad`, `info`,
 `accent`, `muted`: the panel takes that colour as background and border, to stand out, e.g. a warning shown under a
-`cond`). A field:
+`cond`), since 1.14.0 `toneIf` (`{"if": "<XPath predicate on the record>", "then": "bad", "else": "ok"}`: the colour
+follows the record; a missing branch falls back to `tone`). A field:
 
 | Key | Meaning |
 |---|---|
@@ -87,7 +88,7 @@ Since 1.10.0 the document may also hold `personal`, `adminSeesAll` and `variants
 this block stands for).
 
 **`grid`**: `a` (association path), `style` (`native` or `cards`), `cardFields` (paths shown on each card), `addBtn`
-(text). Since 1.11.0, `lazy: true` builds the native grid only when its tab is first opened, in a frame (module service
+(text). Since 1.14.0 a native grid outside the first tab is lazy unless `"lazy": false`. Since 1.11.0, `lazy: true` builds the native grid only when its tab is first opened, in a frame (module service
 `LayoutGrid`), and `height` (pixels, default 460) is its height until the frame fits its content.
 
 **`map`**: `lat`, `lng` (paths), `tall` (larger map), and since 1.7.0 `address` (paths, in order: number, street,
@@ -306,3 +307,15 @@ permissions protect the data.
   ]
 }
 ```
+
+### `actions` (since 1.14.0)
+
+Buttons on the record. `items`: a list of buttons, each with `label` (localized), and either `workflow` (a publication
+to launch) with `var` (the data context variable that receives the record's XPath), or `service` (`module@Service`, opened
+on the record in EBX's pop-up). Optional: `tone` (`ok`, `warn`, `bad`, `info`, `accent`, `muted`) and `cond` (an XPath
+predicate on the record; false hides the button), `single` (`true`: while an instance launched with this record's XPath
+in `var` is still running, the button opens its task, shown without being taken, instead of launching another). A workflow button shows only to a user who may launch the publication;
+it opens the module service `LayoutAction` in EBX's pop-up, which asks for confirmation, launches as the user and opens
+the first task, inside the perspective the form was opened in. The service reads the button again from the layout as the
+user sees it (never from the address). Nothing is shown while a record is created, and a block with no button the user
+may use is not drawn.

@@ -214,7 +214,7 @@ final class LayoutPane implements UIFormPane
 		final String bid = b.path("id").asText(id);
 		final String inner = "orgChart".equals(type) ? OrgChart.render(this.rc, b, bid, w)
 			: "valueHistory".equals(type) ? ValueHistory.render(this.rc, b, bid) : "sitesMap".equals(type) ? SitesMap.render(this.rc, b, bid)
-			: "workflowTasks".equals(type) ? MdmBlocks.workflowTasks(this.rc, b, w) : "sourceValues".equals(type) ? MdmBlocks.sourceValues(this.rc, b)
+			: "workflowTasks".equals(type) ? MdmBlocks.workflowTasks(this.rc, b, w) : "actions".equals(type) ? ActionsBlock.render(this.rc, b, w) : "sourceValues".equals(type) ? MdmBlocks.sourceValues(this.rc, b)
 			: "translations".equals(type) ? MdmBlocks.translations(this.rc, b) : "inheritance".equals(type) ? MdmBlocks.inheritance(this.rc, b) : this.more(type, b);
 		if (inner != null)
 		{
@@ -323,9 +323,25 @@ final class LayoutPane implements UIFormPane
 		return this.rc.xpath(pCondition, true);
 	}
 
+	/**
+	 * The panel's colour: {@code "toneIf": {"if": "<XPath predicate on the record>", "then": "bad", "else": "ok"}} when the
+	 * record exists (1.14.0), else {@code "tone"}. A missing branch falls back to {@code "tone"}.
+	 */
+	private String toneOf(final JsonNode b)
+	{
+		final JsonNode ti = b.path("toneIf");
+		final String fixed = b.path("tone").asText("");
+		if (!ti.isObject() || ti.path("if").asText("").trim().isEmpty() || this.rc.record == null)
+		{
+			return fixed;
+		}
+		final String t = this.rc.xpath(ti.path("if").asText(), false) ? ti.path("then").asText("") : ti.path("else").asText("");
+		return t.isEmpty() ? fixed : t;
+	}
+
 	private void startPanel(final UIFormPaneWriter w, final JsonNode b, final String pId, final String pTitle, final String pCount, final String pExtra)
 	{
-		w.add("<section class=\"ldf-panel").add(Values.toneClass(b.path("tone").asText(""))).add("\" id=\"").add(RenderContext.blockAnchor(pId)).add("\">");
+		w.add("<section class=\"ldf-panel").add(Values.toneClass(this.toneOf(b))).add("\" id=\"").add(RenderContext.blockAnchor(pId)).add("\">");
 		final String note = this.rc.text(b.get("note"));
 		if (!pTitle.isEmpty() || !note.isEmpty() || pExtra != null)
 		{
@@ -776,7 +792,9 @@ final class LayoutPane implements UIFormPane
 			return;
 		}
 		final String title = this.rc.blockTitle(b);
-		if (b.path("lazy").asBoolean(false) && !this.rc.creating && this.rc.record != null && !b.path("id").asText("").isEmpty())
+		// 1.14.0: a native grid outside the first tab loads when its tab opens, unless the layout says "lazy": false
+		final boolean lazy = b.has("lazy") ? b.path("lazy").asBoolean(false) : this.tabIndex > 0 && !"cards".equals(b.path("style").asText());
+		if (lazy && !this.rc.creating && this.rc.record != null && !b.path("id").asText("").isEmpty())
 		{
 			final String src = this.lazySource(b.path("id").asText());
 			if (src != null)

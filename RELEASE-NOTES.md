@@ -1,5 +1,20 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.14.0 (2026-10-13)
+
+- **An "Actions" block** (palette, category Actions): buttons that launch a workflow on the record, or open a service on
+  it. A workflow button shows only to who may launch the publication; it asks for confirmation in EBX's pop-up, launches
+  the workflow as the user with the record's XPath in the chosen variable, and opens the first task, inside the
+  perspective. EBX 6.3's own workflow launchers do not show in the record's Actions menu; this block puts the launch on
+  the form. Each button can take a colour and an XPath condition, and *one request at a time per record*: while a
+  request launched for the record is still running, the button opens its task (shown, not taken) instead of launching another.
+- **A panel's colour can follow the record** (inspector of a panel, *Colour by a condition*; layout key `toneIf`: an
+  XPath predicate, the colour when true and the colour otherwise). One panel can turn red on an anomaly and green
+  otherwise.
+- **A native grid outside the first tab now loads when its tab is opened by default**, as `"lazy": true` did since
+  1.11.0; a grid can still be built with the form by unticking the option (`"lazy": false`). On EBX 6.2 each native grid
+  costs about a second of server rendering. Grids shown as cards are not affected.
+
 ## 1.13.0 (2026-10-13)
 
 - **A panel can take a colour** (inspector of a panel, *Panel colour*; layout key `"tone"`: `ok`, `warn`, `bad`, `info`,

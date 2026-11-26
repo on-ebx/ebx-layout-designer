@@ -49,6 +49,8 @@ final class Css
 		+ ".ldf-go{color:#5B12C7;font-weight:600;font-size:12px;text-decoration:underline;cursor:pointer}"
 		+ ".ldf-btn{font-weight:700;color:#5B12C7;background:#fff;border:1px solid #CDB8F5;border-radius:8px;padding:5px 11px;font-size:12px;text-decoration:none;cursor:pointer;display:inline-block}"
 		+ ".ldf-btn.ldf-solid{background:#7F17FF;color:#fff;border-color:#7F17FF}"
+		// 1.14.0: a button of an "actions" block in a tone
+		+ ".ldf-btn[class*=ldf-t-]{color:var(--ldf-tone);border-color:var(--ldf-tone)}.ldf-btn.ldf-solid[class*=ldf-t-]{background:var(--ldf-tone);color:#fff}"
 		+ ".ldf-vnone{font-size:12.5px;color:#0B7A4B;background:#E7F8EF;border-radius:8px;padding:8px 10px}"
 		+ ".ldf-more{font-size:12px;color:#6B6575}"
 		+ ".ldf-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:8px}"

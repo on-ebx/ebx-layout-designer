@@ -39,6 +39,12 @@ public final class LayoutPaths
 	/** Its parameter: the id of the grid block in the layout. */
 	public static final String GRID_BLOCK_PARAM = "ldfBlock";
 
+	/** The module service an "actions" block opens to launch a workflow on the record (1.14.0). */
+	public static final String ACTION_SERVICE = "LayoutAction";
+	/** Its parameters: the index of the button in the block (the block id goes in {@link #GRID_BLOCK_PARAM}), the perspective. */
+	public static final String ACTION_PARAM = "ldfAction";
+	public static final String PERSPECTIVE_PARAM = "ldfPerspective";
+
 	/** The class a data model declares as its record form to use a layout of this designer. */
 	public static final String FORM_CLASS = "com.on.ebx.layout.runtime.ConfigurableForm";
 

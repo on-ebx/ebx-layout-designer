@@ -134,6 +134,7 @@
 .ld-app .panel header p{margin:2px 0 0;font-size:11.5px;color:var(--p-muted)}
 .ld-app .pbtn{font-weight:700;color:var(--p-purple-ink);background:var(--p-paper);border:1px solid var(--p-dash);border-radius:8px;padding:5px 11px;font-size:12px}
 .ld-app .pbtn.solid{background:var(--p-purple);color:var(--p-on-navy);border-color:var(--p-purple)}
+.ld-app .pbtn.tone{color:var(--tone);border-color:var(--tone)}.ld-app .pbtn.solid.tone{background:var(--tone);color:#fff}
 .ld-app .pf{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px 12px;align-items:center;min-height:28px;border-radius:6px}
 .ld-app .canvas.narrow .pf{grid-template-columns:130px minmax(0,1fr)}
 .ld-app .fr{display:contents}

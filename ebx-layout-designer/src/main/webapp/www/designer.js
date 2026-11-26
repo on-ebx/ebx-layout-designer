@@ -173,7 +173,7 @@ const C = {
  asLabel:['Aperçu en tant que','Preview as'], asAll:['Tout le monde (conception)','Everyone (design)'], asRolesGrp:['Rôles','Roles'], asUsersGrp:['Utilisateurs','Users'],
  seenAs:['Fiche vue par {0} : {1}','Form as seen by {0}: {1}'], adminAll:['administrateur : voit tout','administrator: sees everything'], editingVariant:['Vous modifiez : {0}','You are editing: {0}'],
  lazyGrid:['Charger à l’ouverture de l’onglet (fiche plus rapide)','Load when its tab is opened (faster form)'],
- lazyHint:['La grille native (barre d’outils, « + », filtre) n’est construite qu’à la première ouverture de son onglet, dans un cadre. Utile quand une fiche a plusieurs grilles, surtout sur EBX 6.2.','The native grid (toolbar, “+”, filter) is built only when its tab is first opened, in a frame. Useful when a form has several grids, above all on EBX 6.2.'],
+ lazyHint:['La grille native (barre d’outils, « + », filtre) n’est construite qu’à la première ouverture de son onglet, dans un cadre. C’est le défaut pour une grille hors du premier onglet ; décochez pour la construire avec la fiche.','The native grid (toolbar, “+”, filter) is built only when its tab is first opened, in a frame. It is the default for a grid outside the first tab; untick to build it with the form.'],
  formPick:['Fiche','Form'], newVariantOpt:['+ Nouvelle variante (copie)','+ New variant (copy)']
 };
 const c = (k, ...a) => { let s = (C[k] || [k,k])[UI]; a.forEach((v,i) => { s = s.split('{'+i+'}').join(v); }); return s; };
@@ -322,6 +322,16 @@ const BL = {
    spec:[{k:'fields', key:'fields', l:['Champs comparés (vide : tous)','Fields compared (empty: all)']}, {k:'field', key:'source', l:['Champ du système source (en-tête de colonne)','Source system field (column header)']},
      {k:'bool', key:'onlyDifferent', def:true, l:['Seulement les champs où les sources diffèrent','Only the fields where sources differ']}, {k:'num', key:'max', def:6, l:['Sources au plus','Sources at most']},
      {k:'hint', l:['Lit le groupe de l’add-on Match and Merge (API publique). Sur une fiche fusionnée, le bloc renvoie vers sa fiche de référence.','Reads the Match and Merge add-on’s group (public API). On a merged record, the block links to its golden record.']}]},
+ actions:{cat:'actions', l:['Actions','Actions'], d:['Des boutons qui lancent un workflow sur la fiche (la première tâche s’ouvre ensuite) ou ouvrent un service sur elle.','Buttons that launch a workflow on the record (its first task opens next) or open a service on it.'], tags:'workflow lancer bouton service launch button demande request',
+   def:{items:[]},
+   spec:[{k:'items', key:'items', l:['Boutons','Buttons'], add:['+ Bouton','+ Button'], tpl:{label:{}, workflow:'', var:''}, item:[{k:'loc', key:'label', l:['Libellé','Label']},
+     {k:'str', key:'workflow', l:['Publication de workflow à lancer','Workflow publication to launch'], ph:'FournisseursChangementRIB'},
+     {k:'str', key:'var', l:['Variable qui reçoit l’XPath de la fiche','Variable that receives the record’s XPath'], ph:'tiersXPath'},
+     {k:'bool', key:'single', def:false, l:['Une demande à la fois par fiche (une demande en cours s’ouvre au lieu d’en lancer une autre)','One request at a time per record (a request in progress opens instead of launching another)']},
+     {k:'str', key:'service', l:['Ou un service à ouvrir sur la fiche (module@Service)','Or a service to open on the record (module@Service)'], ph:'ebx-tiers@ChangementRib'},
+     {k:'choice', key:'tone', def:'', l:['Couleur','Colour'], opts:[['',['Par défaut','Default']]].concat(TONES)},
+     {k:'str', key:'cond', l:['Afficher seulement si (XPath sur la fiche)','Show only if (XPath on the record)'], ph:"./statut='ACTIF'"}]},
+     {k:'hint', l:['Un bouton de workflow n’apparaît qu’à qui peut lancer la publication ; il demande confirmation, lance le workflow au nom de l’utilisateur et ouvre la première tâche. Rien n’est affiché pendant une création.','A workflow button shows only to who may launch the publication; it asks for confirmation, launches the workflow as the user and opens the first task. Nothing is shown while a record is created.']}]},
  workflowTasks:{cat:'actions', l:['Workflows en cours','Workflows in progress'], d:['Les workflows ouverts sur la fiche : qui doit agir, depuis quand, avec la tâche à ouvrir.','The workflows open on the record: who must act, since when, with the task to open.'], tags:'workflow tâches validation demande approbation tasks approval inbox',
    def:{variables:''},
    spec:[{k:'str', key:'variables', l:['Variables du workflow qui désignent la fiche (séparées par des virgules)','Workflow variables that point to the record (comma separated)'], ph:'materialXPath, record'},
@@ -469,6 +479,11 @@ function behaviourBlockHtml(b){
   if (b.showIf && b.type === 'panel') h += ctlHtml({k:'choice', key:'onHide', def:'keep', l:['Valeurs des champs cachés','Values of hidden fields'], opts:[['keep',['Gardées','Kept']],['clear',['Vidées','Cleared']]]}, b, '');
   if (b.type === 'panel') h += ctlHtml({k:'choice', key:'tone', def:'', l:['Couleur du panneau','Panel colour'], opts:[['',['Aucune','None']],['ok',['Vert (ok)','Green (ok)']],['warn',['Orange (attention)','Orange (warning)']],['bad',['Rouge (anomalie)','Red (problem)']],['info',['Bleu (info)','Blue (info)']],['accent',['Violet','Purple']],['muted',['Gris','Grey']]]}, b, '');
   if (b.type === 'panel'){
+    const ti = b.toneIf || {}, topt = v => [['',['Couleur fixe','Fixed colour']],['ok',['Vert','Green']],['warn',['Orange','Orange']],['bad',['Rouge','Red']],['info',['Bleu','Blue']],['accent',['Violet','Purple']],['muted',['Gris','Grey']]].map(([k, l]) => opt(k, v || '', cl(l))).join('');
+    h += `<div class="fld"><label for="ld-i-tif">${esc(cl(['Couleur selon une condition (XPath sur la fiche)','Colour by a condition (XPath on the record)']))}</label><input type="text" id="ld-i-tif" class="mono" value="${esc(ti.if || '')}" placeholder="osd:is-not-null(./anomalie)"></div>`
+      + (ti.if ? `<div class="fld"><label for="ld-i-tthen">${esc(cl(['Si vraie','If true']))}</label><select id="ld-i-tthen" data-tif="then">${topt(ti.then)}</select></div><div class="fld"><label for="ld-i-telse">${esc(cl(['Sinon','Otherwise']))}</label><select id="ld-i-telse" data-tif="else">${topt(ti.else)}</select></div>` : '');
+  }
+  if (b.type === 'panel'){
     const by = b.attributesBy || {};
     h += `<div class="fld"><span class="l">${esc(c('famTitle'))}</span><div class="rule">` + specHtml([{k:'table', key:'attributesBy.table', l:['Table de configuration','Configuration table']}, {k:'field', key:'attributesBy.key', l:['Champ de la fiche qui pilote (la famille)','Field of the record that drives (the family)']}], b)
       + (by.table ? specHtml([{k:'col', key:'familyCol', of:'table', l:['Colonne famille','Family column']}, {k:'col', key:'attributeCol', of:'table', l:['Colonne attribut (chemin ou nom du champ)','Attribute column (path or field name)']},
@@ -539,6 +554,8 @@ function previewMore(b){
       return `<div class="galx" style="grid-template-columns:repeat(${Math.max(1, Math.min(8, b.perRow || 4))},1fr)">${(rows.length ? rows : ['', '', '', '']).slice(0, (b.perRow || 4) * 2).map(r => `<span title="${esc(r)}"></span>`).join('')}</div>${indicative()}`;
     case 'documents': if (!b.a || !b.file) return setupNote();
       return rows.length ? rows.map(r => `<div class="docx"><span class="file">PDF</span><b>${esc(r)}</b></div>`).join('') : `<div class="note-b">${esc(u('noRow'))}</div>`;
+    case 'actions': if (!(b.items || []).length) return setupNote();
+      return creating ? `<div class="note-b">${esc(u('afterCreate2'))}</div>` : `<div style="display:flex;gap:8px;flex-wrap:wrap">${b.items.map((it, i) => `<span class="pbtn${i === 0 ? ' solid' : ''}${it.tone ? ' tone t-' + esc(it.tone) : ''}">${tx(it.label) || '…'}</span>`).join('')}</div>`;
     case 'links': if (!(b.items || []).length) return setupNote();
       return `<div style="display:flex;gap:8px;flex-wrap:wrap">${b.items.map((it, i) => `<span class="pbtn${i === 0 ? ' solid' : ''}">${tx(it.label) || '…'}</span>`).join('')}</div>`;
     case 'changes': if (creating) return `<div class="note-b">${esc(u('afterCreate2'))}</div>`;
@@ -671,6 +688,8 @@ const curTab = () => tabOf(cur) || S.tabs[0];
 function tx(o){ const s = esc(T(o)); if (mode === 'design' && isMissing(o, lang)) { const from = o[DEF] ? DEF : Object.keys(o).find(k => o[k]); return `<span class="untr" title="${esc(lang)} → ${esc(from)}">${s}</span>`; } return s; }
 function snapshot(){ history.push(JSON.stringify({V:ALLV, vi, LAY, cur})); if (history.length > 60) history.shift(); dirty = true; }
 function commit(msg){ explain = msg || ''; renderAll(); }
+/* a native grid outside the first tab loads when its tab opens, unless "lazy" says otherwise (1.14.0) */
+function lazyOf(b){ if (b.lazy != null) return !!b.lazy; const Lc = locate(b.id); return !!Lc && Lc.t !== S.tabs[0]; }
 function locate(bid){ for (const t of S.tabs) for (let ri = 0; ri < t.rows.length; ri++){ const r = t.rows[ri]; for (let ci = 0; ci < r.c.length; ci++){ const k = r.c[ci].indexOf(bid); if (k >= 0) return {t, r, ri, ci, k}; } } return null; }
 function orderedBlocks(){ const out = []; S.tabs.forEach(t => t.rows.forEach(r => r.c.forEach(col => col.forEach(id => S.blocks[id] && out.push({t, b:S.blocks[id]}))))); return out; }
 function placedFields(){ const s = new Set(); orderedBlocks().forEach(({b}) => { if (b.type === 'panel') (b.fields || []).forEach(f => s.add(f.p)); }); return s; }
@@ -811,7 +830,7 @@ function renderBlock(b){
         const label = hasText(f.label) ? tx(f.label) : esc(lab(f.p));
         return `<div class="fr${f.wide ? ' wide' : ''}${s}${fHid ? ' ashid' : ''}" data-item="field" data-b="${b.id}" data-i="${i}"><div class="fl" draggable="true" data-drag="field" data-b="${b.id}" data-i="${i}">${label}${fd.req ? ' <i>*</i>' : ''}${mode === 'design' ? audTags(f0, true) : ''}</div><div class="fv" draggable="true" data-drag="field" data-b="${b.id}" data-i="${i}">${renderWidget(f, b)}</div></div>`;
       }).join('');
-      inner = `<div class="panel${b.tone ? ' tone t-' + esc(b.tone) : ''}">${head(b)}<div class="pf" data-drop="fields" data-b="${b.id}">${rows || (mode === 'design' ? `<div class="pf-empty">${esc(c('dropFields'))}</div>` : '')}</div></div>`; break; }
+      inner = `<div class="panel${(b.toneIf && b.toneIf.if && b.toneIf.then) || b.tone ? ' tone t-' + esc((b.toneIf && b.toneIf.if && b.toneIf.then) || b.tone) : ''}">${head(b)}<div class="pf" data-drop="fields" data-b="${b.id}">${rows || (mode === 'design' ? `<div class="pf-empty">${esc(c('dropFields'))}</div>` : '')}</div></div>`; break; }
     case 'hero': {
       const t = creating ? u('newRecord') : val(b.title);
       const sub = creating ? '' : (b.sub || []).map(val).filter(Boolean).join(' · ');
@@ -1084,7 +1103,7 @@ function renderInspector(){
       h += `<div class="fld"><label for="ld-i-ga">${esc(c('assoc'))}</label><select id="ld-i-ga" data-bk="a">${assocOpts(b.a)}</select></div>
         <div class="fld"><span class="l">${esc(c('presentation'))}</span><div class="seg"><button type="button" data-style="native" aria-pressed="${b.style !== 'cards'}">${esc(c('native'))}</button><button type="button" data-style="cards" aria-pressed="${b.style === 'cards'}">${esc(c('cards'))}</button></div></div>
         ${b.style === 'cards' && a ? `<div class="fld"><span class="l">${esc(c('cardFields'))}</span><div class="list-mini">${(a.fields || []).map(f => `<label><input type="checkbox" data-cardf="${esc(f.p)}"${(b.cardFields || []).includes(f.p) ? ' checked' : ''}> ${esc(T(f.lab))}</label>`).join('')}</div></div>${locField('block.addBtn', c('addBtn'), b.addBtn, () => c('none'))}` : ''}
-        <label class="chk"><input type="checkbox" id="ld-i-glazy"${b.lazy ? ' checked' : ''}> ${esc(c('lazyGrid'))}</label>${b.lazy ? `<p class="hint">${esc(c('lazyHint'))}</p>` : ''}
+        ${b.style === 'cards' ? '' : `<label class="chk"><input type="checkbox" id="ld-i-glazy"${lazyOf(b) ? ' checked' : ''}> ${esc(c('lazyGrid'))}</label>`}${b.style !== 'cards' && lazyOf(b) ? `<p class="hint">${esc(c('lazyHint'))}</p>` : ''}
         <p class="hint">${esc(c('gridHint'))}</p>`;
     }
     if (b.type === 'map') h += `<div class="fld"><label for="ld-i-ml">${esc(c('lat'))}</label><select id="ld-i-ml" data-bk="lat">${fieldOpts(b.lat)}</select></div><div class="fld"><label for="ld-i-mg">${esc(c('lng'))}</label><select id="ld-i-mg" data-bk="lng">${fieldOpts(b.lng)}</select></div><label class="chk"><input type="checkbox" id="ld-i-mt"${b.tall ? ' checked' : ''}> ${esc(c('tall'))}</label><div class="info">${esc(c('mapInfo'))}</div>`
@@ -1507,6 +1526,7 @@ root.addEventListener('input', e => {
     const any = hasText(o);
     t.closest('.loc').querySelectorAll('.lrow').forEach(row => { const inp = row.querySelector('input,textarea'); row.classList.toggle('miss', any && !inp.value); });
   });
+  if (sel.k === 'block' && t.id === 'ld-i-tif'){ const b = S.blocks[sel.id]; return live(() => { if (t.value.trim()){ b.toneIf = b.toneIf || {}; b.toneIf.if = t.value; } else delete b.toneIf; }); }
   if (sel.k === 'block'){ const b = S.blocks[sel.id]; const map = {'ld-i-cond':'cond', 'ld-i-cc':'cls'}; if (map[t.id]) return live(() => { b[map[t.id]] = t.value; }); }
 });
 root.addEventListener('change', e => {
@@ -1542,6 +1562,7 @@ root.addEventListener('change', e => {
   if (Bk && t.id === 'ld-i-ohmax'){ snapshot(); Bk.max = Math.max(0, +t.value || 0); return commit(''); }
   if (Bk && t.dataset.padd && t.value){ snapshot(); (Bk[t.dataset.padd] = Bk[t.dataset.padd] || []).push(t.value); return commit(''); }
   if (Bk && t.dataset.sev){ snapshot(); Bk.sev = Bk.sev || {}; Bk.sev[t.dataset.sev] = t.checked; return commit(''); }
+  if (Bk && t.dataset.tif){ snapshot(); Bk.toneIf = Bk.toneIf || {}; if (t.value) Bk.toneIf[t.dataset.tif] = t.value; else delete Bk.toneIf[t.dataset.tif]; return commit(''); }
   if (Bk && t.dataset.ak){ snapshot(); Bk.actions[+t.dataset.ak][t.dataset.af] = t.value; return commit(''); }
   if (Bk && t.dataset.cardf){ snapshot(); Bk.cardFields = (Bk.cardFields || []).filter(p => p !== t.dataset.cardf); if (t.checked) Bk.cardFields.push(t.dataset.cardf); return commit(''); }
   const flags = {'ld-i-vlinks':'links', 'ld-i-vempty':'hideEmpty', 'ld-i-ro':'ro', 'ld-i-hc':'hideCreate', 'ld-i-mt':'tall', 'ld-i-glazy':'lazy'};
@@ -1552,7 +1573,7 @@ root.addEventListener('change', e => {
     if (t.id === 'ld-i-fro'){ snapshot(); f.ro = t.checked; return commit(''); }
     if (t.id === 'ld-i-fwide'){ snapshot(); f.wide = t.checked; return commit(''); }
   }
-  if (t.dataset.lt || t.id === 'ld-i-cond' || t.id === 'ld-i-cc'){ delete t.dataset.snap; if (sel.k !== 'i18n') renderInspector(); renderPalette(); }
+  if (t.dataset.lt || t.id === 'ld-i-cond' || t.id === 'ld-i-cc' || t.id === 'ld-i-tif'){ delete t.dataset.snap; if (sel.k !== 'i18n') renderInspector(); renderPalette(); }
 });
 function toast(m){ const d = document.createElement('div'); d.className = 'toast'; d.textContent = m; document.body.appendChild(d); setTimeout(() => d.remove(), 2200); }
 
