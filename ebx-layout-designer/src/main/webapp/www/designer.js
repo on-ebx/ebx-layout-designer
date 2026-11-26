@@ -135,6 +135,7 @@ const c = (k, ...a) => { let s = (C[k] || [k,k])[UI]; a.forEach((v,i) => { s = s
 
 /* the form's own words (as the runtime writes them), in the preview language */
 const U = {
+ ocChild:['Subsidiary','Filiale','Controllata'],
  afterCreate2:['Shown once the record is created.','Affiché une fois l’enregistrement créé.','Visibile dopo la creazione del record.'], chCount:['2 fields changed','2 champs modifiés','2 campi modificati'], chEmpty:['(empty)','(vide)','(vuoto)'],
  ubSample1:['Contacts, through Company','Contacts, par Société','Contatti, tramite Società'], ubSample2:['Addresses, through Company','Adresses, par Société','Indirizzi, tramite Società'],
  riCreatedBy:['Created by','Créé par','Creato da'], riCreatedOn:['Created on','Créé le','Creato il'], riModifiedBy:['Last modified by','Modifié par','Modificato da'], riModifiedOn:['Last modified on','Modifié le','Modificato il'], riNew:['Filled in when the record is saved.','Renseigné à l’enregistrement.','Compilato al salvataggio del record.'],
@@ -270,6 +271,16 @@ const BL = {
    spec:[{k:'fields', key:'lines', l:['Lignes de rue','Street lines']}, {k:'field', key:'number', l:['Numéro (sur la première ligne)','Number (on the first line)']}, {k:'choice', key:'numberPlace', def:'auto', l:['Place du numéro','Number position'], opts:[['auto',['Selon le pays','By country']],['numberBefore',['Avant la rue','Before the street']],['numberAfter',['Après la rue','After the street']]], when:b => b.number}, {k:'field', key:'zip', l:['Code postal','Postcode']}, {k:'field', key:'city', l:['Ville','City']}, {k:'field', key:'region', l:['Région, état','Region, state']},
      {k:'field', key:'country', l:['Pays','Country']}, {k:'choice', key:'format', def:'auto', l:['Mise en forme','Layout'], opts:[['auto',['Selon le pays','By country']],['zipFirst',['Code postal puis ville','Postcode then city']],['cityFirst',['Ville, région code','City, region code']],['zipAfter',['Ville puis code (UK)','City then code (UK)']]]},
      {k:'bool', key:'mapLink', def:true, l:['Lien vers la carte','Map link']}]},
+ orgChart:{cat:'relations', l:['Hiérarchie graphique','Hierarchy chart'], d:['Le groupe de la fiche en organigramme, en arbre ou en anneaux.','The record’s group as an org chart, a tree or rings.'], tags:'organigramme arbre groupe filiales maison mère org chart tree sunburst subsidiaries parent',
+   def:{parent:'', present:'auto', threshold:24},
+   spec:[{k:'field', key:'parent', types:['fk'], l:['Clé vers le parent (dans cette même table)','Key to the parent (in this same table)']},
+     {k:'field', key:'label', l:['Libellé (vide : celui de la fiche)','Label (empty: the record’s)']}, {k:'field', key:'sub', l:['Sous le nom','Under the name']},
+     {k:'field', key:'color', l:['Couleur selon','Colour by']}, {k:'tones', key:'colors', of:'color', l:['Couleurs par valeur (vide : couleurs automatiques)','Colours by value (empty: automatic colours)'], when:b => b.color},
+     {k:'choice', key:'present', def:'auto', l:['Présentation','Layout'], opts:[['auto',['Automatique : organigramme, arbre au-delà du seuil','Automatic: org chart, tree beyond the threshold']],['org',['Organigramme','Org chart']],['tree',['Arbre','Tree']],['sun',['Anneaux','Rings']]]},
+     {k:'num', key:'threshold', def:24, l:['Passer à l’arbre au-delà de N filiales directes','Switch to the tree beyond N direct subsidiaries'], when:b => !b.present || b.present === 'auto'},
+     {k:'bool', key:'hideSwitch', def:false, l:['Masquer le choix de présentation','Hide the layout switch']},
+     {k:'choice', key:'openIn', def:'popup', l:['Un clic sur une entité ouvre sa fiche','A click on an entity opens its record'], opts:[['popup',['Dans une fenêtre par-dessus (la fermer revient ici)','In a window on top (closing it comes back here)']],['replace',['À la place de cette fiche','Instead of this record']],['newTab',['Dans un nouvel onglet','In a new tab']]]},
+     {k:'hint', l:['Tout le groupe de la fiche (jusqu’à 2 000 entités), lu dans la table en une fois puis gardé en mémoire tant que la table ne change pas. Un clic sur une entité ouvre sa fiche.','The record’s whole group (up to 2,000 entities), read from the table once and kept in memory until the table changes. A click on an entity opens its record.']}]},
  hierarchy:{cat:'relations', l:['Arborescence','Hierarchy'], d:['Le chemin dans une hiérarchie (fil d’Ariane) et les enfants.','The path in a hierarchy (breadcrumb) and the children.'], tags:'catégories classification arbre tree breadcrumb',
    def:{parent:'', up:'', label:'', depth:6, children:''},
    spec:[{k:'field', key:'parent', types:['fk'], l:['Clé vers le parent','Key to the parent']}, {k:'fkfield', key:'up', of:'parent', types:['fk'], l:['Parent du parent (si la cible est une autre table)','Parent of the parent (when the target is another table)']},
@@ -465,6 +476,9 @@ function previewMore(b){
     case 'address': { const ls = (b.lines || []).map(val).filter(Boolean); if (val(b.number)) { if (ls.length) ls[0] = (b.numberPlace === 'numberAfter' ? ls[0] + ' ' + val(b.number) : val(b.number) + ' ' + ls[0]); else ls.push(val(b.number)); } const zc = [val(b.zip), val(b.city)].filter(Boolean).join(' ');
       if (zc) ls.push(zc); if (val(b.region)) ls.push(val(b.region)); if (val(b.country)) ls.push(val(b.country));
       return ls.length ? `<address class="addrx">${ls.map(esc).join('<br>')}</address>` : !b.city && !(b.lines || []).length ? setupNote() : `<div class="note-b">${esc(c('noAddress'))}</div>`; }
+    case 'orgChart': { if (!b.parent) return setupNote(); if (creating) return `<div class="note-b">${esc(u('afterCreate2'))}</div>`;
+      const me = B.record.label || '…', par = val(b.parent) || '…';
+      return `<div class="ocx"><span class="n">${esc(par)}</span><i></i><span class="n me">${esc(me)}</span><i></i><div class="k"><span class="n">${esc(u('ocChild'))} 1</span><span class="n">${esc(u('ocChild'))} 2</span><span class="n">${esc(u('ocChild'))} 3</span></div></div>${indicative()}`; }
     case 'hierarchy': if (!b.parent) return setupNote();
       return `<div class="crumbx"><a href="#" data-noop="1">…</a> › <a href="#" data-noop="1">${esc(val(b.parent) || '—')}</a> › <b>${esc(creating ? u('newRecord') : B.record.label || '')}</b></div>`;
   }

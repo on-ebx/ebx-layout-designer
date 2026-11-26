@@ -20,6 +20,7 @@ trap 'rm -rf "$work"' EXIT
 # runtime
 find "$root/runtime/src" -name '*.java' > "$work/runtime.txt"
 "${bin}javac" --release "$release" -encoding UTF-8 -nowarn -Xlint:none -cp "$lib/*" -d "$work/runtime" @"$work/runtime.txt"
+[[ -d "$root/runtime/resources" ]] && cp -R "$root/runtime/resources/." "$work/runtime/"
 mkdir -p "$root/dist"
 "${bin}jar" --create --file "$root/dist/ebx-layout-designer-runtime.jar" -C "$work/runtime" .
 

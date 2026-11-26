@@ -87,6 +87,7 @@ final class LayoutPane implements UIFormPane
 		pWriter.add("</div>");
 		pWriter.addJS_cr(Css.GO_JS);
 		pWriter.addJS_cr(DisplayWidgets.JS);
+		pWriter.addJS_cr(OrgChart.JS);
 		if (!this.rules.isEmpty())
 		{
 			pWriter.addJS_cr(this.rules.js());
@@ -131,7 +132,7 @@ final class LayoutPane implements UIFormPane
 	private void typed(final UIFormPaneWriter w, final JsonNode b, final String id)
 	{
 		final String type = b.path("type").asText();
-		final String inner = this.more(type, b);
+		final String inner = "orgChart".equals(type) ? OrgChart.render(this.rc, b, b.path("id").asText("oc"), w) : this.more(type, b);
 		if (inner != null)
 		{
 			this.startPanel(w, b, id, this.rc.blockTitle(b), null, null);

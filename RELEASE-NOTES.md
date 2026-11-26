@@ -1,5 +1,17 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.8.0 (2026-10-12)
+
+- **New block "Hierarchy chart"** (palette › Relations): the group the record belongs to, through a foreign key to the
+  parent in the same table. Three layouts, switchable on the form: an **org chart** centred on the record (its ancestors
+  above with the number of other entities beside them, the record with its counts, its direct subsidiaries as cards, one
+  more level on demand), a **tree** of the whole group, opened down to the record, with a search, and **rings** (one per
+  level, slices sized by the entities below, the record's path solid). In automatic mode the org chart becomes the tree
+  beyond 24 direct subsidiaries. A line under the name and a colour by value (tones, or automatic colours) are chosen in
+  the designer. A click opens the entity's record in EBX's pop-up over the current one, so closing it comes back to the
+  record and the tab (or, as chosen, instead of the current record, or in a new tab). The table is read once into a key → parent index kept until the table
+  changes, then only the group's records (up to 2,000) are read.
+
 ## 1.7.0 (2026-10-11)
 
 - **Map from an address**: the map block takes address fields in order (number, street, postcode, city, country…). When

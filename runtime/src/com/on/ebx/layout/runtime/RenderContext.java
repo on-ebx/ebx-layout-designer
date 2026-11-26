@@ -286,6 +286,10 @@ final class RenderContext
 		{
 			return RuntimeText.get("historyTitle", this.locale);
 		}
+		if ("orgChart".equals(type))
+		{
+			return RuntimeText.get("orgTitle", this.locale);
+		}
 		if ("recordInfo".equals(type))
 		{
 			return RuntimeText.get("recordInfoTitle", this.locale);
