@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit d6093abd14f4afc28704dedb40e0f756c4d3a16f
-1.10.2: release notes dated
+Exported from EBX-Layout-Designer commit 0157da52fadb38805fa1d07bde8266f3f7ef4290
+Merge feature/lazy-grid: grids loaded when their tab opens (1.11.0)
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

@@ -66,6 +66,8 @@ Under *Behaviours* in the field's inspector:
 
 A behaviour changes what is shown, not what EBX validates: to block saving, add a rule to the model.
 
+- **Load a grid when its tab is opened** (inspector of a grid block): the form opens faster when it holds several native grids; the grid is built, in a frame, the first time its tab is shown, with its own toolbar and "+".
+
 ## 4. Blocks
 
 | Block | Settings |

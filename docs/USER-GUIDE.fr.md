@@ -72,6 +72,8 @@ Sous *Comportements*, dans l'inspecteur du champ :
 
 Un comportement change l'affichage, pas la validation d'EBX : pour bloquer l'enregistrement, ajoutez une règle au modèle.
 
+- **Charger une grille à l'ouverture de son onglet** (inspecteur d'un bloc grille) : la fiche s'ouvre plus vite quand elle contient plusieurs grilles natives ; la grille est construite, dans un cadre, la première fois que son onglet s'affiche, avec sa barre d'outils et son « + ».
+
 ## 4. Les blocs
 
 | Bloc | Réglages |

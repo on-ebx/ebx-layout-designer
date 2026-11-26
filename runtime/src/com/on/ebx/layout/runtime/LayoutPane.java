@@ -118,6 +118,7 @@ final class LayoutPane implements UIFormPane
 		pWriter.addJS_cr(DisplayWidgets.JS);
 		pWriter.addJS_cr(OrgChart.JS);
 		pWriter.addJS_cr(OrgChart.BLOCKS_JS);
+		pWriter.addJS_cr(Css.LAZY_JS);
 		if (!this.rules.isEmpty())
 		{
 			pWriter.addJS_cr(this.rules.js());
@@ -775,6 +776,21 @@ final class LayoutPane implements UIFormPane
 			return;
 		}
 		final String title = this.rc.blockTitle(b);
+		if (b.path("lazy").asBoolean(false) && !this.rc.creating && this.rc.record != null && !b.path("id").asText("").isEmpty())
+		{
+			final String src = this.lazySource(b.path("id").asText());
+			if (src != null)
+			{
+				// built when its tab is opened: a frame showing this one native grid (module service LayoutGrid)
+				final int n = this.rc.count(a);
+				this.startPanel(w, b, id, title, String.valueOf(n), null);
+				final String countUrl = this.countUrl(a);
+				w.add("<div class=\"ldf-lazy\" data-n=\"").add(String.valueOf(n)).add("\"").add(countUrl == null ? "" : " data-count=\"" + LayoutPane.esc(countUrl) + "\"")
+					.add(" data-src=\"").add(LayoutPane.esc(src)).add("\" style=\"height:").add(String.valueOf(Math.max(200, b.path("height").asInt(460))))
+					.add("px\"><div class=\"ldf-more\">").add(LayoutPane.esc(RuntimeText.get("lazyLoading", this.rc.locale))).add("</div></div></section>");
+				return;
+			}
+		}
 		final String count = this.rc.record == null ? null : String.valueOf(this.rc.count(a));
 		final String add = LText.hasText(b.get("addBtn")) ? "<span class=\"ldf-btn\">" + LayoutPane.esc(this.rc.text(b.get("addBtn"))) + "</span>" : null;
 		this.startPanel(w, b, id, title, count, null);
@@ -810,6 +826,71 @@ final class LayoutPane implements UIFormPane
 			w.addWidget(LayoutPaths.relative(a)); // the native association grid: toolbar, filter, paging
 		}
 		w.add("</section>");
+	}
+
+	/**
+	 * Data Services' count of the association's rows for this record ({@code …/root/T/<key>/<association>:count}), read by
+	 * the page after a row is added or removed in the frame, to keep the block's and the tab's counters right. It answers
+	 * with the user's own permissions (the browser's EBX session).
+	 */
+	private String countUrl(final String pAssociation)
+	{
+		try
+		{
+			final Adaptation r = this.rc.record;
+			final StringBuilder u = new StringBuilder("/ebx-dataservices/rest/data/v1/");
+			u.append(LayoutPane.seg("B" + r.getHome().getKey().getName())).append('/').append(LayoutPane.seg(r.getContainer().getAdaptationName().getStringName()));
+			for (final String s : r.getContainerTable().getTablePath().format().split("/"))
+			{
+				if (!s.isEmpty())
+				{
+					u.append('/').append(LayoutPane.seg(s));
+				}
+			}
+			u.append('/').append(LayoutPane.seg(r.getOccurrencePrimaryKey().format()));
+			for (final String s : pAssociation.split("/"))
+			{
+				if (!s.isEmpty())
+				{
+					u.append('/').append(LayoutPane.seg(s));
+				}
+			}
+			return u.append(":count").toString();
+		}
+		catch (final RuntimeException ex)
+		{
+			return null;
+		}
+	}
+
+	private static String seg(final String s)
+	{
+		try
+		{
+			return java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20");
+		}
+		catch (final java.io.UnsupportedEncodingException ex)
+		{
+			return s;
+		}
+	}
+
+	/** The address of the page that draws this grid alone (a sub-session of this form, documented API); null when it cannot be built. */
+	private String lazySource(final String pBlockId)
+	{
+		try
+		{
+			final com.orchestranetworks.ui.UIHttpManagerComponent wc = this.rc.context.createWebComponentForSubSession();
+			wc.selectInstanceOrOccurrence(this.rc.record);
+			wc.setService(com.orchestranetworks.service.ServiceKey.forModuleServiceName(LayoutPaths.MODULE_NAME, LayoutPaths.GRID_SERVICE));
+			wc.setAdditionalParameter(LayoutPaths.GRID_BLOCK_PARAM, pBlockId);
+			return wc.getURIWithParameters();
+		}
+		catch (final RuntimeException ex)
+		{
+			LoggingCategory.getKernel().warn("[layout-designer] lazy grid not prepared, drawn at once: " + ex);
+			return null;
+		}
 	}
 
 	/** The fields listed in the block's "cardFields", formatted, on one line. */

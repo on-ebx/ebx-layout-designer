@@ -91,6 +91,8 @@ final class Css
 		+ ".ldf-sec[open]>summary{border-bottom:1px solid #EFECF3;margin-bottom:12px}.ldf-sec>.ldf-row{margin-bottom:12px}"
 		+ ".ldf-fold{border:1px solid #E2DEE6;border-radius:13px;background:#FFFFFF;padding:0 12px;margin-bottom:12px}.ldf-fold>summary{cursor:pointer;font-weight:600;color:#07073C;padding:10px 2px;font-size:13px}"
 		+ ".ldf-fold[open]>summary{border-bottom:1px solid #EFECF3;margin-bottom:10px}"
+		+ ".ldf-lazy{position:relative;border:1px solid #EFECF3;border-radius:10px;overflow:hidden;background:#FFFFFF}.ldf-lazy>iframe{border:0;width:100%;height:100%;display:block}"
+		+ ".ldf-lazy>.ldf-more{padding:14px}"
 		+ ".ldf-mine{display:flex;justify-content:flex-end;margin:-4px 0 8px}.ldf-mine-btn{font:inherit;font-size:12.5px;border:1px solid #E2DEE6;background:#FFFFFF;color:#5B12C7;border-radius:8px;padding:4px 10px;cursor:pointer}"
 		+ ".ldf-mine-btn:hover{border-color:#7F17FF;background:#F1E8FF}.ldf-none{color:#6B6575;font-size:13px;padding:16px 4px}"
 		+ ".ldf-tl{list-style:none;margin:0;padding:0 0 0 14px;border-left:2px solid #E2DEE6;display:flex;flex-direction:column;gap:10px}"
@@ -227,6 +229,30 @@ final class Css
 	 * ({@code div.ebx_FormPaneWithTabs_Tab}, visibility hidden); the tab's title is {@code li#ebx_TabTitle_<pane id>}.
 	 * The script opens that tab when the anchor sits in a hidden one, then scrolls to the anchor and highlights it.
 	 */
+	/**
+	 * Grids loaded when their tab opens: a placeholder becomes a frame as soon as it is visible (EBX keeps every tab in
+	 * the page, the inactive ones hidden). The frame then follows the height of its content.
+	 */
+	static final String LAZY_JS = "(function(){if(window.ldfLazy)return;window.ldfLazy=1;"
+		+ "function vis(e){if(!e.getClientRects().length)return false;for(var x=e;x&&x.nodeType===1;x=x.parentElement){var s=getComputedStyle(x);if(s.visibility==='hidden'||s.display==='none')return false;}return true;}"
+		+ "function inner(f){try{var d=f.contentDocument,i=d&&d.querySelector('iframe');return i&&i.contentDocument&&i.contentDocument.body?i:null;}catch(x){return null;}}"
+		// the height of what the page really shows: the lowest element that is not a full-height wrapper (EBX's page fills its frame)
+		+ "function bottom(d){var vh=d.documentElement.clientHeight,m=0,a=d.body.getElementsByTagName('*');for(var i=0;i<a.length;i++){var r=a[i].getBoundingClientRect();if(!r.height||r.height>=vh-2)continue;if(r.bottom>m)m=r.bottom;}return m;}"
+		+ "function fit(f){try{var d=f.contentDocument;if(!d||!d.body)return;var i=inner(f),h=i?i.getBoundingClientRect().top+bottom(i.contentDocument):bottom(d);if(h<40)return;h=Math.min(Math.max(Math.round(h)+24,200),1600);"
+		+ "if(Math.abs(h-f.parentNode.clientHeight)>8)f.parentNode.style.height=h+'px';}catch(x){}}"
+		+ "function open(e){var f=document.createElement('iframe');f.src=e.getAttribute('data-src');e.removeAttribute('data-src');e.innerHTML='';e.appendChild(f);"
+		+ "f.addEventListener('load',function(){fit(f);setTimeout(function(){fit(f);watch(f,e);},1200);setTimeout(function(){fit(f);},3000);recount(e);});e.addEventListener('mouseleave',function(){setTimeout(function(){recount(e);},300);});}"
+		+ "function check(){var l=document.querySelectorAll('.ldf-lazy[data-src]');for(var i=0;i<l.length;i++){if(vis(l[i]))open(l[i]);}}"
+		// counters: after a row is added or removed in the frame, the block's "· n" and the tab's "(n)" follow
+		+ "function recount(e){var u=e.getAttribute('data-count');if(!u)return;fetch(u,{credentials:'same-origin',headers:{Accept:'application/json'}}).then(function(r){return r.ok?r.json():null;}).then(function(j){"
+		+ "if(!j||typeof j.count!=='number')return;var o=+e.getAttribute('data-n')||0,n=j.count;if(n===o)return;e.setAttribute('data-n',n);var sec=e.closest('section');var c=sec&&sec.querySelector('header .ldf-n');if(c)c.textContent='\u00b7 '+n;"
+		+ "var p=e.closest('.ebx_FormPaneWithTabs_Tab');var t=p&&p.id?document.querySelector('#ebx_TabTitle_'+(window.CSS&&CSS.escape?CSS.escape(p.id):p.id)+' a'):null;if(t){var w=document.createTreeWalker(t,NodeFilter.SHOW_TEXT),x,last=null;while((x=w.nextNode()))if(/\\S/.test(x.nodeValue))last=x;"
+		+ "if(last){var m=last.nodeValue.match(/^(.*?)\\s*\\((\\d+)\\)\\s*$/);var base=m?m[1]:last.nodeValue.replace(/\\s+$/,'');var tot=(m?+m[2]:0)+n-o;last.nodeValue=tot>0?base+' ('+tot+')':base;}}}).catch(function(){});}"
+		+ "function watch(f,e){var tm=null,mo=new MutationObserver(function(){clearTimeout(tm);tm=setTimeout(function(){recount(e);fit(f);},700);});"
+		+ "function obs(doc){try{mo.observe(doc.body,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});}catch(x){}}obs(f.contentDocument);"
+		+ "var i=inner(f);if(i){obs(i.contentDocument);i.addEventListener('load',function(){obs(i.contentDocument);fit(f);recount(e);});}}"
+		+ "check();document.addEventListener('click',function(){setTimeout(check,60);setTimeout(check,400);},true);setInterval(check,1200);})();";
+
 	static final String GO_JS = "window.ldfGo=function(id){try{var hidden=function(e){var p=e&&e.closest?e.closest('.ebx_FormPaneWithTabs_Tab'):null;return p&&getComputedStyle(p).visibility==='hidden'?p:null;};"
 		+ "var el=document.getElementById(id);if(!el)return false;var pane=hidden(el);"
 		+ "if(pane){var t=document.getElementById('ebx_TabTitle_'+pane.id);var a=t&&(t.querySelector('a')||t);if(a)a.click();}"

@@ -85,7 +85,8 @@ Since 1.10.0 the document may also hold `personal`, `adminSeesAll` and `variants
 this block stands for).
 
 **`grid`**: `a` (association path), `style` (`native` or `cards`), `cardFields` (paths shown on each card), `addBtn`
-(text).
+(text). Since 1.11.0, `lazy: true` builds the native grid only when its tab is first opened, in a frame (module service
+`LayoutGrid`), and `height` (pixels, default 460) is its height until the frame fits its content.
 
 **`map`**: `lat`, `lng` (paths), `tall` (larger map), and since 1.7.0 `address` (paths, in order: number, street,
 postcode, city, country…). When latitude or longitude is empty, the non-empty address values (a foreign key gives its label)

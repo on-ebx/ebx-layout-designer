@@ -32,6 +32,7 @@ public final class RuntimeText
 		RuntimeText.put("pinnedNotHere", "Your pinned blocks do not apply to this record (they show only under a condition it does not meet).",
 			"Vos blocs épinglés ne concernent pas cette fiche (ils ne s'affichent que sous une condition qu'elle ne remplit pas).",
 			"I tuoi blocchi fissati non riguardano questo record (compaiono solo a una condizione che non soddisfa).");
+		RuntimeText.put("lazyLoading", "Loaded when this tab is opened.", "Chargé à l'ouverture de l'onglet.", "Caricato all'apertura della scheda.");
 		RuntimeText.put("foldedBlock", "Folded block", "Bloc replié", "Blocco chiuso");
 		RuntimeText.put("nothingForRole", "Nothing on this form is shown for your role.", "Rien sur cette fiche n'est affiché pour votre rôle.", "Niente di questa scheda è visibile per il tuo ruolo.");
 		// blocks and widgets of 1.4.0

@@ -1,5 +1,17 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.11.0 (2026-10-13)
+
+- **A grid can be loaded when its tab is opened** (inspector of a grid block, *Load when its tab is opened*, layout key
+  `"lazy": true`; optional `"height"`, in pixels, before the frame fits its content). The form no longer builds that
+  native grid when it opens: the block shows a placeholder, and the first time its tab becomes visible a frame loads a
+  page that draws this grid alone (module service `LayoutGrid`, never in a menu), with EBX's own toolbar, "+", filter
+  and paging; the "+" creates a row already linked to the record. The block's and the tab's counters follow a row added or
+  removed in the frame (Data Services `…/<association>:count`, with the user's permissions), and the frame fits the height
+  of what it shows (a short grid, an open creation form). Measured on EBX 6.2.3 on
+  a supplier form with five grids: about 0.75 s of server rendering instead of about 5 s (each native grid costs about
+  1 s on 6.2.3, much less on 6.3). A grid the user may not see (role, EBX permission) is not drawn in the frame either.
+
 ## 1.10.2 (2026-10-12)
 
 - **A bin to remove a block or a field** (contributed by Christian Mayor, PR #1): drop a block or a field on the bin at

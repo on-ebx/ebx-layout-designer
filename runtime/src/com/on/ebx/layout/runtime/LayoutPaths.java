@@ -34,6 +34,11 @@ public final class LayoutPaths
 	/** The module service that lets a user arrange a form for themself. */
 	public static final String PERSONALIZE_SERVICE = "PersonalizeForm";
 
+	/** The module service that draws one native association grid of a record alone, for a grid loaded when its tab opens. */
+	public static final String GRID_SERVICE = "LayoutGrid";
+	/** Its parameter: the id of the grid block in the layout. */
+	public static final String GRID_BLOCK_PARAM = "ldfBlock";
+
 	/** The class a data model declares as its record form to use a layout of this designer. */
 	public static final String FORM_CLASS = "com.on.ebx.layout.runtime.ConfigurableForm";
 

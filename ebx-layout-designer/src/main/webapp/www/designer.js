@@ -172,6 +172,8 @@ const C = {
  mxItem:['Onglet, bloc, champ','Tab, block, field'], mxRead:['lecture','read'],
  asLabel:['Aperçu en tant que','Preview as'], asAll:['Tout le monde (conception)','Everyone (design)'], asRolesGrp:['Rôles','Roles'], asUsersGrp:['Utilisateurs','Users'],
  seenAs:['Fiche vue par {0} : {1}','Form as seen by {0}: {1}'], adminAll:['administrateur : voit tout','administrator: sees everything'], editingVariant:['Vous modifiez : {0}','You are editing: {0}'],
+ lazyGrid:['Charger à l’ouverture de l’onglet (fiche plus rapide)','Load when its tab is opened (faster form)'],
+ lazyHint:['La grille native (barre d’outils, « + », filtre) n’est construite qu’à la première ouverture de son onglet, dans un cadre. Utile quand une fiche a plusieurs grilles, surtout sur EBX 6.2.','The native grid (toolbar, “+”, filter) is built only when its tab is first opened, in a frame. Useful when a form has several grids, above all on EBX 6.2.'],
  formPick:['Fiche','Form'], newVariantOpt:['+ Nouvelle variante (copie)','+ New variant (copy)']
 };
 const c = (k, ...a) => { let s = (C[k] || [k,k])[UI]; a.forEach((v,i) => { s = s.split('{'+i+'}').join(v); }); return s; };
@@ -1081,6 +1083,7 @@ function renderInspector(){
       h += `<div class="fld"><label for="ld-i-ga">${esc(c('assoc'))}</label><select id="ld-i-ga" data-bk="a">${assocOpts(b.a)}</select></div>
         <div class="fld"><span class="l">${esc(c('presentation'))}</span><div class="seg"><button type="button" data-style="native" aria-pressed="${b.style !== 'cards'}">${esc(c('native'))}</button><button type="button" data-style="cards" aria-pressed="${b.style === 'cards'}">${esc(c('cards'))}</button></div></div>
         ${b.style === 'cards' && a ? `<div class="fld"><span class="l">${esc(c('cardFields'))}</span><div class="list-mini">${(a.fields || []).map(f => `<label><input type="checkbox" data-cardf="${esc(f.p)}"${(b.cardFields || []).includes(f.p) ? ' checked' : ''}> ${esc(T(f.lab))}</label>`).join('')}</div></div>${locField('block.addBtn', c('addBtn'), b.addBtn, () => c('none'))}` : ''}
+        <label class="chk"><input type="checkbox" id="ld-i-glazy"${b.lazy ? ' checked' : ''}> ${esc(c('lazyGrid'))}</label>${b.lazy ? `<p class="hint">${esc(c('lazyHint'))}</p>` : ''}
         <p class="hint">${esc(c('gridHint'))}</p>`;
     }
     if (b.type === 'map') h += `<div class="fld"><label for="ld-i-ml">${esc(c('lat'))}</label><select id="ld-i-ml" data-bk="lat">${fieldOpts(b.lat)}</select></div><div class="fld"><label for="ld-i-mg">${esc(c('lng'))}</label><select id="ld-i-mg" data-bk="lng">${fieldOpts(b.lng)}</select></div><label class="chk"><input type="checkbox" id="ld-i-mt"${b.tall ? ' checked' : ''}> ${esc(c('tall'))}</label><div class="info">${esc(c('mapInfo'))}</div>`
@@ -1534,7 +1537,7 @@ root.addEventListener('change', e => {
   if (Bk && t.dataset.sev){ snapshot(); Bk.sev = Bk.sev || {}; Bk.sev[t.dataset.sev] = t.checked; return commit(''); }
   if (Bk && t.dataset.ak){ snapshot(); Bk.actions[+t.dataset.ak][t.dataset.af] = t.value; return commit(''); }
   if (Bk && t.dataset.cardf){ snapshot(); Bk.cardFields = (Bk.cardFields || []).filter(p => p !== t.dataset.cardf); if (t.checked) Bk.cardFields.push(t.dataset.cardf); return commit(''); }
-  const flags = {'ld-i-vlinks':'links', 'ld-i-vempty':'hideEmpty', 'ld-i-ro':'ro', 'ld-i-hc':'hideCreate', 'ld-i-mt':'tall'};
+  const flags = {'ld-i-vlinks':'links', 'ld-i-vempty':'hideEmpty', 'ld-i-ro':'ro', 'ld-i-hc':'hideCreate', 'ld-i-mt':'tall', 'ld-i-glazy':'lazy'};
   if (Bk && flags[t.id]){ snapshot(); Bk[flags[t.id]] = t.checked; return commit(''); }
   if (Bk && t.id === 'ld-i-vmax'){ snapshot(); Bk.max = +t.value; return commit(''); }
   if (sel.k === 'field'){ const f = S.blocks[sel.b].fields[sel.i];

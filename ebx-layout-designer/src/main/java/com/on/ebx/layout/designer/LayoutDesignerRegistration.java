@@ -28,5 +28,6 @@ public final class LayoutDesignerRegistration extends ModuleRegistrationListener
 		pContext.registerUserService(new LayoutsHomeServiceDeclaration(pContext.getModuleName()));
 		pContext.registerUserService(new AboutServiceDeclaration(pContext.getModuleName()));
 		pContext.registerUserService(new PersonalizeServiceDeclaration(pContext.getModuleName()));
+		pContext.registerUserService(new GridServiceDeclaration(pContext.getModuleName()));
 	}
 }
