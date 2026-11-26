@@ -501,9 +501,11 @@ public final class Engine
 			final Set<String> w = pRequest.selected.get(facet.id);
 			selected[f] = w == null || w.isEmpty() ? Model.Pred.TRUE : Engine.selection(pView, facet, w, pRequest.favorites);
 		}
+		final Model.Pred asOfP = Engine.asOfPred(pView, pRequest.asOf);
 		final List<Model.Pred> all = new ArrayList<Model.Pred>();
 		all.add(text);
 		all.add(tileP);
+		all.add(asOfP);
 		Collections.addAll(all, selected);
 		final Model.Pred where = Model.and(all);
 
@@ -518,7 +520,7 @@ public final class Engine
 		tasks.add(() -> main ? Integer.valueOf(Engine.count(pView, Model.Pred.TRUE)) : null);
 		for (final Spec.Tile t : pView.tiles)
 		{
-			tasks.add(() -> main ? Integer.valueOf(Engine.count(pView, Engine.tilePred(pView, t))) : null);
+			tasks.add(() -> main ? Integer.valueOf(Engine.count(pView, Model.and(java.util.Arrays.asList(asOfP, Engine.tilePred(pView, t))))) : null);
 		}
 		final int first = tasks.size();
 		for (int f = 0; f < nf; f++)
@@ -532,6 +534,7 @@ public final class Engine
 			final List<Model.Pred> others = new ArrayList<Model.Pred>();
 			others.add(text);
 			others.add(tileP);
+			others.add(asOfP);
 			for (int g = 0; g < nf; g++)
 			{
 				if (g != f)
@@ -577,6 +580,52 @@ public final class Engine
 		LoggingCategory.getKernel().debug("[layout-designer] explorer query on " + m.table.getTablePath().format() + ": " + out.total + "/" + out.all + " records, "
 			+ (System.currentTimeMillis() - start) + " ms");
 		return out;
+	}
+
+	/** The day an explorer with an "in force on" date works at: the page's valid date, else today. */
+	public static String asOfDay(final View pView, final String pAsked)
+	{
+		return pAsked != null && pAsked.matches("\\d{4}-\\d{2}-\\d{2}") ? pAsked : java.time.LocalDate.now().toString();
+	}
+
+	/**
+	 * 1.25.0: {@code from <= day and (to is empty or to >= day)} on the explorer's dates; TRUE when the explorer has no
+	 * date, or when the user may not read one of its two fields (the page then shows no date either).
+	 */
+	static Model.Pred asOfPred(final View pView, final String pAsked)
+	{
+		final Spec.AsOf a = pView.spec.asOf;
+		if (a == null || !Engine.asOfReadable(pView))
+		{
+			return Model.Pred.TRUE;
+		}
+		final Model.Pred p = pView.model.pred(Engine.asOfCond(a.from, a.to, Engine.asOfDay(pView, pAsked)));
+		if (p == null || p.sql == null && p.xpath == null)
+		{
+			LoggingCategory.getKernel().warn("[layout-designer] explorer: the \"in force on\" date cannot be evaluated on " + a.from + " / " + a.to + ": ignored");
+			return Model.Pred.TRUE;
+		}
+		return p;
+	}
+
+	public static boolean asOfReadable(final View pView)
+	{
+		final Spec.AsOf a = pView.spec.asOf;
+		return a != null && !pView.hidden.contains(a.from) && (a.to.isEmpty() || !pView.hidden.contains(a.to)) && pView.model.src(a.from) != null;
+	}
+
+	static com.fasterxml.jackson.databind.JsonNode asOfCond(final String pFrom, final String pTo, final String pDay)
+	{
+		final com.fasterxml.jackson.databind.node.ObjectNode cond = com.on.ebx.layout.runtime.LayoutStore.json().createObjectNode();
+		final com.fasterxml.jackson.databind.node.ArrayNode all = cond.putArray("all");
+		all.addObject().put("field", pFrom).put("le", pDay);
+		if (pTo != null && !pTo.isEmpty())
+		{
+			final com.fasterxml.jackson.databind.node.ArrayNode any = all.addObject().putArray("any");
+			any.addObject().put("field", pTo).put("empty", true);
+			any.addObject().put("field", pTo).put("ge", pDay);
+		}
+		return cond;
 	}
 
 	/** The page asks for a sort by its index in the explorer's list of sorts; the user's list may have fewer. */
@@ -1468,11 +1517,16 @@ public final class Engine
 	 */
 	public static Cards cards(final View pView, final List<String> pKeys, final Set<String> pDerived, final Set<String> pFlagFacets)
 	{
+		return Engine.cards(pView, pKeys, pDerived, pFlagFacets, null);
+	}
+
+	public static Cards cards(final View pView, final List<String> pKeys, final Set<String> pDerived, final Set<String> pFlagFacets, final String pAsOf)
+	{
 		// the cards are never older than the automatic mode allows, whatever the explorer's mode
 		Engine.begin(pView, false, null, true);
 		try
 		{
-			return Engine.cardsKept(pView, pKeys, pDerived, pFlagFacets);
+			return Engine.cardsKept(pView, pKeys, pDerived, pFlagFacets, pAsOf);
 		}
 		finally
 		{
@@ -1480,7 +1534,7 @@ public final class Engine
 		}
 	}
 
-	private static Cards cardsKept(final View pView, final List<String> pKeys, final Set<String> pDerived, final Set<String> pFlagFacets)
+	private static Cards cardsKept(final View pView, final List<String> pKeys, final Set<String> pDerived, final Set<String> pFlagFacets, final String pAsOf)
 	{
 		final Cards out = new Cards();
 		final Model m = pView.model;
@@ -1558,6 +1612,9 @@ public final class Engine
 				break;
 			case "suspects":
 				Engine.suspects(pView, d, records.keySet(), values);
+				break;
+			case "stateAt":
+				Engine.stateAtValues(pView, d, def, records, values, Engine.asOfDay(pView, pAsOf));
 				break;
 			case "sameValue":
 				Engine.sameValues(pView, d, def, records, values);
@@ -1710,6 +1767,82 @@ public final class Engine
 			for (final Map<String, Object> v : pValues.values())
 			{
 				v.putIfAbsent(pName, Double.valueOf(0));
+			}
+		}
+	}
+
+	/**
+	 * 1.25.0, {@code stateAt}: for each record of the page, a field of the state in force on the day among the states of
+	 * the entity its {@code link} names ({@code states} table, {@code identity} its key to the entity, {@code from} /
+	 * {@code to} its dates, {@code field} the value). One SQL statement for the page; a link the user may not read on a
+	 * record leaves that record's value empty.
+	 */
+	private static void stateAtValues(final View pView, final String pName, final com.fasterxml.jackson.databind.JsonNode pDef, final Map<String, Adaptation> pRecords,
+		final Map<String, Map<String, Object>> pValues, final String pDay)
+	{
+		final Model m = pView.model;
+		AdaptationTable states = null;
+		try
+		{
+			states = m.dataset.getTable(com.orchestranetworks.schema.Path.parse(pDef.path("states").asText("")));
+		}
+		catch (final RuntimeException ex)
+		{
+			states = null;
+		}
+		final com.orchestranetworks.schema.SchemaNode link = m.node(pDef.path("link").asText(""));
+		if (states == null || link == null)
+		{
+			return;
+		}
+		final Model c = m.on(states);
+		final Model.Src identity = c.src(pDef.path("identity").asText(""));
+		final Model.Src field = c.src(pDef.path("field").asText(""));
+		if (identity == null || identity.node == null || field == null || field.sql == null)
+		{
+			return;
+		}
+		final Map<String, List<String>> byLink = new HashMap<String, List<String>>();
+		for (final Map.Entry<String, Adaptation> e : pRecords.entrySet())
+		{
+			try
+			{
+				if (pView.session.getPermissions().getNodeAccessPermission(link, e.getValue()).isHidden())
+				{
+					continue;
+				}
+				final Object v = e.getValue().get(link.getPathInAdaptation());
+				if (v != null && !String.valueOf(v).isEmpty())
+				{
+					byLink.computeIfAbsent(String.valueOf(v), x -> new ArrayList<String>()).add(e.getKey());
+				}
+			}
+			catch (final RuntimeException ex)
+			{
+				// a link that cannot be read leaves the value empty
+			}
+		}
+		if (byLink.isEmpty())
+		{
+			return;
+		}
+		final String key = "FK_AS_STRING(t." + Model.dotted(identity.node.getPathInAdaptation()) + ")";
+		final Model.Pred where = c.pred(Engine.asOfCond(pDef.path("from").asText(""), pDef.path("to").asText(""), pDay));
+		if (where == null || where.sql == null)
+		{
+			return;
+		}
+		final String sql = "SELECT " + key + " AS k, MIN(" + field.sql + ") AS v FROM " + c.from + " t WHERE " + c.keysAs(key, byLink.keySet()).sql + " AND " + where.sql + " GROUP BY " + key;
+		for (final Object[] row : Engine.select(pView, sql, Integer.MAX_VALUE))
+		{
+			final List<String> keys = byLink.get(String.valueOf(row[0]));
+			if (keys == null || row[1] == null)
+			{
+				continue;
+			}
+			for (final String k : keys)
+			{
+				pValues.get(k).put(pName, IndexBuilder.compact(row[1]));
 			}
 		}
 	}

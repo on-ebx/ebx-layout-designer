@@ -71,6 +71,15 @@ public final class Spec
 	public final int pageSize;
 	/** The records are shown in groups of this source's values, with a count per group (null: no groups). */
 	public final Sort group;
+	/** 1.25.0: the page's "in force on" date: a date field the record starts on, one it ends on (empty = open-ended). */
+	public static final class AsOf
+	{
+		public String from;
+		public String to;
+		public JsonNode label;
+	}
+
+	public final AsOf asOf;
 
 	/**
 	 * @param pRoles true when the user holds one of the role names of the given array (an empty array never reaches it)
@@ -180,6 +189,18 @@ public final class Spec
 		group.desc = "desc".equals(g.path("dir").asText("asc"));
 		group.label = g.get("label");
 		this.group = group.source == null ? null : group;
+		final JsonNode a = layout.path("asOf");
+		if (a.isObject() && !a.path("from").asText("").isEmpty())
+		{
+			this.asOf = new AsOf();
+			this.asOf.from = a.path("from").asText("");
+			this.asOf.to = a.path("to").asText("");
+			this.asOf.label = a.get("label");
+		}
+		else
+		{
+			this.asOf = null;
+		}
 	}
 
 	static boolean forRoles(final JsonNode pElement, final Predicate<JsonNode> pRoles)
@@ -348,6 +369,9 @@ public final class Spec
 			break;
 		case "test":
 			Cond.reads(pDef.get("when"), pFields, pDerived);
+			break;
+		case "stateAt":
+			Spec.add(pDef.path("link").asText(""), pFields, pDerived);
 			break;
 		default:
 			break;

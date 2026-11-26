@@ -99,6 +99,22 @@ public final class Views
 			{
 				hiddenTables.add(e.getKey());
 			}
+			else if ("stateAt".equals(type))
+			{
+				AdaptationTable t = null;
+				try
+				{
+					t = pDataset.getTable(com.orchestranetworks.schema.Path.parse(e.getValue().path("states").asText("")));
+				}
+				catch (final RuntimeException ex)
+				{
+					t = null;
+				}
+				if (t == null || perms.getNodeAccessPermission(t.getTableNode(), pDataset).isHidden())
+				{
+					hiddenTables.add(e.getKey());
+				}
+			}
 		});
 		return new View(model, spec, pSession, hiddenFields, hiddenTables);
 	}

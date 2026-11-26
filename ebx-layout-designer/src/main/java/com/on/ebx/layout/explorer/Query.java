@@ -80,6 +80,8 @@ public final class Query
 		public final Set<String> closed = new TreeSet<String>();
 		/** Start new answers (the Refresh button). */
 		public boolean refresh;
+		/** 1.25.0: the "in force on" date (yyyy-MM-dd) chosen on the page; null = today, for an explorer that has one. */
+		public String asOf;
 		/** True once the same page asked a newer request: this one stops. */
 		public java.util.function.BooleanSupplier cancelled;
 	}

@@ -191,3 +191,50 @@
   } };
   window.ldfBlocks.scan();
 })();
+
+/* 1.24.0: the "Hierarchy at a date" block. Every state of every entity is in the page; the chosen date decides which one shows. */
+(function () {
+  if (window.ldfAsOf) { window.ldfAsOf.scan(); return; }
+  var init = function (box) {
+    if (box.ldfInit) return; box.ldfInit = 1;
+    var cfg = JSON.parse(box.querySelector('script[type="application/json"]').textContent);
+    var inp = box.querySelector('input[type=date]'), cnt = box.querySelector('.ldf-aot-cnt'), bounds = cfg.bounds || [];
+    /* 1.25.0: the date chosen in an explorer ("in force on") or in another block follows the user; a date read from a field of the record wins */
+    var key = cfg.user ? 'ldfAsOf:' + cfg.user : null, isDay = function (s) { return /^\d{4}-\d{2}-\d{2}$/.test(s || ''); };
+    try { var shared = key ? sessionStorage.getItem(key) : null; if (!cfg.fixed && isDay(shared)) inp.value = shared; } catch (x) {}
+    var share = function () { try { if (key && isDay(inp.value)) sessionStorage.setItem(key, inp.value); } catch (x) {} };
+    var lv0 = function (li) { return li.getAttribute('data-lv') === '0'; };
+    var visit = function (li, d, counts) {
+      var on = false, kids = false, h = li.querySelector(':scope > .ldf-aot-h');
+      Array.prototype.forEach.call(h.querySelectorAll(':scope > .ldf-aot-s'), function (a) {
+        var f = a.getAttribute('data-f'), t = a.getAttribute('data-t'), ok = (!f || f <= d) && (!t || d <= t);
+        a.style.display = ok ? '' : 'none'; if (ok) on = true;
+      });
+      if (on || lv0(li)) Array.prototype.forEach.call(li.querySelectorAll(':scope > ul > li'), function (c) { if (visit(c, d, counts)) kids = true; });
+      var lv = +li.getAttribute('data-lv');
+      /* an entity with no state on the date does not exist under this parent on that date: its subtree goes with it
+         (its children name the entity, not this parent); only the root stays, greyed, when it has no state */
+      if (on) counts[lv] = (counts[lv] || 0) + 1;
+      li.classList.toggle('ldf-aot-off', !on);
+      li.style.display = (on || lv === 0) ? '' : 'none';
+      return on;
+    };
+    var apply = function () {
+      var d = inp.value || cfg.def, counts = [];
+      Array.prototype.forEach.call(box.querySelectorAll(':scope > ul.ldf-aot-tree > li'), function (li) { visit(li, d, counts); });
+      cnt.textContent = (cfg.levels || []).map(function (l, i) { return (counts[i + 1] || 0) + ' ' + l; }).join(' \u00b7 ');
+    };
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-aot]'); if (!b) return;
+      var d = inp.value || cfg.def, k = b.getAttribute('data-aot'), x;
+      if (k === 'today') { x = new Date(); inp.value = x.getFullYear() + '-' + ('0' + (x.getMonth() + 1)).slice(-2) + '-' + ('0' + x.getDate()).slice(-2); }
+      else if (k === 'prev') { for (var i = bounds.length - 1; i >= 0; i--) if (bounds[i] < d) { inp.value = bounds[i]; break; } }
+      else if (k === 'next') { for (var j = 0; j < bounds.length; j++) if (bounds[j] > d) { inp.value = bounds[j]; break; } }
+      share(); apply();
+    });
+    inp.addEventListener('change', function () { share(); apply(); });
+    apply();
+  };
+  window.ldfAsOf = { scan: function () { Array.prototype.forEach.call(document.querySelectorAll('.ldf-aot'), init); } };
+  window.ldfAsOf.scan();
+})();

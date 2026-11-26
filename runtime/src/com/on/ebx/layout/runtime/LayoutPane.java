@@ -349,6 +349,12 @@ final class LayoutPane implements UIFormPane
 			return ChartBlocks.compare(this.rc, b);
 		case "coverage":
 			return ChartBlocks.coverage(this.rc, b);
+		case "asOfTree":
+			return EffectiveBlocks.asOfTree(this.rc, b);
+		case "stateTimeline":
+			return EffectiveBlocks.stateTimeline(this.rc, b);
+		case "delta":
+			return EffectiveBlocks.delta(this.rc, b);
 		default:
 			return null;
 		}

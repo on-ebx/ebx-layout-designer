@@ -137,11 +137,12 @@ final class LayoutMcpTools
 			new Param("expected_version", "integer", "The version read before editing. Omit to overwrite.", false),
 			new Param("dry_run", "boolean", "true: check only, write nothing.", false)));
 
-	/** Block types of ebx-form-layout/1 (LAYOUT-FORMAT.md, up to 1.22). An unknown one is a warning: a newer runtime may know it. */
+	/** Block types of ebx-form-layout/1 (LAYOUT-FORMAT.md, up to 1.24). An unknown one is a warning: a newer runtime may know it. */
 	static final Set<String> BLOCK_TYPES = new HashSet<String>(Arrays.asList("panel", "hero", "facts", "validation", "grid", "map", "tree", "hours",
 		"duplicates", "note", "custom", "timeline", "history", "completeness", "stepper", "checklist", "chart", "aggregates", "pivot", "linked",
 		"contacts", "gallery", "documents", "links", "validity", "address", "hierarchy", "recordInfo", "changes", "usedBy", "orgChart",
-		"valueHistory", "sitesMap", "sourceValues", "workflowTasks", "translations", "inheritance", "actions", "heatmap", "gantt", "compare", "coverage"));
+		"valueHistory", "sitesMap", "sourceValues", "workflowTasks", "translations", "inheritance", "actions", "heatmap", "gantt", "compare", "coverage",
+		"asOfTree", "stateTimeline", "delta"));
 
 	/** Match and Merge's technical nodes: a layout should leave them out. */
 	private static final Pattern TECHNICAL = Pattern.compile("^/(Association_Reverse|Linked_Field_[A-Za-z]+)$");

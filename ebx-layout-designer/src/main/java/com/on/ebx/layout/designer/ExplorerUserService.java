@@ -519,6 +519,14 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 			}
 		}
 		out.put("pageSize", pView.spec.pageSize);
+		if (pView.spec.asOf != null && Engine.asOfReadable(pView))
+		{
+			final ObjectNode asOf = out.putObject("asOf");
+			if (pView.spec.asOf.label != null)
+			{
+				asOf.set("label", pView.spec.asOf.label);
+			}
+		}
 		if (pView.spec.group != null && !pView.hidden.contains(pView.spec.group.source))
 		{
 			final ObjectNode group = out.putObject("group");
@@ -687,6 +695,7 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 				}
 				request.refresh = "1".equals(pContext.getParameter("refresh"));
 				request.dir = pContext.getParameter("dir");
+				request.asOf = pContext.getParameter("asOf");
 				// a newer request of the same page (the user kept typing) makes this one useless: it stops between two statements
 				final String tab = session.getUserReference().getUserId() + "|" + this.explorerId + "|" + pContext.getParameter("tab");
 				final long gen = ExplorerUserService.integer(pContext.getParameter("gen"), 0, 0, Integer.MAX_VALUE);
@@ -735,7 +744,7 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 					}
 				}
 				final ArrayNode cards = out.putArray("cards");
-				final Engine.Cards extra = ExplorerUserService.cardExtras(view, result.keys);
+				final Engine.Cards extra = ExplorerUserService.cardExtras(view, result.keys, request.asOf);
 				for (final String k : result.keys)
 				{
 					final ObjectNode c = this.card(view, k, session, request.favorites, extra);
@@ -845,7 +854,7 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 								request.tile = tile;
 								request.sort = sort;
 								final Query.Result result = Query.run(view, request, 0, view.spec.pageSize);
-								ExplorerUserService.cardExtras(view, result.keys);
+								ExplorerUserService.cardExtras(view, result.keys, null);
 								times.add(Long.valueOf(System.currentTimeMillis() - t0));
 							}
 							catch (final RuntimeException ex)
@@ -1157,7 +1166,7 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 	}
 
 	/** The computed values and flags the cards of a page show, asked to EBX once for the page. */
-	private static Engine.Cards cardExtras(final View pView, final List<String> pKeys)
+	private static Engine.Cards cardExtras(final View pView, final List<String> pKeys, final String pAsOf)
 	{
 		final JsonNode card = pView.spec.layout.path("card");
 		final Set<String> derived = new LinkedHashSet<String>();
@@ -1179,7 +1188,7 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 				}
 			}
 		}
-		return Engine.cards(pView, pKeys, derived, flags);
+		return Engine.cards(pView, pKeys, derived, flags, pAsOf);
 	}
 
 	/** A value computed in Java ({@code provided}): asked to its provider for the record shown. */

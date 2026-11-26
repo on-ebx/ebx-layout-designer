@@ -21,6 +21,7 @@
   };
   /* [French, English, Italian]; any other language reads English */
   var STR = {
+    asOf: ['En vigueur au', 'In force on', 'In vigore al'], today: ['Aujourd’hui', 'Today', 'Oggi'],
     search: ['Rechercher…', 'Search…', 'Cerca…'], records: ['fiches', 'records', 'schede'], record: ['fiche', 'record', 'scheda'], more: ['Afficher plus', 'Show more', 'Mostra altro'],
     none: ['Aucune fiche ne correspond à ces critères.', 'No record matches these criteria.', 'Nessuna scheda corrisponde a questi criteri.'], clear: ['Tout effacer', 'Clear all', 'Cancella tutto'],
     hideF: ['Masquer les filtres', 'Hide filters', 'Nascondi i filtri'], showF: ['Afficher les filtres', 'Show filters', 'Mostra i filtri'], open: ['Ouvrir la fiche', 'Open', 'Apri la scheda'],
@@ -40,15 +41,19 @@
 
   // --- state, kept per EBX user and explorer for the browser tab ---------------------------------------------------
   var STORE = 'ldx:' + B.user + ':' + B.explorer;
-  var S = {q: '', sel: {}, tile: null, sort: 0, dir: '', lay: '', more: {}, fq: {}, collapsed: {}, noSide: false, selLabels: {}};
+  var S = {q: '', sel: {}, tile: null, sort: 0, dir: '', lay: '', more: {}, fq: {}, collapsed: {}, noSide: false, selLabels: {}, asOf: ''};
+  /* 1.25.0: the "in force on" date is shared by every explorer and form block of this user in the tab */
+  var ASOF_KEY = 'ldfAsOf:' + B.user, isDay = function (s) { return /^\d{4}-\d{2}-\d{2}$/.test(s || ''); };
+  var today = function () { var x = new Date(); return x.getFullYear() + '-' + ('0' + (x.getMonth() + 1)).slice(-2) + '-' + ('0' + x.getDate()).slice(-2); };
   try {
     for (var i = sessionStorage.length - 1; i >= 0; i--) { var k = sessionStorage.key(i); if (k && k.indexOf('ldx:') === 0 && k.indexOf('ldx:' + B.user + ':') !== 0) sessionStorage.removeItem(k); }
     var saved = JSON.parse(sessionStorage.getItem(STORE) || 'null');
     if (saved) { S.q = saved.q || ''; S.sel = saved.sel || {}; S.tile = saved.tile || null; S.sort = saved.sort || 0; S.dir = saved.dir || ''; S.collapsed = saved.collapsed || {}; S.selLabels = saved.selLabels || {}; }
     var savedLay = localStorage.getItem(STORE + ':lay'); if (savedLay) S.lay = savedLay;
+    var sharedDay = sessionStorage.getItem(ASOF_KEY); if (C.asOf && isDay(sharedDay)) S.asOf = sharedDay;
   } catch (x) { /* no storage */ }
   (C.facets || []).forEach(function (f) { if (!(f.id in S.collapsed) && f.open === false) S.collapsed[f.id] = true; });
-  var save = function () { try { sessionStorage.setItem(STORE, JSON.stringify({q: S.q, sel: S.sel, tile: S.tile, sort: S.sort, dir: S.dir, collapsed: S.collapsed, selLabels: S.selLabels})); if (S.lay) localStorage.setItem(STORE + ':lay', S.lay); } catch (x) {} };
+  var save = function () { try { if (C.asOf) { if (isDay(S.asOf)) sessionStorage.setItem(ASOF_KEY, S.asOf); else sessionStorage.removeItem(ASOF_KEY); } sessionStorage.setItem(STORE, JSON.stringify({q: S.q, sel: S.sel, tile: S.tile, sort: S.sort, dir: S.dir, collapsed: S.collapsed, selLabels: S.selLabels})); if (S.lay) localStorage.setItem(STORE + ':lay', S.lay); } catch (x) {} };
   /* the layouts the user may switch between (the configurator's list), and the one shown */
   var LAYS = (CARD.layouts || []).filter(function (l) { return l === 'vertical' || l === 'horizontal' || l === 'compact'; });
   var lay = function () { return S.lay && LAYS.indexOf(S.lay) >= 0 ? S.lay : CARD.layout || 'vertical'; };
@@ -93,7 +98,7 @@
   var params = function (off, lim, part, force) {
     return {
       part: part || 'all', closed: closed(), refresh: force ? 1 : '', dir: S.dir,
-      q: S.q, tile: S.tile || '', sort: S.sort, off: off, lim: lim,
+      q: S.q, tile: S.tile || '', sort: S.sort, off: off, lim: lim, asOf: C.asOf && isDay(S.asOf) ? S.asOf : '',
       f: Object.keys(S.sel).map(function (id) { var v = on(S.sel[id]); return v.length ? id + '=' + v.map(escV).join('|') : null; }).filter(Boolean).join(';'),
       more: Object.keys(S.more).map(function (id) { return id + ':' + S.more[id]; }).join(';'),
       fq: Object.keys(S.fq).filter(function (id) { return S.fq[id]; }).map(function (id) { return id + ':' + escV(S.fq[id]); }).join(';')
@@ -328,6 +333,7 @@
     var total = R ? R.total || 0 : 0, all = R ? R.all || 0 : 0;
     var main = '<div class="ldx-bar">' + (side ? '<button type="button" class="ldx-toggle" data-side="1">' + esc(S.noSide ? S_('showF') : S_('hideF')) + '</button>' : '')
       + '<span class="ldx-count">' + nf(total) + ' ' + esc(total > 1 ? S_('records') : S_('record')) + (R ? ' <small>/ ' + nf(all) + '</small>' : '') + '</span>'
+      + (C.asOf ? '<label class="ldx-asof">&#128197; ' + esc(T(C.asOf.label) || S_('asOf')) + ' <input type="date" id="ldx-asof" value="' + esc(isDay(S.asOf) ? S.asOf : today()) + '" aria-label="' + esc(T(C.asOf.label) || S_('asOf')) + '">' + (isDay(S.asOf) && S.asOf !== today() ? '<button type="button" data-asof-today="1">' + esc(S_('today')) + '</button>' : '') + '</label>' : '')
       + ((C.sorts || []).length > 1 ? '<select id="ldx-sort" aria-label="' + esc(S_('sort')) + '">' + C.sorts.map(function (s) { return '<option value="' + s.i + '"' + (+S.sort === s.i ? ' selected' : '') + '>' + esc(T(s.label)) + '</option>'; }).join('') + '</select>' : '')
       + ((C.sorts || []).length ? '<button type="button" class="ldx-dir" data-dir="1" title="' + esc(isDesc() ? S_('desc') : S_('asc')) + '" aria-label="' + esc(isDesc() ? S_('desc') : S_('asc')) + '">' + (isDesc() ? '↓' : '↑') + '</button>' : '')
       + (LAYS.length > 1 ? '<span class="ldx-views" role="group" aria-label="' + esc(S_('asView')) + '">' + LAYS.map(function (l) { return '<button type="button" data-lay="' + l + '" aria-pressed="' + (lay() === l) + '" title="' + esc(S_('v_' + l)) + '" aria-label="' + esc(S_('v_' + l)) + '">' + (l === 'compact' ? '☰' : l === 'horizontal' ? '▤' : '▦') + '</button>'; }).join('') + '</span>' : '')
@@ -417,6 +423,7 @@
     if (t.dataset.f) { (S.sel[t.dataset.f] = S.sel[t.dataset.f] || {})[t.dataset.v] = t.checked; refresh(); }
     else if (t.dataset.sf) { S.sel[t.dataset.sf] = {}; if (t.value) S.sel[t.dataset.sf][t.value] = true; refresh(); }
     else if (t.id === 'ldx-sort') { S.sort = +t.value; S.dir = ''; refresh(); }
+    else if (t.id === 'ldx-asof') { if (isDay(t.value)) { S.asOf = t.value; refresh(); } }
   });
   root.addEventListener('click', function (e) {
     var t = e.target, el;
@@ -427,6 +434,7 @@
     if ((el = t.closest('[data-hlink]'))) { e.preventDefault(); goLink((B.header.links || [])[+el.dataset.hlink]); return; }
     if ((el = t.closest('[data-lay]'))) { S.lay = el.dataset.lay; draw(); return; }
     if (t.closest('[data-dir]')) { S.dir = isDesc() ? 'asc' : 'desc'; refresh(); return; }
+    if (t.closest('[data-asof-today]')) { S.asOf = today(); refresh(); return; }
     if ((el = t.closest('[data-star]'))) {
       var key = el.dataset.star;
       ask(url(B.ajax.fav, {k: key}), function (d) { CARDS.forEach(function (c) { if (c.k === key) c.fav = !!d.favorite; }); if ((C.facets || []).some(function (f) { return f.kind === 'favorites'; })) reload(); else draw(); });

@@ -52,7 +52,7 @@ Since 1.10.0 the document may also hold `personal`, `adminSeesAll` and `variants
 
 | Key | Meaning |
 |---|---|
-| `type` | `panel`, `hero`, `facts`, `validation`, `grid`, `map`, `tree`, `hours`, `duplicates`, `note`, `custom`; since 1.4.0 `timeline`, `history`, `completeness`, `stepper`, `checklist`, `chart`, `aggregates`, `pivot`, `linked`, `contacts`, `gallery`, `documents`, `links`, `validity`, `address`, `hierarchy`; since 1.5.0 `recordInfo`; since 1.6.0 `changes`, `usedBy`; since 1.8.0 `orgChart`; since 1.9.0 `valueHistory`, `sitesMap`, `sourceValues`, `workflowTasks`, `translations`, `inheritance`; since 1.22.0 `heatmap`, `gantt`, `compare`, `coverage` |
+| `type` | `panel`, `hero`, `facts`, `validation`, `grid`, `map`, `tree`, `hours`, `duplicates`, `note`, `custom`; since 1.4.0 `timeline`, `history`, `completeness`, `stepper`, `checklist`, `chart`, `aggregates`, `pivot`, `linked`, `contacts`, `gallery`, `documents`, `links`, `validity`, `address`, `hierarchy`; since 1.5.0 `recordInfo`; since 1.6.0 `changes`, `usedBy`; since 1.8.0 `orgChart`; since 1.9.0 `valueHistory`, `sitesMap`, `sourceValues`, `workflowTasks`, `translations`, `inheritance`; since 1.22.0 `heatmap`, `gantt`, `compare`, `coverage`; since 1.24.0 `asOfTree`, `stateTimeline`, `delta` |
 | `id` | unique in the layout |
 | `title`, `note` | texts |
 | `cond` | XPath predicate on the record; the block shows only when it is true (always shown on creation) |
@@ -197,6 +197,26 @@ Each reads the rows of an association `a` of the record (5,000 at most). Every o
 | `coverage` | `field` (the field each row should have), `label`, `target` (100: percentage under which the figure turns orange, under 80 % of it red), `max` (8: missing rows listed). Shows "N of M with <field>" and the rows without it, each a link |
 
 Tones (`color.map`, `colors`): `ok` (green), `warn` (orange), `bad` (red), `accent` (purple), `info` (blue), `muted` (grey).
+
+## Blocks added in 1.24.0: effective-dated models
+
+For models where an entity (a fund, a contract, an organisation) is a stable identity whose values live in successive
+states, each from an effective date to an end date (inclusive; empty = open-ended), with the link to the parent carried
+by the state. Worked example: the ROSA fund repository (`Fund` → `FundState`, `SubFundState.fund`, `ShareState.subFund`).
+
+Permissions, as for every block: a state the user may not see (record permission) is left out, and so is a state whose
+key to the parent, key to the entity or effective date the user may not read (field permission); every value shown goes
+through the field permission. A `delta` report is one text field: whoever may read it reads the values it holds, whatever
+the permissions on the fields it names. Cost: `asOfTree` runs one scan of each level's states table (an OR of the parents'
+keys, 100 per query; 2,000 states per level at most, then a note), `stateTimeline` one association read or one scan,
+`delta` none; every tab of a form is rendered when it opens, so keep these blocks on tables where a tree is a few hundred
+states (ROSA: 6,572 sub-fund states, 15,100 share states, a scan of 20-25 ms).
+
+| Type | Keys |
+|---|---|
+| `asOfTree` | `levels[]`, one per level under the root: `states` (the children's states table, `/root/SubFundState`), `parent` (its foreign key to the parent entity, `./fund`), `identity` (its foreign key to the child's own entity, `./subFund`), `effectiveDate`, `endDate`, `label` (a field of the state; empty: the state's label), `chip` (a field shown as a badge: status, code). `root`: a foreign key of the record to the root entity (empty: the record itself; on a state, `./fund`). `selfStates` + `selfIdentity`, `selfEffectiveDate`, `selfEndDate`, `selfLabel`, `selfChip`: the root's own states. `date`: a date field of the record giving the default date (empty: today). Every state of every entity is read (500 per table and per parent at most) and put in the page; the date input, the ◀ ▶ buttons (previous / next change among all effective and end dates) and *Today* decide which state each entity shows, with a count per level. Since 1.25.0 the date follows the user: without a `date` field, the block opens on the date last chosen in an explorer with an "in force on" date or in another block (`sessionStorage` key `ldfAsOf:<user>`), and a date chosen here is shared the same way. An entity with no state at the date is greyed, and hidden when none of its descendants has one either |
+| `stateTimeline` | the states of one entity on a time scale: `a` (an association of the record to its states) or, when the record is itself a state, `via` (its foreign key to the entity: its siblings are drawn and the record's own state highlighted). `effectiveDate`, `endDate` (empty end: the band runs to the edge, faded), `label`, `badge` + `colors` (tone per value, e.g. the source or the project; without `colors`, one tone per value met), `date` (a date field of the record drawn as a dark marker, besides today's red line). Month, quarter or year ticks by span; each band and label opens the state |
+| `delta` | a before/after report kept as JSON in a text field: `field` of the record, or of each row of `a` (one section per row, titled by `label`, with the count of changes). Shapes read: an object `{"name": {"before": "…", "after": "…"}}`; an array of `{"field"|"path"|"name", "before"|"old"|"from", "after"|"new"|"to"}`; either of them under a `changes`, `fields`, `items` or `delta` key. `labelsFrom`: the table whose field labels name the keys (empty: this table; a key may be `name`, `./name` or `/root/T/name`); `max` (50). A text that is not JSON says so; an empty report says "No change recorded" |
 
 ## Display widgets of a field (1.4.0)
 

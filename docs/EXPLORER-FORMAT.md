@@ -75,6 +75,7 @@ Computed once per index build, never per card shown.
 | `test` | `when` | `true` / `false` |
 | `suspects` | — | records the Match and Merge add-on holds as suspects of this one (metadataset `<dataset>_<table>_MDS`, tables `Suspected` and `MatchingResult`) |
 | `provided` | `name` | value given by a module through `com.on.ebx.layout.runtime.ExplorerValues.register` |
+| `stateAt` | `link` (a foreign key of this table to an entity), `states` (the entity's states table, `/root/FundState`), `identity` (its foreign key to the entity), `from`, `to` (its dates), `field` (the value) | (1.25.0) the field of the state of the linked entity **in force on the page's date** (`asOf`, else today): one SQL statement for the page's records, cards only (a facet, sort or condition on it is left out). The linked data of a dated row is read at the same date, not as the entity's current projection |
 
 ### Search
 
@@ -113,6 +114,20 @@ shows a ↑/↓ button that reverses the chosen sort for the user.
 field: enumeration, foreign key, boolean), each under a heading with its number of matching records; the chosen sort
 applies inside each group. One count per group shown on the page. `emptyLabel` (texts per locale): the heading of the
 records without a value ("(empty)" by default).
+
+### "In force on" date (1.25.0)
+
+```json
+"asOf": {"from": "/effectiveDate", "to": "/endDate", "label": {"fr-FR": "En vigueur au", "en-US": "In force on"}}
+```
+
+For a table of effective-dated states (one row per version of an entity, from a date to a date). The page shows a date
+input (today by default) and a *Today* button; only the rows whose `from` ≤ date ≤ `to` (or empty `to`) count: the total,
+the page, the tiles and every facet's counts. The chosen date is kept per user in the browser tab (`sessionStorage`,
+key `ldfAsOf:<user>`) and shared: another explorer with a date, and the *Hierarchy at a date* block of a record form,
+open on the same date. The date filter is a SQL comparison (`from <= DATE 'yyyy-MM-dd'`), so the explorer's statements
+take the SQL route. When the user may not read one of the two fields, the page shows no date and nothing is filtered.
+Set in the designer: explorer settings, *“In force on” date*.
 
 ### Header (1.20.0)
 

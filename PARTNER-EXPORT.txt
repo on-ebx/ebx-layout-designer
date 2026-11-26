@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit 097a420a5129ee8af9e49a3b96cf643dfc628755
-Merge integration/robustesse-2026-10-23: robustness audit of 2026-10-23 (lots A-G, 1.23.3: action conditions, MCP bounds, explorer permissions and paging, theme colours, texts)
+Exported from EBX-Layout-Designer commit 738f743658cdb69ff544f19b1c94c272d4985c3b
+Merge feature/rosa-blocks: 1.25.0, effective-dated models (asOfTree, stateTimeline, delta blocks; explorers in force on a date; stateAt computed value)
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

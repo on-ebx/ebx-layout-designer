@@ -42,7 +42,7 @@ public final class ExplorerCheck
 		}
 	}
 
-	static final Set<String> DERIVED_TYPES = new HashSet<String>(Arrays.asList("count", "lookup", "sameValue", "firstOf", "case", "test", "suspects", "provided"));
+	static final Set<String> DERIVED_TYPES = new HashSet<String>(Arrays.asList("count", "lookup", "sameValue", "firstOf", "case", "test", "suspects", "provided", "stateAt"));
 	static final Set<String> FACET_KINDS = new HashSet<String>(Arrays.asList("field", "flags", "ranges", "tree", "favorites"));
 	static final Set<String> FACET_WIDGETS = new HashSet<String>(Arrays.asList("checks", "chips", "select"));
 	static final Set<String> TONES = new HashSet<String>(Arrays.asList("ok", "warn", "bad", "info", "accent", "muted"));
@@ -272,6 +272,23 @@ public final class ExplorerCheck
 				this.source(pre + "group", src, true);
 			}
 		}
+		if (pLayout.path("asOf").isObject())
+		{
+			final JsonNode a = pLayout.get("asOf");
+			this.field(pre + "asOf.from", a.path("from").asText(""));
+			if (!a.path("to").asText("").isEmpty())
+			{
+				this.field(pre + "asOf.to", a.path("to").asText(""));
+			}
+			for (final String k : new String[] { "from", "to" })
+			{
+				final Model.Src s = this.model.src(a.path(k).asText(""));
+				if (s != null && !"date".equals(s.type) && !"datetime".equals(s.type))
+				{
+					this.error(pre + "asOf." + k, "\"" + k + "\" must be a date field.");
+				}
+			}
+		}
 		this.header(pre + "header", pLayout.path("header"));
 		this.card(pre + "card", pLayout.path("card"), flagFacets);
 	}
@@ -424,7 +441,7 @@ public final class ExplorerCheck
 		final String type = pDef.path("type").asText("");
 		if (!ExplorerCheck.DERIVED_TYPES.contains(type))
 		{
-			this.error(pWhere, "Unknown type \"" + type + "\" (count, lookup, sameValue, firstOf, case, test, suspects, provided).");
+			this.error(pWhere, "Unknown type \"" + type + "\" (count, lookup, sameValue, firstOf, case, test, suspects, provided, stateAt).");
 			return;
 		}
 		switch (type)
@@ -481,6 +498,37 @@ public final class ExplorerCheck
 		case "test":
 			this.condition(pWhere, pDef.get("when"), false);
 			break;
+		case "stateAt":
+		{
+			this.field(pWhere + ".link", pDef.path("link").asText(""));
+			AdaptationTable states = null;
+			try
+			{
+				states = this.dataset.getTable(com.orchestranetworks.schema.Path.parse(pDef.path("states").asText("")));
+			}
+			catch (final RuntimeException ex)
+			{
+				states = null;
+			}
+			if (states == null)
+			{
+				this.error(pWhere + ".states", "\"states\" must be a table of the dataset (/root/…).");
+			}
+			else
+			{
+				final ExplorerCheck on = this.on(states);
+				for (final String k : new String[] { "identity", "from", "field" })
+				{
+					on.field(pWhere + "." + k, pDef.path(k).asText(""));
+				}
+				if (!pDef.path("to").asText("").isEmpty())
+				{
+					on.field(pWhere + ".to", pDef.path("to").asText(""));
+				}
+				this.out.addAll(on.out);
+			}
+			break;
+		}
 		case "suspects":
 			if (this.model.mdsTable == null)
 			{
@@ -490,7 +538,7 @@ public final class ExplorerCheck
 		default:
 			break;
 		}
-		if (!"provided".equals(type) && !"suspects".equals(type) && this.model.src(Spec.DERIVED + pName) == null)
+		if (!"provided".equals(type) && !"suspects".equals(type) && !"stateAt".equals(type) && this.model.src(Spec.DERIVED + pName) == null)
 		{
 			this.error(pWhere, "EBX cannot compute this value as written.");
 		}

@@ -41,6 +41,7 @@
 .ldx-main{min-width:0}
 .ldx-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .ldx-count{font-size:15px;font-weight:600}.ldx-count small{font-weight:400;color:var(--ldx-mute)}
+.ldx-asof{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ldx-muted,#6B6575)}.ldx-asof input{font:inherit;padding:3px 6px;border:1px solid var(--ldx-line);border-radius:6px;background:var(--ldx-surface);color:inherit}.ldx-asof button{font:inherit;font-size:12px;padding:2px 8px;border:1px solid var(--ldx-line);border-radius:6px;background:var(--ldx-surface);cursor:pointer}
 .ldx-bar select{margin-left:auto;padding:4px 8px;border:1px solid var(--ldx-line);border-radius:6px;background:var(--ldx-surface)}
 .ldx-toggle{border:1px solid var(--ldx-line);background:var(--ldx-surface);border-radius:8px;padding:4px 10px;cursor:pointer}
 .ldx-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}

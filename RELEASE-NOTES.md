@@ -1,5 +1,29 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.25.0 (2026-10-24)
+
+- **Explorers: an "in force on" date** ([EXPLORER-FORMAT.md](docs/EXPLORER-FORMAT.md#in-force-on-date-1250)): `asOf`
+  names the start and end date fields of a table of effective-dated states; the page gets a date input (today by default)
+  and only the rows in force on that date count, facets and tiles included. The date is kept per user in the browser tab
+  and shared with every explorer and with the *Hierarchy at a date* block of the forms. Set in the explorer settings of
+  the designer.
+- **Computed value `stateAt`**: a field of the state in force on the page's date among the states of a linked entity
+  (the fund's name as it was on that date on a sub-fund's card, not its current name): one statement per page, cards only.
+- The 1.24.0 blocks take the theme's main colour from `--ldf-main` (audit rule, lot C).
+
+## 1.24.1 (2026-10-24, RC install: 1.24.0 ROSA blocks + robustness audit lots A-G)
+
+## 1.24.0 (2026-10-24)
+
+- **Three blocks for effective-dated models** ([LAYOUT-FORMAT.md](docs/LAYOUT-FORMAT.md#blocks-added-in-1240-effective-dated-models)),
+  where an entity is a stable identity whose values live in successive states (effective date → end date) and the link
+  to the parent is carried by the state: `asOfTree` (the hierarchy, e.g. fund → sub-funds → shares, as it stands at a
+  date chosen on the form, with ◀ ▶ to the previous or next change and a count per level), `stateTimeline` (the states
+  of one entity as bands on a time scale, open-ended bands faded, today's line, a marker on a date of the record, the
+  current state highlighted when the form is a state) and `delta` (a before/after report kept as JSON in a text field,
+  field by field, one section per row of an association). All three are in the designer's palette, category *Time* and
+  *Quality*. Built for the ROSA fund repository (AMF), generic in the model they read.
+
 ## 1.23.3 (in progress, robustness audit lots E, F and G)
 
 **Geocoding (lot E)**

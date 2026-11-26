@@ -187,7 +187,7 @@ const U = {
  riCreatedBy:['Created by','Créé par','Creato da'], riCreatedOn:['Created on','Créé le','Creato il'], riModifiedBy:['Last modified by','Modifié par','Modificato da'], riModifiedOn:['Last modified on','Modifié le','Modificato il'], riNew:['Filled in when the record is saved.','Renseigné à l’enregistrement.','Compilato al salvataggio del record.'],
  completeness:['completeness','complétude','completezza'], noRow:['No rows.','Aucune ligne.','Nessuna riga.'], rows:['rows','lignes','righe'], actions:['Actions ▾','Actions ▾','Azioni ▾'], filter:['Filter','Filtrer','Filtra'],
  noParent:['No parent · head of group','Aucune maison mère · tête de groupe','Nessuna controllante · capogruppo'], mame:['Match and Merge state, read at display','État Match and Merge, lu à l’affichage','Stato Match and Merge, letto alla visualizzazione'],
- noCoords:['No coordinates yet','Pas encore de coordonnées','Nessuna coordinata'], closed:['Closed','Fermé','Chiuso'], newRecord:['New record','Nouvel enregistrement','Nuovo record'],
+ noCoords:['No coordinates yet','Pas encore de coordonnées','Nessuna coordinata'], closed:['Closed','Fermé','Chiuso'], newRecord:['New record','Nouvel enregistrement','Nuovo record'], asOfToday:['Today','Aujourd’hui','Oggi'],
  error:['Error','Erreur','Errore'], warning:['Warning','Avertissement','Avviso'], info:['Information','Information','Informazione'],
  error1:['error','erreur','errore'], warning1:['warning','avertissement','avviso'], info1:['information','information','informazione'],
  errorN:['errors','erreurs','errori'], warningN:['warnings','avertissements','avvisi'], infoN:['information','informations','informazioni'],
@@ -344,6 +344,33 @@ const BL = {
    def:{a:'', field:''},
    spec:[{k:'assoc', key:'a'}, {k:'tfield', key:'field', of:'a', l:['Champ attendu','Expected field']}, {k:'tfield', key:'label', of:'a', l:['Libellé des manquants (vide : libellé de la ligne)','Label of the missing (empty: the row label)']},
      {k:'num', key:'target', def:100, l:['Objectif (%)','Target (%)']}, {k:'num', key:'max', def:8, l:['Manquants listés','Missing rows listed']}]},
+ asOfTree:{cat:'time', l:['Hiérarchie à une date','Hierarchy at a date'], d:['L’arbre des entités liées (fonds → compartiments → parts) tel qu’il est à une date choisie, lu dans leurs états à date d’effet.','The tree of linked entities (fund → sub-funds → shares) as it stands at a chosen date, read from their effective-dated states.'], tags:'hiérarchie date effet états bitemporel arbre fonds compartiment hierarchy as of effective states tree',
+   def:{levels:[{states:'', parent:'', identity:'', effectiveDate:'', endDate:'', label:'', chip:''}]},
+   spec:[{k:'field', key:'root', types:['fk'], l:['Racine (clé vers l’entité ; vide : cette fiche)','Root (key to the entity; empty: this record)']}, {k:'field', key:'date', types:['date','dt'], l:['Date par défaut (champ ; vide : aujourd’hui)','Default date (a field; empty: today)']},
+     {k:'items', key:'levels', l:['Niveaux sous la racine','Levels under the root'], add:['+ Niveau','+ Level'], tpl:{states:'', parent:'', identity:'', effectiveDate:'', endDate:'', label:'', chip:''}, item:[{k:'table', key:'states', l:['Table des états','States table']},
+       {k:'col', key:'parent', of:'states', types:['fk'], l:['Clé vers le parent','Key to the parent']}, {k:'col', key:'identity', of:'states', types:['fk'], l:['Clé vers l’entité','Key to the entity']},
+       {k:'col', key:'effectiveDate', of:'states', types:['date','dt'], l:['Date d’effet','Effective date']}, {k:'col', key:'endDate', of:'states', types:['date','dt'], l:['Date de fin','End date']},
+       {k:'col', key:'label', of:'states', l:['Libellé (vide : celui de l’état)','Label (empty: the state’s)']}, {k:'col', key:'chip', of:'states', l:['Puce (statut, code…)','Chip (status, code…)']}]},
+     {k:'table', key:'selfStates', l:['États de la racine (facultatif)','States of the root (optional)']}, {k:'col', key:'selfIdentity', of:'selfStates', types:['fk'], l:['Clé vers la racine','Key to the root']},
+     {k:'col', key:'selfEffectiveDate', of:'selfStates', types:['date','dt'], l:['Date d’effet','Effective date']}, {k:'col', key:'selfEndDate', of:'selfStates', types:['date','dt'], l:['Date de fin','End date']},
+     {k:'col', key:'selfLabel', of:'selfStates', l:['Libellé','Label']}, {k:'col', key:'selfChip', of:'selfStates', l:['Puce','Chip']},
+     {k:'hint', l:['Chaque niveau lit la table des états des enfants : leur clé vers le parent, leur clé vers l’entité, leur période. La date se change dans la fiche ; ◀ ▶ sautent au changement précédent ou suivant.','Each level reads the children’s states table: their key to the parent, their key to the entity, their period. The date is changed on the form; ◀ ▶ jump to the previous or next change.']}]},
+ stateTimeline:{cat:'time', l:['États successifs','Successive states'], d:['Les états à date d’effet d’une entité sur une échelle de temps : une bande par état, la date du jour, l’état courant mis en avant.','The effective-dated states of an entity on a time scale: one band per state, today’s line, the current state highlighted.'], tags:'états date effet versions bitemporel frise states effective versions timeline',
+   def:{a:'', effectiveDate:'', endDate:''},
+   spec:[{k:'assoc', key:'a', none:true, l:['Association des états (vide : les états frères par la clé ci-dessous)','Association of the states (empty: the sibling states through the key below)']},
+     {k:'field', key:'via', types:['fk'], l:['Clé vers l’entité (quand la fiche est un état)','Key to the entity (when the record is a state)'], when:b => !b.a},
+     {k:'tfield', key:'effectiveDate', of:'a', types:['date','dt'], l:['Date d’effet','Effective date'], when:b => !!b.a}, {k:'field', key:'effectiveDate', types:['date','dt'], l:['Date d’effet','Effective date'], when:b => !b.a},
+     {k:'tfield', key:'endDate', of:'a', types:['date','dt'], l:['Date de fin','End date'], when:b => !!b.a}, {k:'field', key:'endDate', types:['date','dt'], l:['Date de fin','End date'], when:b => !b.a},
+     {k:'tfield', key:'label', of:'a', l:['Libellé (vide : celui de l’état)','Label (empty: the state’s)'], when:b => !!b.a}, {k:'field', key:'label', l:['Libellé (vide : celui de l’état)','Label (empty: the state’s)'], when:b => !b.a},
+     {k:'tfield', key:'badge', of:'a', l:['Couleur selon (source, projet…)','Colour by (source, project…)'], when:b => !!b.a}, {k:'field', key:'badge', l:['Couleur selon (source, projet…)','Colour by (source, project…)'], when:b => !b.a},
+     {k:'tones', key:'colors', of:'badge', l:['Couleurs par valeur','Colours by value']}, {k:'field', key:'date', types:['date','dt'], l:['Repère (champ date de la fiche)','Marker (a date field of the record)']}]},
+ delta:{cat:'quality', l:['Avant / après (rapport)','Before / after (report)'], d:['Un rapport de changements gardé en JSON dans un champ texte (projet, demande) : champ, valeur avant, valeur après.','A change report kept as JSON in a text field (project, request): field, value before, value after.'], tags:'delta avant après changements rapport projet demande before after changes report',
+   def:{field:''},
+   spec:[{k:'assoc', key:'a', none:true, l:['Association (vide : le champ de la fiche)','Association (empty: a field of the record)']},
+     {k:'tfield', key:'field', of:'a', types:['text','str'], l:['Champ du rapport','Report field'], when:b => !!b.a}, {k:'field', key:'field', types:['text','str'], l:['Champ du rapport','Report field'], when:b => !b.a},
+     {k:'tfield', key:'label', of:'a', l:['Titre de chaque ligne (vide : son libellé)','Title of each row (empty: its label)'], when:b => !!b.a},
+     {k:'table', key:'labelsFrom', l:['Table dont les libellés nomment les champs (vide : celle-ci)','Table whose labels name the fields (empty: this one)']}, {k:'num', key:'max', def:50, l:['Lignes au plus','Rows at most']},
+     {k:'hint', l:['Formes lues : {"champ": {"before": …, "after": …}} ou [{"field", "before", "after"}], aussi sous une clé changes, fields, items ou delta.','Shapes read: {"field": {"before": …, "after": …}} or [{"field", "before", "after"}], also under a changes, fields, items or delta key.']}]},
  linked:{cat:'relations', l:['Fiche liée (aperçu)','Linked record (preview)'], d:['Les champs choisis de l’enregistrement visé par une clé étrangère, avec un lien pour l’ouvrir.','Chosen fields of the record a foreign key points to, with a link to open it.'], tags:'fournisseur marque référence supplier',
    def:{fk:'', fields:[], open:true},
    spec:[{k:'field', key:'fk', types:['fk'], l:['Clé étrangère','Foreign key']}, {k:'fkfields', key:'fields', of:'fk', l:['Champs affichés','Fields shown']}, {k:'bool', key:'open', def:true, l:['Lien « Ouvrir la fiche »','“Open the record” link']}]},
@@ -630,6 +657,13 @@ function previewMore(b){
       return `<div class="facts"><div class="fact"><b>—</b><span>${esc(tx(b.plannedLabel) || tfl(b.a, b.planned))}</span></div><div class="fact"><b>—</b><span>${esc(tx(b.actualLabel) || tfl(b.a, b.actual))}</span></div><div class="fact"><b>—</b><span>Δ</span></div></div>${indicative()}`;
     case 'coverage': if (!b.a || !b.field) return setupNote();
       return `<div class="more"><b>— %</b> ${esc(tfl(b.a, b.field))}</div>${indicative()}`;
+    case 'asOfTree': { const lv = (b.levels || []).filter(l => l.states); if (!lv.length) return setupNote();
+      const nm = p => { const tb = tableOf(p); return tb ? T(tb.lab) : p; };
+      return `<div class="more">\uD83D\uDCC5 ${esc(b.date ? lab(b.date) : u('asOfToday'))}</div><div class="crumbx"><b>${esc(creating ? u('newRecord') : B.record.label || '')}</b></div>${lv.map((l, i) => `<div style="margin-left:${14 * (i + 1)}px;border-left:1px solid var(--line,#E2DEE6);padding-left:10px"><span class="s">${esc(nm(l.states))}</span> · <b>…</b></div>`).join('')}${indicative()}`; }
+    case 'stateTimeline': if (!b.effectiveDate || !(b.a || b.via)) return setupNote();
+      return `<div class="barsx">${(b.a && rows.length ? rows.slice(0, 4) : ['2024', '2025', '2026']).map((r, i) => `<span>${esc(r)}</span><span class="barx"><i style="margin-left:${i * 30}%;width:${i === 2 ? 40 : 28}%"></i></span>`).join('')}</div>${indicative()}`;
+    case 'delta': if (!b.field) return setupNote();
+      return `<div class="gtab"><table><tbody><tr><th>${esc(b.a ? tfl(b.a, b.field) : lab(b.field))}</th><td><s>…</s></td><td>→</td><td><b>…</b></td></tr></tbody></table></div>${indicative()}`;
     case 'linked': { if (!b.fk) return setupNote(); const fk = F[b.fk] || {};
       return `<b>${esc(val(b.fk) || '—')}</b>${(b.fields || []).map(p => { const f = (fk.tf || []).find(x => x.p === p); return `<div class="fr"><div class="fl">${esc(f ? T(f.lab) : p)}</div><div class="fv"><div class="w-ro">…</div></div></div>`; }).join('')}${b.open !== false ? `<div style="margin-top:6px"><span class="pbtn">${esc(c('openRecord'))}</span></div>` : ''}`; }
     case 'contacts': if (!b.a) return setupNote();
@@ -795,7 +829,7 @@ function whereIs(node){
   for (const {t, b} of blocks){ if (b.type === 'panel'){ const i = (b.fields || []).findIndex(f => f.p.startsWith(node + '/')); if (i >= 0) return {t, b, i}; } }
   return null;
 }
-const defTitle = b => ['grid','timeline','contacts','documents','chart','pivot','aggregates','heatmap','gantt','compare','coverage'].includes(b.type) || (b.type === 'gallery' && b.a) ? (b.a ? lab(b.a) : '') : b.type === 'linked' && b.fk ? lab(b.fk) : b.type === 'stepper' && b.field ? lab(b.field) : '';
+const defTitle = b => ['grid','timeline','contacts','documents','chart','pivot','aggregates','heatmap','gantt','compare','coverage','stateTimeline'].includes(b.type) || (b.type === 'gallery' && b.a) ? (b.a ? lab(b.a) : '') : b.type === 'linked' && b.fk ? lab(b.fk) : b.type === 'stepper' && b.field ? lab(b.field) : '';
 const blockName = b => hasText(b.title) ? T(b.title) : defTitle(b) || bl(b.type);
 
 const isLoc = v => !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length > 0 && Object.keys(v).every(k => LOCALES.includes(k) && typeof v[k] === 'string');
@@ -1358,7 +1392,7 @@ function newBlock(type, extra){
     grid:{a:(B.assocs[0] || {}).p || '', style:'native'}, map:{title:L('Localisation','Location','Posizione'), lat:'', lng:''},
     tree:{title:L('Structure du groupe','Group structure','Struttura del gruppo'), parent:'', children:''},
     hours:{title:L('Horaires d’ouverture','Opening hours','Orari di apertura'), week:{a:'', day:'', open:'', close:'', closed:''}, days:{}, exceptions:{a:'', date:'', open:'', close:'', closed:'', reason:''}, max:3, tz:''}, duplicates:{title:L('Doublons','Duplicates','Duplicati')},
-    note:{text:L('Texte d’aide pour l’utilisateur.','Help text for the user.','Testo di aiuto per l’utente.')}, custom:{cls:'', title:{}}}[type] || Object.assign({title:BL[type] && !['timeline','contacts','documents','chart','pivot','aggregates','linked','stepper','heatmap','gantt','compare','coverage'].includes(type) ? L(BL[type].l[0], BL[type].l[1]) : {}}, BL[type] ? BL[type].def : {});
+    note:{text:L('Texte d’aide pour l’utilisateur.','Help text for the user.','Testo di aiuto per l’utente.')}, custom:{cls:'', title:{}}}[type] || Object.assign({title:BL[type] && !['timeline','contacts','documents','chart','pivot','aggregates','linked','stepper','heatmap','gantt','compare','coverage','stateTimeline'].includes(type) ? L(BL[type].l[0], BL[type].l[1]) : {}}, BL[type] ? BL[type].def : {});
   S.blocks[id] = Object.assign({id, type}, JSON.parse(JSON.stringify(base)), extra || {});
   return id;
 }

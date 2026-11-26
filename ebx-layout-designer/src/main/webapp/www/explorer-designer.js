@@ -105,6 +105,8 @@ const C = {
  permSearch:['Droits EBX : un champ masqué pour l’utilisateur n’est ni cherché ni proposé au tri.','EBX permissions: a field hidden for the user is neither searched nor offered as a sort.'],
  variantD:['Une variante est une version complète de l’explorateur. Un utilisateur voit la première variante (après la première) dont il a un des rôles, sinon la première.','A variant is a complete version of the explorer. A user sees the first variant (after the first) one of whose roles they hold, else the first one.'],
  vName:['Nom','Name'], forRoles:['Pour les rôles','For roles'], firstVariant:['Première variante : pour tous les rôles sans variante à eux.','First variant: for every role without a variant of its own.'], pageSize:['Cartes par page','Cards per page'],
+  asOfS:['Date « en vigueur au »','“In force on” date'], asOfFrom:['Champ de début (date d’effet)','Start field (effective date)'], asOfTo:['Champ de fin (vide = sans fin)','End field (empty = open-ended)'], asOfLabel:['Libellé du sélecteur','Label of the date input'], asOfNone:['(aucune : toutes les lignes)','(none: every row)'],
+  asOfHint:['Une date choisie sur la page ; seules les lignes dont début ≤ date ≤ fin (ou fin vide) comptent, dans les facettes aussi. La date suit l’utilisateur d’un explorateur à l’autre et jusqu’au bloc « Hiérarchie à une date » des fiches.','A date chosen on the page; only the rows whose start ≤ date ≤ end (or empty end) count, in the facets too. The date follows the user from one explorer to the next and into the “Hierarchy at a date” block of the forms.'],
   freshness:['Fraîcheur des résultats','Freshness of the results'], frOnDemand:['À la demande (recommandé)','On demand (recommended)'], frAuto:['Automatique','Automatic'],
   frMaxAge:['Âge maximum (minutes)','Maximum age (minutes)'],
   frHint:['À la demande : les résultats calculés sont partagés et gardés jusqu’à « Actualiser » ou l’âge maximum ; la page dit quand ils ont été calculés et si des données ont changé depuis. Automatique : recalculés dès qu’une table lue change (au plus une minute de retard) ; à réserver aux petits volumes ou à peu d’utilisateurs.','On demand: computed results are shared and kept until "Refresh" or the maximum age; the page says when they were computed and whether data changed since. Automatic: computed again as soon as a table read changes (at most a minute late); keep it for small volumes or few users.'],
@@ -126,7 +128,7 @@ const C = {
  tSuggest:['Suggestion chargée. « Annuler » revient en arrière.','Suggestion loaded. “Undo” goes back.'], tEmpty:['Explorateur vide. « Annuler » revient en arrière.','Empty explorer. “Undo” goes back.'], tDeleted:['Supprimé. « Annuler » le remet.','Deleted. “Undo” puts it back.'],
  rangeLo:['Moins de {0}','Below {0}'], rangeMid:['De {0} à moins de {1}','{0} to under {1}'], rangeHi:['{0} et plus','{0} and above'], needs:['À surveiller','Needs attention'], toComplete:['À compléter','To complete'], possibleDup:['Doublon possible','Possible duplicate'],
  ty_str:['Texte','Text'], ty_text:['Texte long','Long text'], ty_int:['Entier','Integer'], ty_dec:['Nombre','Number'], ty_date:['Date','Date'], ty_dt:['Date-heure','Date-time'], ty_bool:['Oui/non','Yes/no'], ty_enum:['Liste','List'], ty_fk:['Clé étr.','Foreign key'], ty_list:['Multiple','Multiple'], ty_media:['Image','Image'], ty_flags:['Drapeaux','Flags'],
- dt_count:['Comptage','Count'], dt_lookup:['Valeur liée','Lookup'], dt_sameValue:['Doublons','Duplicates'], dt_firstOf:['Premier renseigné','First filled'], dt_case:['Selon conditions','By conditions'], dt_test:['Test','Test'], dt_suspects:['Suspects M&M','M&M suspects'], dt_provided:['Fourni par un module','Provided by a module'],
+ dt_stateAt:['Valeur de l’état en vigueur à la date','Value of the state in force on the date'], dt_count:['Comptage','Count'], dt_lookup:['Valeur liée','Lookup'], dt_sameValue:['Doublons','Duplicates'], dt_firstOf:['Premier renseigné','First filled'], dt_case:['Selon conditions','By conditions'], dt_test:['Test','Test'], dt_suspects:['Suspects M&M','M&M suspects'], dt_provided:['Fourni par un module','Provided by a module'],
  w_text:['Texte','Text'], w_bold:['Gras','Bold'], w_mono:['Code','Code'], w_copy:['Copiable','Copyable'], w_tag:['Étiquette','Tag'], w_link:['Lien vers la fiche','Record link'], w_pill:['Pastille colorée','Colour pill'], w_dot:['Point coloré','Coloured dot'], w_country:['Pays avec drapeau','Country with flag'],
  w_num:['Nombre','Number'], w_money:['Montant','Amount'], w_bar:['Barre','Bar'], w_ring:['Anneau','Ring'], w_level:['Pastille de seuil','Threshold pill'], w_stars:['Étoiles','Stars'], w_alert:['Alerte si non nul','Alert when not zero'], w_date:['Date','Date'], w_relative:['Date relative','Relative date'], w_flags:['Drapeaux','Flags'],
  wd_text:['Tel quel','As is'], wd_bold:['Mis en avant','Emphasized'], wd_mono:['Police à chasse fixe','Monospace'], wd_copy:['Avec un bouton Copier','With a Copy button'], wd_tag:['Encadré gris','Grey tag'], wd_link:['Ouvre la fiche liée','Opens the linked record'], wd_pill:['Couleur par valeur','Colour per value'], wd_dot:['Point de couleur + libellé','Coloured dot + label'], wd_country:['Drapeau + nom','Flag + name'],
@@ -160,7 +162,7 @@ const LISTS = ['overline','subtitle','lines','tags','kpis'];
 const TONES = ['ok','warn','bad','info','accent','muted'];
 const OPS = ['in','notIn','filled','empty','gt','lt','ge','le','eq','ne','days'];
 const TOP = 10, MAXLIST = 50;
-const DT = {count:'int', sameValue:'int', test:'bool', suspects:'list', lookup:'str', firstOf:'str', case:'str', provided:'str'};
+const DT = {count:'int', sameValue:'int', test:'bool', suspects:'list', lookup:'str', firstOf:'str', case:'str', provided:'str', stateAt:'str'};
 
 let D, vi = 0, X, label = '';
 let MC = {}, SIDX = {};                    // per-render caches: field metadata, sample index
@@ -654,7 +656,7 @@ function pitem(ref, sub){
 }
 function derivedSummary(d){
   if (!d) return '';
-  const bits = [d.type]; ['association','table','fk','field'].forEach(k => { if (d[k]) bits.push(d[k]); });
+  const bits = [d.type]; ['association','table','fk','link','states','field'].forEach(k => { if (d[k]) bits.push(d[k]); });
   return bits.join(' · ');
 }
 function renderPalette(){
@@ -997,6 +999,11 @@ function renderInspector(){
     h += `<div class="fld"><label for="ldx-label">${esc(c('rowLabel'))}</label><input type="text" id="ldx-label" data-label="1" value="${esc(label)}"></div>`;
     h += `<div class="fld"><span class="l">${esc(c('pageTitle'))}</span>${locIn(D, 'title', label)}</div>`;
     h += rolesEd(D.openTo ? {roles:D.openTo, __open:true} : {roles:[]}, c('openTo'), ' ', c('openToHint'));
+    const ao = X.asOf || {}, dateF = FIELDS.filter(f => f.t === 'date' || f.t === 'dt');
+    const dsel = (key, cur, none) => `<select data-asof="${key}"><option value="">${esc(none)}</option>${dateF.map(f => `<option value="${esc(f.p)}"${f.p === cur ? ' selected' : ''}>${esc(labelOf(f.p))}  ${esc(f.p)}</option>`).join('')}</select>`;
+    h += `<div class="sechd">${esc(c('asOfS'))}</div><div class="fld"><span class="l">${esc(c('asOfFrom'))}</span>${dsel('from', ao.from, c('asOfNone'))}</div>`;
+    if (ao.from) h += `<div class="fld"><span class="l">${esc(c('asOfTo'))}</span>${dsel('to', ao.to, '—')}</div><div class="fld"><span class="l">${esc(c('asOfLabel'))}</span>${locIn(X.asOf, 'label')}</div>`;
+    h += `<div class="where">${esc(c('asOfHint'))}</div>`;
     const fr = D.freshness || {}, frMode = fr.mode === 'auto' ? 'auto' : 'onDemand';
     h += `<div class="fld"><label for="ldx-fresh">${esc(c('freshness'))}</label><select id="ldx-fresh" data-frmode="1"><option value="onDemand"${frMode === 'onDemand' ? ' selected' : ''}>${esc(c('frOnDemand'))}</option><option value="auto"${frMode === 'auto' ? ' selected' : ''}>${esc(c('frAuto'))}</option></select></div>`;
     if (frMode === 'onDemand') h += `<div class="fld"><label for="ldx-frage">${esc(c('frMaxAge'))}</label><input type="number" min="1" max="1440" id="ldx-frage" data-frage="1" value="${esc(fr.maxAgeMinutes || 60)}"></div>`;
@@ -1316,6 +1323,7 @@ root.addEventListener('change', e => {
   if (t.matches('[data-otone]')){ snap(); const o = optTarget(); o.colors = o.colors || {}; o.colors[t.dataset.otone] = t.value; return commit(''); }
   if (t.matches('[data-oval]')){ snap(); const o = optTarget(); if (t.value === '') delete o[t.dataset.oval]; else o[t.dataset.oval] = t.value; return commit(''); }
   if (t.matches('[data-onum]')){ snap(); const o = optTarget(), k = t.dataset.onum; if (t.value === '') delete o[k]; else o[k] = +t.value; return commit(''); }
+  if (t.matches('[data-asof]')){ snap(); const k = t.getAttribute('data-asof'); if (k === 'from' && !t.value) delete X.asOf; else { X.asOf = Object.assign({}, X.asOf || {}); X.asOf[k] = t.value; if (!X.asOf.to) delete X.asOf.to; } return commit(''); }
   if (t.matches('[data-frmode]')){ snap(); D.freshness = Object.assign({}, D.freshness || {}, {mode: t.value}); if (t.value !== 'auto') D.freshness.maxAgeMinutes = D.freshness.maxAgeMinutes || 60; return commit(''); }
   if (t.matches('[data-frage]')){ snap(); D.freshness = Object.assign({mode: 'onDemand'}, D.freshness || {}, {maxAgeMinutes: Math.max(1, Math.min(1440, +t.value || 60))}); return commit(''); }
   if (t.matches('[data-psize]')){ snap(); X.pageSize = Math.max(1, +t.value || 48); return commit(''); }
