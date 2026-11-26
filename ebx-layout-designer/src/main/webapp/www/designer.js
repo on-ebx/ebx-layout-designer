@@ -18,6 +18,26 @@ function L(fr, en, it){ const o = {}; LOCALES.forEach(l => { const k = l.slice(0
 
 /* the designer's own words */
 const C = {
+ bnOff:['La table « {0} » n’utilise pas encore cette fiche.','Table “{0}” does not use this form yet.'], bnOffSub:['La mise en page est enregistrée. Il reste à l’activer : le designer écrit la déclaration dans le fichier du modèle, puis EBX doit redémarrer.','The layout is saved. It remains to activate it: the designer writes the declaration into the model file, then EBX must restart.'],
+ bnOther:['La table « {0} » utilise une autre fiche ({1}).','Table “{0}” uses another form ({1}).'], bnOtherSub:['Activer la remplace par celle-ci ; « Remettre la fiche précédente » la rétablit.','Activating replaces it with this one; “Put the previous form back” restores it.'],
+ bnWait:['Activée dans {0} : prendra effet au prochain redémarrage d’EBX.','Activated in {0}: takes effect at the next EBX restart.'], bnWaitSub:['Ouvrez ensuite une fiche : ce bandeau passe au vert dès qu’elle s’affiche avec cette mise en page.','Then open a record: this banner turns green as soon as it is drawn with this layout.'],
+ bnDma:['Modèle DMA : la fiche se déclare dans l’écran du modèle, en 4 étapes.','DMA model: the form is declared in the model screen, in 4 steps.'], bnDmaSub:['Le designer ne peut pas écrire dans un modèle DMA : déclarez la classe dans la librairie de composants du modèle, choisissez-la pour la table, puis publiez. Aucun redémarrage.','The designer cannot write into a DMA model: declare the class in the model’s component library, choose it for the table, then publish. No restart.'],
+ bnManual:['La table « {0} » n’utilise pas encore cette fiche : déclaration à faire à la main.','Table “{0}” does not use this form yet: declare it by hand.'], bnManualSub:['Le designer n’a pas pu écrire dans le fichier du modèle ({0}). Le guide donne la ligne à coller.','The designer could not write into the model file ({0}). The guide gives the line to paste.'],
+ bnOn:['Fiche active : la table « {0} » l’utilise.','Form active: table “{0}” uses it.'], bnOnSub:['Vue pour la dernière fois sur « {0} » le {1}. Chaque enregistrement s’affiche à la prochaine ouverture d’une fiche, sans redémarrage.','Last drawn on “{0}” on {1}. Each save shows at the next opening of a record, with no restart.'],
+ bnSteps:['Voir les étapes','See the steps'], bnDetails:['Détails','Details'],
+ stSave:['Enregistrer','Save'], stActivate:['Activer','Activate'], stRestart:['Redémarrer EBX','Restart EBX'], stCheck:['Vérifier','Check'], stCopy:['Copier la classe','Copy the class'], stDeclare:['Déclarer le composant','Declare the component'], stChoose:['Le choisir pour la table','Choose it for the table'], stPublish:['Publier','Publish'], stPaste:['Coller la déclaration','Paste the declaration'],
+ gKindDma:['modèle DMA {0}','DMA model {0}'], gKindModule:['modèle {0}','model {0}'], gTitle:['Utiliser cette fiche pour « {0} »','Use this form for “{0}”'], gTitleOn:['Fiche active pour « {0} »','Form active for “{0}”'],
+ gSaved:['Version {0}, enregistrée le {1} par {2}.','Version {0}, saved on {1} by {2}.'], gCopy:['Copier le nom de la classe','Copy the class name'], gCopyTxt:['C’est la même pour toutes les tables et tous les modèles :','It is the same for every table and every model:'],
+ gDeclare:['La déclarer dans la librairie de composants du modèle','Declare it in the model’s component library'], gDeclareTxt:['Une fois par modèle ; si une autre table l’utilise déjà, passez à l’étape 3.','Once per model; if another table already uses it, go to step 3.'],
+ gModel:['Modèle {0}','Model {0}'], gLibrary:['Librairie de composants','Component library'], gCreate:['+ Créer','+ Create'], gCompName:['Nom du composant','Component name'], gRule:['Configuration › Règle','Configuration › Rule'], gCategories:['Catégories du composant (déduites par EBX)','Component types (inferred by EBX)'],
+ gChoose:['Le choisir pour la table « {0} »','Choose it for table “{0}”'], gFormLayout:['Mise en page du formulaire','Form layout'], gComponent:['Composant','Component'], gChooseTxt:['La liste ne propose que les composants déclarés à l’étape 2.','The list only offers the components declared in step 2.'],
+ gPublish:['Publier le modèle','Publish the model'], gPublishTxt:['Bouton « Publier » de l’écran du modèle. La fiche s’applique aussitôt aux jeux de données du modèle, sans redémarrage.','“Publish” button of the model screen. The form applies at once to the model’s datasets, with no restart.'],
+ gCheckTxt:['Ouvrez une fiche de « {0} » : l’état passe au vert dès qu’elle s’affiche avec cette mise en page.','Open a record of “{0}”: the state turns green as soon as it is drawn with this layout.'], gSeen:['Vue sur « {0} » le {1}','Seen on “{0}” on {1}'], gNotSeen:['Pas encore vue depuis le démarrage d’EBX','Not seen since EBX started'],
+ gAgent:['Avec l’assistant d’EBX ou un agent (serveur MCP data-model) :','With EBX’s assistant or an agent (data-model MCP server):'],
+ gPaste:['Coller la déclaration dans le fichier du modèle','Paste the declaration into the model file'], gPasteTxt:['Dans l’osd:table de {0}, dans le fichier XSD du modèle (le designer n’a pas pu le faire : {1}) :','In the osd:table of {0}, in the model’s XSD file (the designer could not do it: {1}):'],
+ gRestartTxt:['EBX ne relit le fichier d’un modèle de module qu’au démarrage. À faire par l’administrateur du serveur.','EBX only reads a module model’s file when it starts. To be done by the server’s administrator.'],
+ gActivateTxt:['Le designer ajoute cette ligne dans {0}, sur la table {1} ; la fiche précédente éventuelle est gardée pour revenir en arrière.','The designer adds this line to {0}, on table {1}; any previous form is kept to go back.'], gReplaces:['Remplacera : {0}','Will replace: {0}'],
+ gWhy:['Pourquoi un redémarrage ? Le modèle {0} est un fichier de module, lu par EBX à son démarrage. Une mise en page modifiée ensuite s’affiche, elle, sans redémarrage.','Why a restart? Model {0} is a module file, read by EBX when it starts. A layout changed afterwards shows with no restart.'],
  title:['Designer de fiche','Form designer'], help:['Aide','Help'],
  useActive:['Déclarée dans le modèle','Declared in the model'], useRestart:['Déclarée · redémarrage requis','Declared · restart needed'],
  useOff:['Non utilisée par la table','Not used by the table'], useUnknown:['Modèle DMA : déclaration à vérifier','DMA model: check the declaration'], useNofile:['Déclaration à faire à la main','Declare it by hand'],
@@ -135,6 +155,7 @@ const c = (k, ...a) => { let s = (C[k] || [k,k])[UI]; a.forEach((v,i) => { s = s
 
 /* the form's own words (as the runtime writes them), in the preview language */
 const U = {
+ svGolden:['Golden record','Fiche de référence','Record di riferimento'], wfSample:['Validation request · with the reviewer since 3 days','Demande de validation · chez le valideur depuis 3 jours','Richiesta di validazione · dal revisore da 3 giorni'], inSample:['2 fields changed here','2 champs modifiés ici','2 campi modificati qui'],
  ocChild:['Subsidiary','Filiale','Controllata'],
  afterCreate2:['Shown once the record is created.','Affiché une fois l’enregistrement créé.','Visibile dopo la creazione del record.'], chCount:['2 fields changed','2 champs modifiés','2 campi modificati'], chEmpty:['(empty)','(vide)','(vuoto)'],
  ubSample1:['Contacts, through Company','Contacts, par Société','Contatti, tramite Società'], ubSample2:['Addresses, through Company','Adresses, par Société','Indirizzi, tramite Società'],
@@ -271,6 +292,40 @@ const BL = {
    spec:[{k:'fields', key:'lines', l:['Lignes de rue','Street lines']}, {k:'field', key:'number', l:['Numéro (sur la première ligne)','Number (on the first line)']}, {k:'choice', key:'numberPlace', def:'auto', l:['Place du numéro','Number position'], opts:[['auto',['Selon le pays','By country']],['numberBefore',['Avant la rue','Before the street']],['numberAfter',['Après la rue','After the street']]], when:b => b.number}, {k:'field', key:'zip', l:['Code postal','Postcode']}, {k:'field', key:'city', l:['Ville','City']}, {k:'field', key:'region', l:['Région, état','Region, state']},
      {k:'field', key:'country', l:['Pays','Country']}, {k:'choice', key:'format', def:'auto', l:['Mise en forme','Layout'], opts:[['auto',['Selon le pays','By country']],['zipFirst',['Code postal puis ville','Postcode then city']],['cityFirst',['Ville, région code','City, region code']],['zipAfter',['Ville puis code (UK)','City then code (UK)']]]},
      {k:'bool', key:'mapLink', def:true, l:['Lien vers la carte','Map link']}]},
+ sourceValues:{cat:'quality', l:['Valeurs par source','Values by source'], d:['Pour une fiche de référence : la valeur donnée par chaque source fusionnée, champ par champ.','For a golden record: the value each merged source gave, field by field.'], tags:'match merge golden survivance lineage sources fusion doublons survivorship',
+   def:{fields:[], source:'', onlyDifferent:true, max:6},
+   spec:[{k:'fields', key:'fields', l:['Champs comparés (vide : tous)','Fields compared (empty: all)']}, {k:'field', key:'source', l:['Champ du système source (en-tête de colonne)','Source system field (column header)']},
+     {k:'bool', key:'onlyDifferent', def:true, l:['Seulement les champs où les sources diffèrent','Only the fields where sources differ']}, {k:'num', key:'max', def:6, l:['Sources au plus','Sources at most']},
+     {k:'hint', l:['Lit le groupe de l’add-on Match and Merge (API publique). Sur une fiche fusionnée, le bloc renvoie vers sa fiche de référence.','Reads the Match and Merge add-on’s group (public API). On a merged record, the block links to its golden record.']}]},
+ workflowTasks:{cat:'actions', l:['Workflows en cours','Workflows in progress'], d:['Les workflows ouverts sur la fiche : qui doit agir, depuis quand, avec la tâche à ouvrir.','The workflows open on the record: who must act, since when, with the task to open.'], tags:'workflow tâches validation demande approbation tasks approval inbox',
+   def:{variables:''},
+   spec:[{k:'str', key:'variables', l:['Variables du workflow qui désignent la fiche (séparées par des virgules)','Workflow variables that point to the record (comma separated)'], ph:'materialXPath, record'},
+     {k:'hint', l:['La variable contient l’XPath de la fiche (/root/T[./id=…]) ou sa clé. Cherché dans toutes les publications par l’API du moteur de workflow ; la tâche s’ouvre dans une fenêtre par-dessus la fiche.','The variable holds the record’s XPath (/root/T[./id=…]) or its key. Looked up in every publication through the workflow engine’s API; the task opens in a window over the record.']}]},
+ translations:{cat:'quality', l:['Traductions','Translations'], d:['Pour chaque langue : ce qui est traduit et ce qui manque.','For each language: what is translated and what is missing.'], tags:'langues traductions libellés i18n languages localisation',
+   def:{a:'', lang:'', fields:[], expected:'', languages:[]},
+   spec:[{k:'assoc', key:'a', none:true, l:['Table des traductions (facultatif)','Translations table (optional)']},
+     {k:'tfield', key:'lang', of:'a', l:['Champ langue','Language field'], when:b => b.a}, {k:'tfields', key:'fields', of:'a', l:['Champs traduits','Translated fields'], when:b => b.a},
+     {k:'str', key:'expected', l:['Langues attendues (EN, FR, DE…)','Expected languages (EN, FR, DE…)'], ph:'EN, FR, DE', when:b => b.a},
+     {k:'items', key:'languages', l:['Ou une langue par groupe de champs de la fiche','Or one language per group of fields of the record'], add:['+ Langue','+ Language'], tpl:{code:'', fields:[]}, item:[{k:'str', key:'code', l:['Langue','Language'], ph:'FR'}, {k:'fields', key:'fields', l:['Champs','Fields']}], when:b => !b.a}]},
+ inheritance:{cat:'quality', l:['Héritage','Inheritance'], d:['Dans un jeu de données enfant : ce que la fiche hérite du parent et ce qui est modifié ici.','In a child dataset: what the record inherits from the parent and what is changed here.'], tags:'héritage marché surcharge parent enfant inheritance overwrite market child dataset',
+   def:{fields:[], listInherited:true},
+   spec:[{k:'fields', key:'fields', l:['Champs suivis (vide : tous)','Fields followed (empty: all)']}, {k:'bool', key:'listInherited', def:true, l:['Lister les champs hérités','List the inherited fields']},
+     {k:'hint', l:['Dans un jeu de données racine, le bloc dit qu’il n’hérite de rien. API documentée : getValueWithoutResolution et AdaptationValue.INHERIT_VALUE.','In a root dataset the block says it inherits nothing. Documented API: getValueWithoutResolution and AdaptationValue.INHERIT_VALUE.']}]},
+ valueHistory:{cat:'time', l:['Évolution d’une valeur','Value over time'], d:['La courbe d’une valeur dans l’historique de la fiche, avec les changements.','A value’s curve in the record’s history, with the changes.'], tags:'historique courbe graphique tendance prix score evolution trend chart',
+   def:{fields:[], period:'all', shape:'step', listChanges:true, author:true},
+   spec:[{k:'fields', key:'fields', l:['Valeurs suivies (une par onglet)','Values followed (one per tab)']},
+     {k:'choice', key:'period', def:'all', l:['Période','Period'], opts:[['all',['Tout l’historique','The whole history']],['12m',['12 derniers mois','Last 12 months']],['90d',['90 derniers jours','Last 90 days']]]},
+     {k:'choice', key:'shape', def:'step', l:['Tracé','Line'], opts:[['step',['En escalier (la valeur tient jusqu’au changement suivant)','Steps (a value holds until the next change)']],['line',['Ligne','Line']]]},
+     {k:'bool', key:'listChanges', def:true, l:['Lister les changements sous la courbe','List the changes under the curve']}, {k:'bool', key:'author', def:true, l:['Afficher l’auteur','Show the author']},
+     {k:'hint', l:['Lu dans l’historique d’EBX : la table doit être historisée. Seuls les changements de la valeur sont gardés. Une valeur non numérique est listée sans courbe.','Read in EBX’s history: the table must be historized. Only the changes of the value are kept. A non-numeric value is listed without a curve.']}]},
+ sitesMap:{cat:'location', l:['Sites sur la carte','Sites on a map'], d:['Les lignes d’une association (établissements, adresses) sur une carte, avec leur liste.','An association’s rows (sites, addresses) on a map, with their list.'], tags:'carte établissements adresses sites magasins map locations stores openstreetmap',
+   def:{a:'', lat:'', lng:'', address:[], label:'', hq:'', active:'', showInactive:false, tall:false},
+   spec:[{k:'assoc', key:'a'}, {k:'tfield', key:'lat', of:'a', l:['Latitude (facultatif)','Latitude (optional)']}, {k:'tfield', key:'lng', of:'a', l:['Longitude (facultatif)','Longitude (optional)']},
+     {k:'tfields', key:'address', of:'a', l:['Ou adresse : champs dans l’ordre (n°, rue, code postal, ville, pays…)','Or address: fields in order (number, street, postcode, city, country…)']},
+     {k:'tfield', key:'label', of:'a', l:['Nom du site (vide : libellé de la ligne)','Site name (empty: the row label)']}, {k:'tfield', key:'detail', of:'a', l:['Ligne de détail','Detail line']},
+     {k:'tfield', key:'hq', of:'a', types:['bool'], l:['Mis en avant si (oui/non : siège…)','Highlighted when (yes/no: head office…)']}, {k:'tfield', key:'active', of:'a', types:['bool'], l:['Actif (oui/non)','Active (yes/no)']},
+     {k:'bool', key:'showInactive', def:false, l:['Montrer aussi les sites inactifs','Also show inactive sites']}, {k:'bool', key:'tall', def:false, l:['Grande carte','Large map']},
+     {k:'hint', l:['Sans coordonnées, chaque adresse est cherchée par le serveur EBX sur OpenStreetMap (Nominatim), au plus six nouvelles par affichage, puis gardée en mémoire ; une rue introuvable est placée sur sa ville et signalée. Le navigateur charge les tuiles d’OpenStreetMap.','Without coordinates, each address is looked up by the EBX server on OpenStreetMap (Nominatim), at most six new ones per display, then kept in memory; an unknown street is placed on its town and flagged. The browser loads OpenStreetMap tiles.']}]},
  orgChart:{cat:'relations', l:['Hiérarchie graphique','Hierarchy chart'], d:['Le groupe de la fiche en organigramme, en arbre ou en anneaux.','The record’s group as an org chart, a tree or rings.'], tags:'organigramme arbre groupe filiales maison mère org chart tree sunburst subsidiaries parent',
    def:{parent:'', present:'auto', threshold:24},
    spec:[{k:'field', key:'parent', types:['fk'], l:['Clé vers le parent (dans cette même table)','Key to the parent (in this same table)']},
@@ -476,6 +531,17 @@ function previewMore(b){
     case 'address': { const ls = (b.lines || []).map(val).filter(Boolean); if (val(b.number)) { if (ls.length) ls[0] = (b.numberPlace === 'numberAfter' ? ls[0] + ' ' + val(b.number) : val(b.number) + ' ' + ls[0]); else ls.push(val(b.number)); } const zc = [val(b.zip), val(b.city)].filter(Boolean).join(' ');
       if (zc) ls.push(zc); if (val(b.region)) ls.push(val(b.region)); if (val(b.country)) ls.push(val(b.country));
       return ls.length ? `<address class="addrx">${ls.map(esc).join('<br>')}</address>` : !b.city && !(b.lines || []).length ? setupNote() : `<div class="note-b">${esc(c('noAddress'))}</div>`; }
+    case 'sourceValues': if (creating) return `<div class="note-b">${esc(u('afterCreate2'))}</div>`;
+      return `<table class="chx"><tr><th></th><th>${esc(u('svGolden'))}</th><th>ERP</th><th>CRM</th></tr><tr><th>${esc(F[Object.keys(F)[0]] ? lab(Object.keys(F)[0]) : '…')}</th><td class="n">ACME SA</td><td class="k">ACME SA</td><td class="o">Acme</td></tr></table>${indicative()}`;
+    case 'workflowTasks': if (!b.variables) return setupNote(); if (creating) return `<div class="note-b">${esc(u('afterCreate2'))}</div>`;
+      return `<div class="note-b">${esc(u('wfSample'))}</div>${indicative()}`;
+    case 'translations': if (!b.a && !(b.languages || []).length) return setupNote();
+      return `<div class="ubx"><div><b>FR</b><span>100 %</span></div><div><b>EN</b><span>50 %</span></div><div><b>DE</b><span>0 %</span></div></div>${indicative()}`;
+    case 'inheritance': return `<span class="w-badge t-warn">${esc(u('inSample'))}</span>${indicative()}`;
+    case 'valueHistory': { if (!(b.fields || []).length) return setupNote(); if (creating) return `<div class="note-b">${esc(u('afterCreate2'))}</div>`;
+      return `<div class="vhx"><b>100 %</b><span class="w-badge t-ok">+7</span></div><svg class="vhs" viewBox="0 0 300 70"><path d="M8,40H120V52H190V14H292" fill="none" stroke="var(--p-purple)" stroke-width="2.5"/><circle cx="8" cy="40" r="4"/><circle cx="120" cy="52" r="4"/><circle cx="190" cy="14" r="4"/></svg><div class="more">${esc(b.fields.map(lab).join(' · '))}</div>${indicative()}`; }
+    case 'sitesMap': { if (!b.a) return setupNote(); if (creating) return `<div class="note-b">${esc(u('afterCreate2'))}</div>`;
+      return `<div class="smx"><div class="m"><span style="left:30%;top:40%"></span><span style="left:62%;top:58%"></span><span class="hq" style="left:48%;top:25%"></span></div><div class="l"><span>${esc(lab(b.label) || '…')} 1</span><span>${esc(lab(b.label) || '…')} 2</span><span>${esc(lab(b.label) || '…')} 3</span></div></div>${indicative()}`; }
     case 'orgChart': { if (!b.parent) return setupNote(); if (creating) return `<div class="note-b">${esc(u('afterCreate2'))}</div>`;
       const me = B.record.label || '…', par = val(b.parent) || '…';
       return `<div class="ocx"><span class="n">${esc(par)}</span><i></i><span class="n me">${esc(me)}</span><i></i><div class="k"><span class="n">${esc(u('ocChild'))} 1</span><span class="n">${esc(u('ocChild'))} 2</span><span class="n">${esc(u('ocChild'))} 3</span></div></div>${indicative()}`; }
@@ -927,33 +993,66 @@ function javaExport(){
   Ls.push('}');
   return Ls.join('\n');
 }
-/* where the form stands, as the model's XSD says (no public API tells which form the running schema uses):
-   declared, another class declared, nothing declared; unknown for a DMA model */
+/* where the form stands: the model's XSD for a module model (declared, another class, nothing), and the form itself,
+   which reports each table it is drawn for (FormSightings): the only sign for a DMA model */
 function useState(){
-  const ac = B.activation;
-  if (!ac.file) return ac.reason === 'dma' ? 'unknown' : 'nofile';
-  if (ac.declared) return 'active';
+  const ac = B.activation, seen = !!ac.seenAt;
+  if (ac.reason === 'dma') return seen ? 'on' : 'dma';
+  if (!ac.file) return seen ? 'on' : 'manual';
+  if (ac.declared) return seen ? 'on' : 'wait';
   return ac.currentForm ? 'other' : 'off';
 }
-function renderUse(){
-  const u = useState(), el = $('#ld-use');
-  el.className = 'status use-' + u;
-  el.textContent = c({active:'useActive', restart:'useRestart', off:'useOff', other:'useOther', unknown:'useUnknown', nofile:'useNofile'}[u]);
-  $('#ld-deploy').classList.toggle('primary', u === 'off' || u === 'other');
-  $('#ld-deploy').classList.toggle('ghost', !(u === 'off' || u === 'other'));
-  $('#ld-deploy').setAttribute('aria-pressed', !!(sel && sel.k === 'deploy'));
+const fmtWhen = ms => new Date(ms).toLocaleString(UI === 0 ? 'fr-FR' : 'en-GB', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+const XSD_LINE = () => '<recordForm osd:class="' + B.activation.formClass + '"/>';
+function miniSteps(labels, cur, done){
+  return `<span class="steps-mini">${labels.map((l, i) => `<i class="${i < done ? 'done' : i === cur ? 'cur' : ''}">${i < done ? '✓' : i + 1}</i>${esc(l)}`).join('<em>—</em>')}</span>`;
 }
+function renderUse(){
+  const u = useState(), ac = B.activation, el = $('#ld-banner'); if (!el) return;
+  const T = ac.tableLabel || ac.table, open = sel && sel.k === 'deploy';
+  const steps = `<button type="button" class="btn ${u === 'dma' || u === 'manual' ? 'primary' : 'ghost'}" data-steps="1" aria-pressed="${open}">${esc(c(u === 'on' ? 'bnDetails' : 'bnSteps'))}</button>`;
+  const M = {
+    off: ['off', '!', c('bnOff', T), c('bnOffSub'), miniSteps([c('stSave'), c('stActivate'), c('stRestart'), c('stCheck')], 1, 1), `<button type="button" class="btn primary" data-submit="activate">${esc(c('activate'))}</button>` + steps],
+    other: ['off', '!', c('bnOther', T, ac.currentForm), c('bnOtherSub'), '', `<button type="button" class="btn primary" data-submit="activate">${esc(c('activate'))}</button>` + steps],
+    wait: ['wait', '↻', c('bnWait', ac.file.replace(/^.*\//, '')), c('bnWaitSub'), miniSteps([c('stSave'), c('stActivate'), c('stRestart'), c('stCheck')], 2, 2), steps + `<button type="button" class="btn ghost" data-submit="deactivate">${esc(c('deactivate'))}</button>`],
+    dma: ['dma', '4', c('bnDma'), c('bnDmaSub'), miniSteps([c('stCopy'), c('stDeclare'), c('stChoose'), c('stPublish'), c('stCheck')], 0, 0), steps],
+    manual: ['dma', '3', c('bnManual', T), c('bnManualSub', ac.reason), miniSteps([c('stPaste'), c('stRestart'), c('stCheck')], 0, 0), steps],
+    on: ['on', '✓', c('bnOn', T), c('bnOnSub', ac.seenRecord || '—', fmtWhen(ac.seenAt)), '', steps]
+  }[u];
+  el.className = 'ld-banner bn-' + M[0];
+  el.innerHTML = `<span class="ic">${M[1]}</span><div class="tx"><b>${esc(M[2])}</b><span>${esc(M[3])}</span>${M[4]}</div><div class="acts">${M[5]}</div>`;
+}
+function copyBox(v){ return `<div class="copybox"><code>${esc(v)}</code><button type="button" class="btn small" data-copy="${esc(v)}">${esc(c('copy'))}</button></div>`; }
+function stepHtml(n, state, title, body){ return `<div class="gstep ${state}"><span class="n">${state === 'done' ? '✓' : n}</span><div class="c"><b>${esc(title)}</b>${body}</div></div>`; }
 function deployHtml(){
-  const ac = B.activation, st = B.stored, u = useState();
-  const storedLine = st.exists ? `${esc(c('stored'))} ${st.version} · ${esc(st.updatedOn || '')} ${st.updatedBy ? esc(c('by')) + ' ' + esc(st.updatedBy) : ''}` : esc(c('notStored'));
-  let h = `<div class="insp act"><span class="kind">${esc(c('activation'))}</span><h3>${esc(c('deployTitle'))}</h3>
-    <div class="${u === 'active' ? 'notice' : 'explain'}">${esc(c(u === 'active' ? 'deployActive' : u === 'restart' ? 'deployRestart' : u === 'unknown' ? 'deployUnknown' : u === 'nofile' ? 'deployNofile' : 'deployOff'))}</div>
-    <div class="kv"><span>${esc(c('currentForm'))}</span><code>${esc(ac.currentForm || (ac.file ? c('none2') : '—'))}</code><span>${esc(c('file'))}</span><code>${esc(ac.file || '—')}</code>${st.previousForm ? `<span>${esc(c('previousForm'))}</span><code>${esc(st.previousForm)}</code>` : ''}<span>FormLayout</span><span>${storedLine}</span></div>`;
-  if (ac.file){
-    h += `<div class="row-btns">${!ac.declared ? `<button type="button" class="btn primary small" data-submit="activate">${esc(c('activate'))}</button>` : `<button type="button" class="btn small ghost" data-submit="deactivate">${esc(c('deactivate'))}</button>`}</div><p class="hint">${esc(c('restart'))}</p>`;
-  } else if (ac.reason === 'dma'){ if (u !== 'active') h += `<p class="hint">${esc(c('dma', ac.formClass))}</p>`; }
-  else if (ac.reason === 'table') h += `<p class="hint">${esc(c('noTable', ac.formClass))}</p>`;
-  else h += `<p class="hint">${esc(c('noFile', ac.reason, ac.formClass))}</p>`;
+  const ac = B.activation, st = B.stored, u = useState(), T = ac.tableLabel || ac.table, cls = ac.formClass;
+  const saved = st.exists ? c('gSaved', st.version, st.updatedOn || '', st.updatedBy || '') : c('notStored');
+  const p = t => `<p class="hint">${t}</p>`, path = parts => `<div class="gpath">${parts.map(x => `<span>${esc(x)}</span>`).join('<em>›</em>')}</div>`;
+  const field = (label, value, muted) => `<div class="gfield"><span class="lbl">${esc(label)}</span><span class="in${muted ? ' muted' : ''}">${esc(value)}</span></div>`;
+  const check = `${p(esc(c('gCheckTxt', T)))}<span class="pill ${ac.seenAt ? 'ok' : 'no'}">${esc(ac.seenAt ? c('gSeen', ac.seenRecord || '—', fmtWhen(ac.seenAt)) : c('gNotSeen'))}</span>`;
+  let h = `<div class="insp act"><span class="kind">${esc(c('activation'))} · ${esc(ac.reason === 'dma' ? c('gKindDma', ac.model) : c('gKindModule', ac.model))}</span><h3>${esc(c(u === 'on' ? 'gTitleOn' : 'gTitle', T))}</h3>`;
+  if (u === 'dma' || (u === 'on' && ac.reason === 'dma')){
+    const done = u === 'on';
+    h += stepHtml(1, done ? 'done' : 'cur', c('gCopy'), p(esc(c('gCopyTxt'))) + copyBox(cls))
+      + stepHtml(2, done ? 'done' : '', c('gDeclare'), p(esc(c('gDeclareTxt'))) + path([c('gModel', ac.model), c('gLibrary'), c('gCreate')]) + `<div class="gfields">${field(c('gCompName'), cls)}${field(c('gRule'), cls)}${field(c('gCategories'), 'UIForm', true)}</div>`)
+      + stepHtml(3, done ? 'done' : '', c('gChoose', T), path([c('gModel', ac.model), T, c('gFormLayout')]) + `<div class="gfields">${field(c('gFormLayout') + ' › ' + c('gComponent'), cls + ' ▾')}</div>` + p(esc(c('gChooseTxt'))))
+      + stepHtml(4, done ? 'done' : '', c('gPublish'), p(esc(c('gPublishTxt'))))
+      + stepHtml(5, done ? 'done' : '', c('stCheck'), check)
+      + `<div class="galt">${esc(c('gAgent'))} <code>set_form_layout</code> (<code>${esc(ac.table)}</code>) · <code>publish_data_model</code></div>`;
+  } else if (u === 'manual' || (u === 'on' && !ac.file)){
+    h += stepHtml(1, u === 'on' ? 'done' : 'cur', c('gPaste'), p(esc(c('gPasteTxt', ac.table, ac.reason))) + copyBox(XSD_LINE()))
+      + stepHtml(2, u === 'on' ? 'done' : '', c('stRestart'), p(esc(c('gRestartTxt'))))
+      + stepHtml(3, u === 'on' ? 'done' : '', c('stCheck'), check);
+  } else {
+    const activated = ac.declared, seen = !!ac.seenAt;
+    h += stepHtml(1, st.exists ? 'done' : 'cur', c('stSave'), p(esc(saved)))
+      + stepHtml(2, activated ? 'done' : 'cur', c('stActivate'), p(esc(c('gActivateTxt', ac.file.replace(/^.*\//, ''), ac.table))) + copyBox(XSD_LINE())
+        + (ac.currentForm && !activated ? p(esc(c('gReplaces', ac.currentForm))) : '')
+        + (activated ? `<div class="row-btns"><button type="button" class="btn small ghost" data-submit="deactivate">${esc(c('deactivate'))}</button></div>` : `<div class="row-btns"><button type="button" class="btn primary small" data-submit="activate">${esc(c('activate'))}</button></div>`))
+      + stepHtml(3, seen ? 'done' : activated ? 'cur' : '', c('stRestart'), p(esc(c('gRestartTxt'))))
+      + stepHtml(4, seen ? 'done' : '', c('stCheck'), check)
+      + `<div class="gwhy">${esc(c('gWhy', ac.model))}</div>`;
+  }
   return h + `<p class="hint">${esc(c('jsonHow'))}</p></div>`;
 }
 function renderCode(){
@@ -1161,7 +1260,8 @@ root.addEventListener('click', e => {
   if (t.closest('#ld-i18n')){ sel = sel && sel.k === 'i18n' ? null : {k:'i18n'}; explain = ''; return renderAll(); }
   for (const k of ['fields','assoc','blocks']) if (t.closest('#ld-pt-' + k)){ ptab = k; return renderPalette(); }
   for (const k of ['json','java']) if (t.closest('#ld-o-' + k)){ otab = k; return renderCode(); }
-  if (t.closest('#ld-deploy')){ sel = sel && sel.k === 'deploy' ? null : {k:'deploy'}; explain = ''; return renderAll(); }
+  if (t.closest('[data-steps]')){ sel = sel && sel.k === 'deploy' ? null : {k:'deploy'}; explain = ''; return renderAll(); }
+  const cpy = t.closest('[data-copy]'); if (cpy){ const v = cpy.dataset.copy; const ok = () => toast(c('copied')); try { navigator.clipboard.writeText(v).then(ok, () => toast(v)); } catch (x) { toast(v); } return; }
   if (t.closest('#ld-codebtn')){ const d = $('#ld-dlg'); if (d.showModal) d.showModal(); else d.setAttribute('open', ''); return renderCode(); }
   if (t.closest('#ld-dlg-close')){ $('#ld-dlg').close ? $('#ld-dlg').close() : $('#ld-dlg').removeAttribute('open'); return; }
   if (t.closest('#ld-undo')){ const s = history.pop(); if (s){ const o = JSON.parse(s); S = o.S; cur = o.cur; sel = null; dirty = history.length > 0; commit(c('explUndo')); } return; }
@@ -1270,8 +1370,9 @@ root.innerHTML = `<div class="wrap">
     <div class="pick"><label>${esc(c('texts'))}</label><button type="button" class="btn ghost" id="ld-i18n" aria-pressed="false">${esc(c('translations'))}</button></div>
     <div class="pick"><label>${esc(c('mode'))}</label><div class="seg"><button type="button" id="ld-m-design" aria-pressed="true">${esc(c('design'))}</button><button type="button" id="ld-m-preview" aria-pressed="false">${esc(c('previewMode'))}</button></div></div>
     <div class="pick"><label>${esc(c('width'))}</label><div class="seg"><button type="button" id="ld-w-wide" aria-pressed="true">1 440 px</button><button type="button" id="ld-w-narrow" aria-pressed="false">890 px</button></div></div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${B.helpUrl ? `<a class="btn ghost" href="${esc(B.helpUrl)}" target="_blank" rel="noopener">${esc(c('help'))}</a>` : ''}<span class="status" id="ld-use" role="status"></span><button type="button" class="btn ghost" id="ld-deploy">${esc(c('activation'))}</button><button type="button" class="btn ghost" id="ld-codebtn">${esc(c('code'))}</button><span class="status saved" id="ld-status"></span><button type="button" class="btn ghost" id="ld-undo" disabled>${esc(c('undo'))}</button><button type="button" class="btn primary" id="ld-save">${esc(c('save'))}</button><button type="button" class="btn ghost" id="ld-close" title="${esc(c('closeTip'))}">${esc(c('closeDesigner'))}</button></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${B.helpUrl ? `<a class="btn ghost" href="${esc(B.helpUrl)}" target="_blank" rel="noopener">${esc(c('help'))}</a>` : ''}<button type="button" class="btn ghost" id="ld-codebtn">${esc(c('code'))}</button><span class="status saved" id="ld-status"></span><button type="button" class="btn ghost" id="ld-undo" disabled>${esc(c('undo'))}</button><button type="button" class="btn primary" id="ld-save">${esc(c('save'))}</button><button type="button" class="btn ghost" id="ld-close" title="${esc(c('closeTip'))}">${esc(c('closeDesigner'))}</button></div>
   </header>
+  <div class="ld-banner" id="ld-banner" role="status"></div>
   <div class="bench">
     <aside class="side palette"><div class="side-hd"><h2>${esc(c('palette'))}</h2><div class="ptabs" role="tablist"><button type="button" role="tab" id="ld-pt-fields">${esc(c('fields'))}</button><button type="button" role="tab" id="ld-pt-assoc">${esc(c('assocs'))}</button><button type="button" role="tab" id="ld-pt-blocks">${esc(c('blocks'))}</button></div><input type="search" class="search" id="ld-psearch" placeholder="${esc(c('search'))}"></div><div class="side-bd" id="ld-palette"></div></aside>
     <section class="canvas-wrap"><div class="canvas-bar" id="ld-cbar"></div><div class="canvas design" id="ld-canvas"></div></section>

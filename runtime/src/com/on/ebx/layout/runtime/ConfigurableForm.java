@@ -25,6 +25,8 @@ public class ConfigurableForm extends UIForm
 		try
 		{
 			final AdaptationTable table = pContext.getCurrentTable();
+			FormSightings.seen(pContext.getCurrentDataSet().getSchemaLocation(), table.getTablePath(),
+				pContext.isCreatingRecord() || pContext.getCurrentRecord() == null ? "" : pContext.getCurrentRecord().getLabel(pContext.getLocale()));
 			layout = LayoutStore.find(Repository.getDefault(), pContext.getCurrentDataSet().getSchemaLocation(), table.getTablePath());
 		}
 		catch (final RuntimeException ex)

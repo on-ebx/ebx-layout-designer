@@ -1,5 +1,36 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.9.0 (2026-10-12)
+
+- **New block "Value over time"** (palette › Time): the successive values of one or more fields, read in the table's
+  history, one tab per field. A number gets a curve (steps, or a line), its current value and the change since the first
+  value; the list of changes gives the date, old → new value and the author ("automatic process" for EBX's system user).
+  A value that never changed says so instead of drawing a flat line. Period: the whole history, 12 months or 90 days.
+- **New block "Sites on a map"** (palette › Location): the rows of an association (establishments, addresses) on an
+  OpenStreetMap map, with their list beside it; a click on a site centres the map on it, zoom and drag work. A row is
+  placed by its latitude and longitude, else by its address (the EBX server asks Nominatim, at most six new addresses per
+  display, answers kept in memory); an unknown street is placed on its town and flagged. A yes/no field highlights the
+  head office, another hides inactive sites.
+- **New block "Values by source"** (palette › Quality): on a golden record of the Match and Merge add-on, the value each
+  merged source gave, field by field, the value kept highlighted; by default only the fields where sources differ, the key
+  left out. A merged record links to its golden. Public API of the add-on, called so that a form works without it.
+- **New block "Workflows in progress"** (palette › Actions): the workflows whose variables point to the record (its XPath
+  or key), on every publication and its earlier versions: label, start, current tasks with who holds them and since when.
+  The user's own task opens in EBX's pop-up inbox; someone else's opens in the monitoring view.
+- **New block "Translations"** (palette › Quality): for each language, the share translated and the missing fields, from
+  a translation table (a row per language, expected languages reported at 0 % when absent) or from fields of the record.
+- **New block "Inheritance"** (palette › Quality): in a child dataset, the fields changed here with the parent's value,
+  and those that follow the parent; "created here" when the parent does not have the record.
+- **Activation, clearer**: the state of the form is now a banner under the designer's header, always visible, with the
+  next action as its main button: not used yet (Activate), activated and waiting for EBX's restart, DMA model, or active.
+  "See the steps" opens a step-by-step guide. For a DMA model it gives the class to copy, where to declare it in the
+  model's component library (Component name, Configuration › Rule), where to choose it for the table (Form layout ›
+  Component), then Publish; for a module model, the line written into the XSD and why a restart is needed; when the
+  designer cannot write the file, the line to paste by hand.
+- **The designer knows when the form is really used**: the form reports each table it is drawn for, so the banner turns
+  green ("last drawn on … on …") for a DMA model too, where nothing else tells it (in memory, since the server started).
+- The history reading is shared by the "Change history" block and the new one.
+
 ## 1.8.1 (2026-10-12)
 
 - **Hierarchy chart**: up to six subsidiaries sit centred under the record, each hung on the line like an org chart (they

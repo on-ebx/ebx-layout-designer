@@ -22,7 +22,7 @@ you save it.
 
 | Area | What it holds |
 |---|---|
-| Top bar | *Preview with* (the record shown in the preview), *Language* (the locale of the preview and of the texts you type), *Translations*, *Design* / *Preview* mode, *Width* (test a narrow screen), *Help*, the **state of the form** as the model declares it (*Declared in the model*, *The table uses another form*, *Not used by the table*; *DMA model: check the declaration*), *Activation*, *</> Code*, *Undo*, *Save* |
+| Top bar | *Preview with* (the record shown in the preview), *Language* (the locale of the preview and of the texts you type), *Translations*, *Design* / *Preview* mode, *Width* (test a narrow screen), *Help*, *Close*, *</> Code*, *Undo*, *Save* |
 | Palette (left) | the table's **fields** by group (search by label or path; a placed field is marked), its **associations**, the **blocks** by category (search on name, description and keywords), the **registered components** |
 | Form (centre) | the record form as it will look, with the chosen record's real values |
 | Inspector (right) | the settings of what you clicked: tab, row, block or field, or the activation of the form. Under 1280 px wide it opens as a drawer on the right while something is selected |
@@ -99,6 +99,12 @@ Since 1.4.0:
 | **Documents** | files of an association: name, type, date (red once an expiry date is past), link |
 | **Links and actions** | buttons to an address built from the record's values (`https://shop.example.com/p/${./Sku}`) |
 | **Validity period** | upcoming, in force, ending soon or expired, with the days left |
+| **Values by source** (1.9.0) | on a Match and Merge golden record: the value each merged source gave, the kept one highlighted |
+| **Workflows in progress** (1.9.0) | the workflows running on the record, who holds each task and since when, the task opened in a pop-up |
+| **Translations** (1.9.0) | for each language: share translated and missing fields |
+| **Inheritance** (1.9.0) | in a child dataset: what the record inherits and what is changed here |
+| **Value over time** (1.9.0) | a value's curve in the record's history (steps or line), the current value, the change, the list of changes with their author |
+| **Sites on a map** (1.9.0) | the rows of an association (sites, addresses) on an OpenStreetMap map with their list; placed by coordinates or by address |
 | **Hierarchy chart** (1.8.0) | the record's group as an org chart centred on the record, a collapsible tree with a search, or rings; a click opens an entity's record |
 | **Changes in this request** (1.6.0) | in a workflow's work dataspace, what the record changes compared with the reference, field by field (old → new) |
 | **Used by** (1.6.0) | the records of other tables that point to this one, counted per table, with a few examples |
@@ -147,11 +153,15 @@ The designer's own screens are in French or English, after the user's locale.
 
 - **Save** writes the layout (JSON) as a new version in `LayoutDesigner/FormLayout`. It shows at the next opening of a
   record, **no restart**, as soon as the table declares the designed form.
-- **Activation** (*Activation* in the top bar; the state next to it says whether the table uses the form):
-  - model packaged in a module: *Declare the designed form on this table* writes the `recordForm` line in the XSD,
-    with a backup; **restart the server once**. *Put the previous form back* undoes it (restart again);
-  - DMA model: declare `com.on.ebx.layout.runtime.ConfigurableForm` as the table's form in the model screen (or with
-    the `data-model` MCP operation `set_form_layout`) and republish; no restart.
+- **Activation** (the banner under the header, since 1.9.0: orange = not used yet, blue = waiting for the restart,
+  purple = DMA model, green = active and last drawn on a given record; *See the steps* opens the guide):
+  - model packaged in a module: *Activate* writes the `recordForm` line in the XSD, with a backup; **restart the server
+    once**, then open a record to check. *Put the previous form back* undoes it (restart again);
+  - DMA model, four steps in the model screen: declare `com.on.ebx.layout.runtime.ConfigurableForm` in the model's
+    **Component library** (*Component name*, *Configuration › Rule*; EBX infers the UIForm type), choose it for the table
+    in **Form layout › Component**, **publish** the model, open a record to check. No restart. The `data-model` MCP
+    operation `set_form_layout` does the first two steps;
+  - when the designer cannot write the module's XSD (folder not found), the guide gives the line to paste by hand.
 - **</> Code**: the saved JSON, and the same layout as a frozen `UIForm` class for a project that does not want the
   designer at run time (optional).
 

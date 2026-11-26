@@ -88,6 +88,7 @@ final class LayoutPane implements UIFormPane
 		pWriter.addJS_cr(Css.GO_JS);
 		pWriter.addJS_cr(DisplayWidgets.JS);
 		pWriter.addJS_cr(OrgChart.JS);
+		pWriter.addJS_cr(OrgChart.BLOCKS_JS);
 		if (!this.rules.isEmpty())
 		{
 			pWriter.addJS_cr(this.rules.js());
@@ -132,7 +133,11 @@ final class LayoutPane implements UIFormPane
 	private void typed(final UIFormPaneWriter w, final JsonNode b, final String id)
 	{
 		final String type = b.path("type").asText();
-		final String inner = "orgChart".equals(type) ? OrgChart.render(this.rc, b, b.path("id").asText("oc"), w) : this.more(type, b);
+		final String bid = b.path("id").asText(id);
+		final String inner = "orgChart".equals(type) ? OrgChart.render(this.rc, b, bid, w)
+			: "valueHistory".equals(type) ? ValueHistory.render(this.rc, b, bid) : "sitesMap".equals(type) ? SitesMap.render(this.rc, b, bid)
+			: "workflowTasks".equals(type) ? MdmBlocks.workflowTasks(this.rc, b, w) : "sourceValues".equals(type) ? MdmBlocks.sourceValues(this.rc, b)
+			: "translations".equals(type) ? MdmBlocks.translations(this.rc, b) : "inheritance".equals(type) ? MdmBlocks.inheritance(this.rc, b) : this.more(type, b);
 		if (inner != null)
 		{
 			this.startPanel(w, b, id, this.rc.blockTitle(b), null, null);

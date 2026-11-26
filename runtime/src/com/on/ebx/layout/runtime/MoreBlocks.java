@@ -130,12 +130,19 @@ final class MoreBlocks
 
 	// ------------------------------------------------------------------------------------------------ history
 
-	static String history(final RenderContext rc, final JsonNode b)
+	/** The versions of the record in the table's history, oldest first, with the history's date, user and operation fields. */
+	static final class Hist
 	{
-		if (rc.creating || rc.record == null)
-		{
-			return MoreBlocks.creatingNote(rc);
-		}
+		final List<Adaptation> rows = new ArrayList<Adaptation>();
+		SchemaNode when;
+		SchemaNode who;
+		SchemaNode op;
+		String error;
+	}
+
+	static Hist readHistory(final RenderContext rc)
+	{
+		final Hist h = new Hist();
 		final AdaptationTable history;
 		try
 		{
@@ -143,11 +150,87 @@ final class MoreBlocks
 		}
 		catch (final RuntimeException ex)
 		{
-			return MoreBlocks.empty(MoreBlocks.t("historyOff", rc));
+			h.error = "historyOff";
+			return h;
 		}
 		if (history == null)
 		{
-			return MoreBlocks.empty(MoreBlocks.t("historyOff", rc));
+			h.error = "historyOff";
+			return h;
+		}
+		// technical fields of the history view: those the record itself does not have
+		final List<SchemaNode> technical = new ArrayList<SchemaNode>();
+		MoreBlocks.technical(history.getTableOccurrenceRootNode(), rc, technical);
+		for (final SchemaNode n : technical)
+		{
+			final String name = n.getPathInAdaptation().format().toLowerCase(Locale.ROOT);
+			final Class<?> c = n.getOccurrencesJavaClass();
+			if (h.when == null && c == Date.class)
+			{
+				h.when = n;
+			}
+			else if (h.who == null && (name.contains("user") || name.contains("author")))
+			{
+				h.who = n;
+			}
+			else if (h.op == null && (name.endsWith("op") || name.contains("operation")))
+			{
+				h.op = n;
+			}
+		}
+		try
+		{
+			final RequestResult result = history.createRequestResult(rc.record.toXPathPredicateString());
+			try
+			{
+				for (Adaptation r = result.nextAdaptation(); r != null && h.rows.size() < 2000; r = result.nextAdaptation())
+				{
+					h.rows.add(r);
+				}
+			}
+			finally
+			{
+				result.close();
+			}
+		}
+		catch (final RuntimeException ex)
+		{
+			LoggingCategory.getKernel().warn("[layout-designer] history of " + rc.record.toXPathPredicateString() + " not read: " + ex.getMessage());
+			h.error = "historyOff";
+			return h;
+		}
+		if (h.rows.isEmpty())
+		{
+			h.error = "historyNone";
+			return h;
+		}
+		final SchemaNode whenNode = h.when;
+		if (whenNode != null)
+		{
+			Collections.sort(h.rows, new Comparator<Adaptation>()
+			{
+				@Override
+				public int compare(final Adaptation x, final Adaptation y)
+				{
+					final Object dx = x.get(whenNode);
+					final Object dy = y.get(whenNode);
+					return Long.compare(dx instanceof Date ? ((Date) dx).getTime() : 0L, dy instanceof Date ? ((Date) dy).getTime() : 0L);
+				}
+			});
+		}
+		return h;
+	}
+
+	static String history(final RenderContext rc, final JsonNode b)
+	{
+		if (rc.creating || rc.record == null)
+		{
+			return MoreBlocks.creatingNote(rc);
+		}
+		final Hist hist = MoreBlocks.readHistory(rc);
+		if (hist.error != null)
+		{
+			return MoreBlocks.empty(MoreBlocks.t(hist.error, rc));
 		}
 		final List<String> fields = new ArrayList<String>();
 		for (final JsonNode p : b.path("fields"))
@@ -161,68 +244,10 @@ final class MoreBlocks
 		{
 			MoreBlocks.terminals(rc.root, fields);
 		}
-		// technical fields of the history view: those the record itself does not have
-		final List<SchemaNode> technical = new ArrayList<SchemaNode>();
-		MoreBlocks.technical(history.getTableOccurrenceRootNode(), rc, technical);
-		SchemaNode when = null;
-		SchemaNode who = null;
-		SchemaNode op = null;
-		for (final SchemaNode n : technical)
-		{
-			final String name = n.getPathInAdaptation().format().toLowerCase(Locale.ROOT);
-			final Class<?> c = n.getOccurrencesJavaClass();
-			if (when == null && c == Date.class)
-			{
-				when = n;
-			}
-			else if (who == null && (name.contains("user") || name.contains("author")))
-			{
-				who = n;
-			}
-			else if (op == null && (name.endsWith("op") || name.contains("operation")))
-			{
-				op = n;
-			}
-		}
-		final List<Adaptation> rows = new ArrayList<Adaptation>();
-		try
-		{
-			final RequestResult result = history.createRequestResult(rc.record.toXPathPredicateString());
-			try
-			{
-				for (Adaptation r = result.nextAdaptation(); r != null && rows.size() < 2000; r = result.nextAdaptation())
-				{
-					rows.add(r);
-				}
-			}
-			finally
-			{
-				result.close();
-			}
-		}
-		catch (final RuntimeException ex)
-		{
-			LoggingCategory.getKernel().warn("[layout-designer] history of " + rc.record.toXPathPredicateString() + " not read: " + ex.getMessage());
-			return MoreBlocks.empty(MoreBlocks.t("historyOff", rc));
-		}
-		if (rows.isEmpty())
-		{
-			return MoreBlocks.empty(MoreBlocks.t("historyNone", rc));
-		}
-		final SchemaNode whenNode = when;
-		if (whenNode != null)
-		{
-			Collections.sort(rows, new Comparator<Adaptation>()
-			{
-				@Override
-				public int compare(final Adaptation x, final Adaptation y)
-				{
-					final Object dx = x.get(whenNode);
-					final Object dy = y.get(whenNode);
-					return Long.compare(dx instanceof Date ? ((Date) dx).getTime() : 0L, dy instanceof Date ? ((Date) dy).getTime() : 0L);
-				}
-			});
-		}
+		final List<Adaptation> rows = hist.rows;
+		final SchemaNode whenNode = hist.when;
+		final SchemaNode who = hist.who;
+		final SchemaNode op = hist.op;
 		// oldest first: each row is compared with the one before it
 		final List<String> entries = new ArrayList<String>();
 		final boolean author = b.path("author").asBoolean(true);
@@ -303,7 +328,7 @@ final class MoreBlocks
 		return java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT, pLocale).format((Date) pValue);
 	}
 
-	private static void terminals(final SchemaNode pNode, final List<String> pOut)
+	static void terminals(final SchemaNode pNode, final List<String> pOut)
 	{
 		for (final SchemaNode c : pNode.getNodeChildren())
 		{

@@ -176,6 +176,17 @@ final class ModelExport
 		activation.put("currentForm", pActivation.currentForm == null ? "" : pActivation.currentForm);
 		activation.put("file", pActivation.file == null ? "" : pActivation.file.getAbsolutePath());
 		activation.put("reason", pActivation.reason == null ? "" : pActivation.reason);
+		// the model's name as the user knows it, and the last time the form was drawn for this table (since the server started)
+		final com.orchestranetworks.schema.SchemaLocation location = pTable.getContainerAdaptation().getSchemaLocation();
+		activation.put("model", location.isPublication() ? location.getPublicationName() : location.format().replaceAll("^.*/", "").replaceAll("\\.xsd$", ""));
+		activation.put("table", pTable.getTablePath().format());
+		activation.put("tableLabel", pTable.getTableNode().getLabel(pUserLocale));
+		final com.on.ebx.layout.runtime.FormSightings.Sighting seen = com.on.ebx.layout.runtime.FormSightings.last(location, pTable.getTablePath());
+		if (seen != null)
+		{
+			activation.put("seenAt", seen.at);
+			activation.put("seenRecord", seen.record);
+		}
 
 		final ArrayNode components = boot.putArray("components");
 		for (final java.util.Map.Entry<String, LayoutComponent> e : LayoutComponents.all().entrySet())

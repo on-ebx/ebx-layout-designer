@@ -60,6 +60,8 @@ Open a table, then **Actions › Design the record form** (or the web component
 | Timeline, change history | an association's rows on a timeline; who changed what and when (historized table) |
 | Completeness, checklist | share of filled fields with weights; points ticked by a condition |
 | Lifecycle steps, validity period | the steps of a status field; upcoming / in force / ending / expired |
+| Values by source, workflows in progress, translations, inheritance | golden record vs its sources; tasks on the record; language completeness; what a child dataset changes |
+| Value over time, sites on a map | a value's curve from the history; an association's rows on a map |
 | Hierarchy chart | the record's group as an org chart, a tree or rings |
 | Changes in this request, used by | what a workflow request changes (old → new); who refers to this record |
 | Record information | created by / on, last modified by / on, kept by EBX for every record |

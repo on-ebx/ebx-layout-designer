@@ -286,6 +286,18 @@ final class RenderContext
 		{
 			return RuntimeText.get("historyTitle", this.locale);
 		}
+		if ("workflowTasks".equals(type) || "sourceValues".equals(type) || "translations".equals(type) || "inheritance".equals(type))
+		{
+			return RuntimeText.get(type + "Title", this.locale);
+		}
+		if ("valueHistory".equals(type))
+		{
+			return RuntimeText.get("vhTitle", this.locale);
+		}
+		if ("sitesMap".equals(type))
+		{
+			return RuntimeText.get("smTitle", this.locale);
+		}
 		if ("orgChart".equals(type))
 		{
 			return RuntimeText.get("orgTitle", this.locale);

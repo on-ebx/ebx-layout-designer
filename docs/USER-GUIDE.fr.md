@@ -23,7 +23,7 @@ association. C'est un brouillon tant que vous ne l'enregistrez pas.
 
 | Zone | Contenu |
 |---|---|
-| Barre du haut | *Aperçu avec* (la fiche montrée dans l'aperçu), *Langue* (celle de l'aperçu et des textes saisis), *Traductions*, mode *Concevoir* / *Aperçu*, *Largeur* (tester un écran étroit), *Aide*, l'**état de la fiche** tel que le modèle le déclare (*Déclarée dans le modèle*, *La table utilise une autre fiche*, *Non utilisée par la table* ; *Modèle DMA : déclaration à vérifier*), *Activation*, *</> Code*, *Annuler*, *Enregistrer* |
+| Barre du haut | *Aperçu avec* (la fiche montrée dans l'aperçu), *Langue* (celle de l'aperçu et des textes saisis), *Traductions*, mode *Concevoir* / *Aperçu*, *Largeur* (tester un écran étroit), *Aide*, *Fermer*, *</> Code*, *Annuler*, *Enregistrer* |
 | Palette (gauche) | les **champs** de la table par groupe (recherche par libellé ou chemin ; un champ placé est marqué), ses **associations**, les **blocs**, les **composants enregistrés** |
 | Fiche (centre) | la fiche telle qu'elle s'affichera, avec les vraies valeurs de l'enregistrement choisi |
 | Inspecteur (droite) | les réglages de ce que vous avez cliqué : onglet, ligne, bloc ou champ, ou l'activation de la fiche. Sous 1 280 px de large, il s'ouvre en panneau latéral à droite tant qu'un élément est sélectionné |
@@ -109,6 +109,12 @@ Depuis la 1.4.0 :
 | **Documents** | les fichiers d'une association : nom, type, date (en rouge une fois une échéance passée), lien |
 | **Liens et actions** | des boutons vers une adresse construite avec les valeurs de la fiche (`https://boutique.exemple.fr/p/${./Sku}`) |
 | **Période de validité** | à venir, en vigueur, bientôt échu ou expiré, avec les jours restants |
+| **Valeurs par source** (1.9.0) | sur une fiche de référence Match and Merge : la valeur donnée par chaque source fusionnée, la valeur retenue mise en évidence |
+| **Workflows en cours** (1.9.0) | les workflows ouverts sur la fiche, qui tient chaque tâche et depuis quand, la tâche ouverte dans une fenêtre |
+| **Traductions** (1.9.0) | pour chaque langue : la part traduite et les champs manquants |
+| **Héritage** (1.9.0) | dans un jeu de données enfant : ce que la fiche hérite et ce qui est modifié ici |
+| **Évolution d'une valeur** (1.9.0) | la courbe d'une valeur dans l'historique de la fiche (en escalier ou en ligne), la valeur actuelle, l'écart, la liste des changements avec leur auteur |
+| **Sites sur la carte** (1.9.0) | les lignes d'une association (établissements, adresses) sur une carte OpenStreetMap avec leur liste ; placées par coordonnées ou par adresse |
 | **Hiérarchie graphique** (1.8.0) | le groupe de la fiche en organigramme centré sur elle, en arbre repliable avec recherche, ou en anneaux ; un clic ouvre la fiche d'une entité |
 | **Changements de la demande** (1.6.0) | dans l'espace de travail d'un workflow, ce que la fiche change par rapport à la référence, champ par champ (ancienne → nouvelle valeur) |
 | **Utilisé par** (1.6.0) | les enregistrements d'autres tables qui pointent vers celui-ci, comptés par table, avec quelques exemples |
@@ -158,12 +164,18 @@ Les écrans du designer lui-même sont en français ou en anglais, selon la lang
 
 - **Enregistrer** écrit la mise en page (JSON) comme nouvelle version dans `LayoutDesigner/FormLayout`. Elle s'affiche à
   la prochaine ouverture d'une fiche, **sans redémarrage**, dès que la table déclare la fiche conçue.
-- **Activation** (*Activation* dans la barre du haut ; l'état affiché à côté dit si la table utilise la fiche) :
-  - modèle packagé dans un module : *Déclarer la fiche conçue sur cette table* écrit la ligne `recordForm` dans le XSD,
-    avec une copie de sauvegarde ; **redémarrez le serveur une fois**. *Remettre la fiche précédente* l'annule
+- **Activation** (le bandeau sous l'en-tête, depuis la 1.9.0 : orange = pas encore utilisée, bleu = en attente du
+  redémarrage, violet = modèle DMA, vert = active et vue pour la dernière fois sur telle fiche ; *Voir les étapes* ouvre
+  le guide) :
+  - modèle packagé dans un module : *Activer* écrit la ligne `recordForm` dans le XSD, avec une copie de sauvegarde ;
+    **redémarrez le serveur une fois**, puis ouvrez une fiche pour vérifier. *Remettre la fiche précédente* l'annule
     (nouveau redémarrage) ;
-  - modèle DMA : déclarez `com.on.ebx.layout.runtime.ConfigurableForm` comme formulaire de la table dans l'écran du
-    modèle (ou avec l'opération MCP `set_form_layout` du serveur `data-model`) et republiez ; pas de redémarrage.
+  - modèle DMA, quatre étapes dans l'écran du modèle : déclarer `com.on.ebx.layout.runtime.ConfigurableForm` dans la
+    **Librairie de composants** du modèle (*Nom du composant*, *Configuration › Règle* ; EBX en déduit le type UIForm),
+    le choisir pour la table dans **Mise en page du formulaire › Composant**, **publier** le modèle, ouvrir une fiche
+    pour vérifier. Pas de redémarrage. L'opération MCP `set_form_layout` du serveur `data-model` fait les deux
+    premières étapes ;
+  - quand le designer ne peut pas écrire le XSD du module (dossier introuvable), le guide donne la ligne à coller.
 - **</> Code** : le JSON enregistré, et la même mise en page en classe `UIForm` figée pour un projet qui ne veut pas
   du designer à l'exécution (facultatif).
 

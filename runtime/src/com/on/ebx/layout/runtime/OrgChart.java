@@ -37,6 +37,8 @@ final class OrgChart
 {
 	static final int MAX_NODES = 2000;
 	static final String JS = OrgChart.resource("orgchart.js");
+	/** The "Value over time" and "Sites on a map" blocks. */
+	static final String BLOCKS_JS = OrgChart.resource("blocks.js");
 
 	/** Dot colours: a tone of the "colors" map, or one of six by distinct value. */
 	private static final Map<String, String> TONES = new HashMap<String, String>();
@@ -290,7 +292,7 @@ final class OrgChart
 		return ix;
 	}
 
-	private static String resource(final String pName)
+	static String resource(final String pName)
 	{
 		try (InputStream in = OrgChart.class.getResourceAsStream(pName))
 		{

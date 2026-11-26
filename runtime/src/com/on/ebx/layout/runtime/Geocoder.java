@@ -51,6 +51,17 @@ final class Geocoder
 		return !"off".equalsIgnoreCase(System.getProperty(Geocoder.PROPERTY, "").trim());
 	}
 
+	/** True when the answer for this address is in memory (found, or not found less than ten minutes ago): no call needed. */
+	static boolean isKnown(final String pAddress)
+	{
+		final String q = pAddress == null ? "" : pAddress.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+		synchronized (Geocoder.CACHE)
+		{
+			final Object[] hit = Geocoder.CACHE.get(q);
+			return hit != null && (hit[0] != null || System.currentTimeMillis() - ((Long) hit[1]).longValue() < Geocoder.MISS_TTL_MS);
+		}
+	}
+
 	/** {latitude, longitude}, or null when the address is unknown or the service cannot be reached. */
 	static double[] locate(final String pAddress, final Locale pLocale)
 	{
