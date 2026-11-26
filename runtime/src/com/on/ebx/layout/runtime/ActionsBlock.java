@@ -24,10 +24,37 @@ import com.orchestranetworks.workflow.WorkflowEngine;
  * on the record) hides a button when false. Nothing is shown while a record is created; a block with no button the user
  * may use is not drawn.
  */
-final class ActionsBlock
+public final class ActionsBlock
 {
 	private ActionsBlock()
 	{
+	}
+
+	/**
+	 * 1.23.1: whether a button of an Actions block is still allowed on this record for this session: the three tests that decide
+	 * its drawing, in the same order (cond on the record, wf, session). The service that launches the button asks it again, as the
+	 * address that opens the service can be typed by anyone.
+	 */
+	public static boolean allowed(final com.orchestranetworks.service.Session pSession, final com.onwbp.adaptation.Adaptation pRecord, final JsonNode pItem)
+	{
+		return ActionsBlock.allowed(pSession, pRecord, pItem, new java.util.function.Predicate<String>()
+		{
+			@Override
+			public boolean test(final String pCond)
+			{
+				return RenderContext.xpath(pRecord, pCond, true);
+			}
+		});
+	}
+
+	/** The same, with the test of the XPath condition given (what a record answers is not reachable without a server). */
+	public static boolean allowed(final com.orchestranetworks.service.Session pSession, final com.onwbp.adaptation.Adaptation pRecord, final JsonNode pItem,
+		final java.util.function.Predicate<String> pCond)
+	{
+		final String cond = pItem.path("cond").asText("");
+		return (cond.trim().isEmpty() || pCond.test(cond))
+			&& WorkflowState.allows(pSession, pRecord, false, new java.util.HashMap<String, Object>(), pItem.get("wf"))
+			&& SessionState.allows(pSession, pItem.get("session"));
 	}
 
 	static String render(final RenderContext rc, final JsonNode b, final UIFormPaneWriter w)

@@ -1,6 +1,7 @@
 package com.on.ebx.layout.runtime;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -290,11 +291,54 @@ final class Behaviors
 		{
 			return known;
 		}
+		final Adaptation dataset = pRc.context.getCurrentTable().getContainerAdaptation();
+		final AdaptationTable table;
+		try
+		{
+			table = dataset.getTable(Path.parse(tablePath));
+		}
+		catch (final RuntimeException ex)
+		{
+			LoggingCategory.getKernel().warn("[layout-designer] configuration table " + tablePath + " not read: " + ex.getMessage());
+			return null;
+		}
+		final String parentCol = pBy.path("familyParent").asText("");
+		final AdaptationTable families = parentCol.isEmpty() ? null : Behaviors.familiesTable(pRc, pBy);
+		// valid until one of the two tables changes (audit L2-24); renewed every ten minutes whatever happens, since the
+		// attribute paths also depend on the data model, which can be republished without touching these tables
+		final Date configStamp = table.getLastModificationDate();
+		final Date familiesStamp = families == null ? null : families.getLastModificationDate();
+		final Object stamp = configStamp == null || families != null && familiesStamp == null ? null
+			: configStamp.getTime() + "|" + (familiesStamp == null ? "" : String.valueOf(familiesStamp.getTime())) + "|" + System.currentTimeMillis() / 600000L;
+		final String shared = dataset.getHome().getKey().getName() + "|" + dataset.getAdaptationName().getStringName() + "|" + pRc.context.getCurrentTable().getTablePath().format() + "|"
+			+ cacheKey;
+		final Map<String, List<String[]>> built = Behaviors.FAMILIES.get(shared, stamp, new StampedCache.Loader<Map<String, List<String[]>>>()
+		{
+			@Override
+			public Map<String, List<String[]>> load()
+			{
+				return Behaviors.readFamilies(pRc, pBy, table, parentCol);
+			}
+		});
+		if (built != null)
+		{
+			pRc.cache.put(cacheKey, built);
+		}
+		return built;
+	}
+
+	/** Configuration tables read by the behaviours, kept until they change (audit L2-24). */
+	private static final StampedCache<Map<String, List<String[]>>> FAMILIES = new StampedCache<Map<String, List<String[]>>>(32);
+
+	/** Reads the configuration table (and the families' parents) into the family → attributes map; null when it cannot be read. */
+	private static Map<String, List<String[]>> readFamilies(final RenderContext pRc, final JsonNode pBy, final AdaptationTable table, final String parentCol)
+	{
+		final String tablePath = pBy.path("table").asText("");
+		final String familyCol = pBy.path("familyCol").asText("");
+		final String attributeCol = pBy.path("attributeCol").asText("");
 		final Map<String, List<String[]>> map = new LinkedHashMap<String, List<String[]>>();
 		try
 		{
-			final Adaptation dataset = pRc.context.getCurrentTable().getContainerAdaptation();
-			final AdaptationTable table = dataset.getTable(Path.parse(tablePath));
 			final String mandatoryCol = pBy.path("mandatoryCol").asText("");
 			final RequestResult rows = table.createRequest().execute();
 			try
@@ -327,18 +371,15 @@ final class Behaviors
 			LoggingCategory.getKernel().warn("[layout-designer] configuration table " + tablePath + " not read: " + ex.getMessage());
 			return null;
 		}
-		final String parentCol = pBy.path("familyParent").asText("");
 		if (!parentCol.isEmpty())
 		{
 			final Map<String, String> parents = Behaviors.familyParents(pRc, pBy, parentCol);
 			if (parents != null)
 			{
 				final Map<String, List<String[]>> expanded = Behaviors.inherit(map, parents);
-				pRc.cache.put(cacheKey, expanded);
 				return expanded;
 			}
 		}
-		pRc.cache.put(cacheKey, map);
 		return map;
 	}
 
@@ -347,25 +388,31 @@ final class Behaviors
 	 * foreign key); "familyParent" is its field holding the parent family. Keys are formatted primary keys, as the
 	 * foreign keys hold them. Null when the table cannot be read.
 	 */
+	static AdaptationTable familiesTable(final RenderContext pRc, final JsonNode pBy)
+	{
+		try
+		{
+			final Adaptation dataset = pRc.context.getCurrentTable().getContainerAdaptation();
+			final String familyTable = pBy.path("familyTable").asText("");
+			if (!familyTable.isEmpty())
+			{
+				return dataset.getTable(Path.parse(familyTable));
+			}
+			final SchemaNode key = pRc.node(pBy.path("key").asText(""));
+			return key != null && key.getFacetOnTableReference() != null ? key.getFacetOnTableReference().getTable(pRc.context.getValueContext()) : null;
+		}
+		catch (final RuntimeException ex)
+		{
+			return null;
+		}
+	}
+
 	static Map<String, String> familyParents(final RenderContext pRc, final JsonNode pBy, final String pParentCol)
 	{
 		try
 		{
 			final Adaptation dataset = pRc.context.getCurrentTable().getContainerAdaptation();
-			AdaptationTable families = null;
-			final String familyTable = pBy.path("familyTable").asText("");
-			if (!familyTable.isEmpty())
-			{
-				families = dataset.getTable(Path.parse(familyTable));
-			}
-			else
-			{
-				final SchemaNode key = pRc.node(pBy.path("key").asText(""));
-				if (key != null && key.getFacetOnTableReference() != null)
-				{
-					families = key.getFacetOnTableReference().getTable(pRc.context.getValueContext());
-				}
-			}
+			final AdaptationTable families = Behaviors.familiesTable(pRc, pBy);
 			if (families == null)
 			{
 				return null;

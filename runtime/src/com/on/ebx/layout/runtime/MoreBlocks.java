@@ -40,6 +40,13 @@ final class MoreBlocks
 	{
 	}
 
+	/** The i-th colour of the charts; the first is the perspective's main colour when its theme gives one (audit L2-20). */
+	static String paletteAt(final RenderContext rc, final int pIndex)
+	{
+		final int i = pIndex % MoreBlocks.PALETTE.length;
+		return i == 0 && rc.themeMain != null ? rc.themeMain : MoreBlocks.PALETTE[i];
+	}
+
 	private static String esc(final String s)
 	{
 		return LayoutPane.esc(s);
@@ -673,13 +680,13 @@ final class MoreBlocks
 			{
 				final double from = 100 * acc / sum;
 				acc += list.get(i).getValue().doubleValue();
-				grad.append(i == 0 ? "" : ",").append(MoreBlocks.PALETTE[i % MoreBlocks.PALETTE.length]).append(' ').append(String.format(Locale.ROOT, "%.2f%% %.2f%%", from, 100 * acc / sum));
+				grad.append(i == 0 ? "" : ",").append(MoreBlocks.paletteAt(rc, i)).append(' ').append(String.format(Locale.ROOT, "%.2f%% %.2f%%", from, 100 * acc / sum));
 			}
 			h.append("<div class=\"ldf-donut\"><span class=\"ldf-donut-c\" style=\"background:conic-gradient(").append(grad).append(")\"><i>").append(MoreBlocks.esc(Values.number(sum, rc.locale)))
 				.append("</i></span><ul>");
 			for (int i = 0; i < list.size(); i++)
 			{
-				h.append("<li><i style=\"background:").append(MoreBlocks.PALETTE[i % MoreBlocks.PALETTE.length]).append("\"></i><span>").append(MoreBlocks.esc(list.get(i).getKey())).append("</span><b>")
+				h.append("<li><i style=\"background:").append(MoreBlocks.paletteAt(rc, i)).append("\"></i><span>").append(MoreBlocks.esc(list.get(i).getKey())).append("</span><b>")
 					.append(MoreBlocks.esc(Values.number(list.get(i).getValue().doubleValue(), rc.locale))).append("</b></li>");
 			}
 			h.append("</ul></div>");
@@ -1460,6 +1467,7 @@ final class MoreBlocks
 		final int samples = Math.max(0, b.path("samples").asInt(3));
 		final boolean showZero = b.path("showZero").asBoolean(false);
 		final boolean others = b.path("otherDatasets").asBoolean(true);
+		final int max = Math.max(1, b.path("max").asInt(1000));
 		final StringBuilder h = new StringBuilder();
 		int shown = 0;
 		try
@@ -1494,6 +1502,7 @@ final class MoreBlocks
 					}
 				}
 				int count = 0;
+				boolean more = false;
 				final List<String> labels = new ArrayList<String>();
 				for (final RequestResult rr : results)
 				{
@@ -1501,20 +1510,31 @@ final class MoreBlocks
 					{
 						continue;
 					}
+					if (more)
+					{
+						rr.close();
+						continue;
+					}
 					try
 					{
-						// only the records the user may see are counted and named (EBX permissions)
-						for (Adaptation a = rr.nextAdaptation(); a != null; a = rr.nextAdaptation())
+						// only the records the user may see are counted and named (EBX permissions), and at most "max" rows are
+						// looked at in all (audit L2-06): a country referenced by 500,000 records costs "max" rows, not 500,000
+						final Bounded<Adaptation> seen = Bounded.count(rr.iterator(), Math.max(1, max - count), new java.util.function.Predicate<Adaptation>()
 						{
-							if (!Access.canSee(a))
+							@Override
+							public boolean test(final Adaptation pRow)
 							{
-								continue;
+								return Access.canSee(pRow);
 							}
-							count++;
-							if (labels.size() < samples)
-							{
-								labels.add(a.getLabel(rc.locale));
-							}
+						}, Math.max(0, samples - labels.size()));
+						count += seen.count;
+						for (final Adaptation a : seen.samples)
+						{
+							labels.add(a.getLabel(rc.locale));
+						}
+						if (seen.more)
+						{
+							more = true;
 						}
 					}
 					finally
@@ -1529,7 +1549,7 @@ final class MoreBlocks
 				shown++;
 				final SchemaNode owner = rel.getExplicitRelationship() == null ? null : rel.getExplicitRelationship().getOwnerNode();
 				final String tableLabel = rel.getReferringTableNode().getLabel(rc.locale);
-				h.append("<div class=\"ldf-ub\"><b class=\"ldf-ub-n\">").append(count).append("</b><span class=\"ldf-ub-t\">").append(MoreBlocks.esc(tableLabel));
+				h.append("<div class=\"ldf-ub\"><b class=\"ldf-ub-n\">").append(count).append(more ? "+" : "").append("</b><span class=\"ldf-ub-t\">").append(MoreBlocks.esc(tableLabel));
 				if (owner != null)
 				{
 					h.append(" <span class=\"ldf-more\">").append(MoreBlocks.esc(RuntimeText.get("ubVia", rc.locale, owner.getLabel(rc.locale)))).append("</span>");

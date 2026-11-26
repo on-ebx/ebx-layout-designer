@@ -1,6 +1,10 @@
 package com.on.ebx.layout.designer;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 import jakarta.ws.rs.Consumes;
@@ -79,7 +83,7 @@ public final class LayoutMcpEndpoint
 
 	@POST
 	@Consumes({ MediaType.APPLICATION_JSON, MediaType.WILDCARD })
-	public Response handle(final String pBody, @HeaderParam("Origin") final String pOrigin, @HeaderParam("Host") final String pHost,
+	public Response handle(final InputStream pBody, @HeaderParam("Origin") final String pOrigin, @HeaderParam("Host") final String pHost,
 		@HeaderParam("X-Forwarded-Host") final String pForwardedHost)
 	{
 		if (!LayoutMcpEndpoint.enabled())
@@ -96,14 +100,19 @@ public final class LayoutMcpEndpoint
 		{
 			return Response.status(401).header("WWW-Authenticate", "Basic realm=\"EBX\"").entity("{\"error\":\"Authentication required\"}").build();
 		}
+		// the administrator test comes BEFORE the body is read or parsed (audit L2-04)
+		if (!LayoutMcpTools.allowed(session))
+		{
+			return Response.status(403).entity(LayoutMcpEndpoint.error(null, -32001, "The Layout Designer is for administrators.").toString()).build();
+		}
 		final JsonNode request;
 		try
 		{
-			request = LayoutStore.json().readTree(pBody == null ? "" : pBody);
+			request = LayoutMcpEndpoint.parseBody(pBody, LayoutMcpEndpoint.maxBodyBytes(), LayoutMcpEndpoint.maxDepth());
 		}
-		catch (final Exception ex)
+		catch (final BodyRefused ex)
 		{
-			return Response.status(400).entity(LayoutMcpEndpoint.error(null, -32700, "Parse error: " + ex.getMessage()).toString()).build();
+			return Response.status(ex.status).entity(LayoutMcpEndpoint.error(null, ex.code, ex.getMessage()).toString()).build();
 		}
 		if (request == null || request.isMissingNode())
 		{
@@ -112,6 +121,11 @@ public final class LayoutMcpEndpoint
 		final Locale locale = this.sessionContext.getLocale() == null ? Locale.ENGLISH : this.sessionContext.getLocale();
 		final LayoutMcpTools tools = new LayoutMcpTools(session, this.sessionContext.getRepository(), locale);
 		final boolean allowed = LayoutMcpTools.allowed(session);
+		if (request.isArray() && request.size() > LayoutMcpEndpoint.MAX_BATCH)
+		{
+			return Response.status(400).entity(LayoutMcpEndpoint.error(null, -32600,
+				"Batch too large: at most " + LayoutMcpEndpoint.MAX_BATCH + " requests per call. Send them in several calls.").toString()).build();
+		}
 		if (request.isArray())
 		{
 			final ArrayNode answers = LayoutStore.json().createArrayNode();
@@ -127,6 +141,128 @@ public final class LayoutMcpEndpoint
 		}
 		final JsonNode answer = LayoutMcpEndpoint.dispatch(request, tools, allowed);
 		return answer == null ? Response.status(202).build() : Response.ok(answer.toString()).build();
+	}
+
+	// ----- bounds on what a caller may send (audit L2-04) -----------------------------------------------------------------
+	// Jackson 2.14 (the version of the server's lib) has no StreamReadConstraints (2.15+): the size is bounded while reading
+	// and the nesting by a scan of the text before the parser sees it. The number of nodes follows from the size.
+
+	static final String PROP_MAX_BODY = "ebx.layoutDesigner.mcp.maxBodyBytes";
+	static final String PROP_MAX_DEPTH = "ebx.layoutDesigner.mcp.maxDepth";
+	static final int DEFAULT_MAX_BODY = 2 * 1024 * 1024;
+	static final int DEFAULT_MAX_DEPTH = 64;
+	static final int MAX_BATCH = 50;
+
+	static int maxBodyBytes()
+	{
+		return LayoutMcpEndpoint.intProperty(LayoutMcpEndpoint.PROP_MAX_BODY, LayoutMcpEndpoint.DEFAULT_MAX_BODY);
+	}
+
+	static int maxDepth()
+	{
+		return LayoutMcpEndpoint.intProperty(LayoutMcpEndpoint.PROP_MAX_DEPTH, LayoutMcpEndpoint.DEFAULT_MAX_DEPTH);
+	}
+
+	private static int intProperty(final String pName, final int pDefault)
+	{
+		try
+		{
+			final int v = Integer.parseInt(System.getProperty(pName, "").trim());
+			return v > 0 ? v : pDefault;
+		}
+		catch (final NumberFormatException ex)
+		{
+			return pDefault;
+		}
+	}
+
+	/** A body refused before or while parsing: HTTP status, JSON-RPC code and a message that says what to do. */
+	static final class BodyRefused extends Exception
+	{
+		private static final long serialVersionUID = 1L;
+		final int status;
+		final int code;
+
+		BodyRefused(final int pStatus, final int pCode, final String pMessage)
+		{
+			super(pMessage);
+			this.status = pStatus;
+			this.code = pCode;
+		}
+	}
+
+	/** Reads at most pMaxBytes (413 beyond), refuses a nesting deeper than pMaxDepth (400), then parses. */
+	static JsonNode parseBody(final InputStream pBody, final int pMaxBytes, final int pMaxDepth) throws BodyRefused
+	{
+		final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+		if (pBody != null)
+		{
+			final byte[] chunk = new byte[8192];
+			try
+			{
+				for (int n = pBody.read(chunk); n >= 0; n = pBody.read(chunk))
+				{
+					if (buffer.size() + n > pMaxBytes)
+					{
+						throw new BodyRefused(413, -32600, "Request body larger than " + pMaxBytes + " bytes: send less, or ask an administrator to raise -D"
+							+ LayoutMcpEndpoint.PROP_MAX_BODY + " on the server.");
+					}
+					buffer.write(chunk, 0, n);
+				}
+			}
+			catch (final IOException ex)
+			{
+				throw new BodyRefused(400, -32700, "The request body could not be read: send it again.");
+			}
+		}
+		final String text = new String(buffer.toByteArray(), StandardCharsets.UTF_8);
+		LayoutMcpEndpoint.checkDepth(text, pMaxDepth);
+		try
+		{
+			return LayoutStore.json().readTree(text);
+		}
+		catch (final Exception ex)
+		{
+			throw new BodyRefused(400, -32700, "Parse error: the body is not valid JSON.");
+		}
+	}
+
+	/** Refuses JSON text nested deeper than pMaxDepth (brackets outside strings), without parsing it. */
+	static void checkDepth(final String pText, final int pMaxDepth) throws BodyRefused
+	{
+		int depth = 0;
+		boolean inString = false;
+		for (int i = 0; i < pText.length(); i++)
+		{
+			final char c = pText.charAt(i);
+			if (inString)
+			{
+				if (c == '\\')
+				{
+					i++;
+				}
+				else if (c == '"')
+				{
+					inString = false;
+				}
+			}
+			else if (c == '"')
+			{
+				inString = true;
+			}
+			else if (c == '{' || c == '[')
+			{
+				if (++depth > pMaxDepth)
+				{
+					throw new BodyRefused(400, -32600, "JSON nested deeper than " + pMaxDepth + " levels: flatten it, or ask an administrator to raise -D"
+						+ LayoutMcpEndpoint.PROP_MAX_DEPTH + " on the server.");
+				}
+			}
+			else if (c == '}' || c == ']')
+			{
+				depth--;
+			}
+		}
 	}
 
 	/** No Origin (a program), or one naming the host the request was sent to. Pure. */

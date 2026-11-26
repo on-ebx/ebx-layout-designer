@@ -22,7 +22,6 @@ import com.orchestranetworks.schema.dynamic.BeanDefinition;
 import com.orchestranetworks.schema.dynamic.BeanElement;
 import com.orchestranetworks.schema.types.dataspace.DataspaceSet;
 import com.orchestranetworks.schema.SchemaNode;
-import com.orchestranetworks.service.LoggingCategory;
 import com.orchestranetworks.service.Profile;
 import com.orchestranetworks.service.Session;
 import com.orchestranetworks.ui.UIButtonSpecNavigation;
@@ -169,8 +168,7 @@ public final class LayoutsHomeUserService implements UserService<TableViewEntity
 				}
 				catch (final Exception ex)
 				{
-					LoggingCategory.getKernel().error("[layout-designer] layouts page not built: " + ex, ex);
-					pWriter.add("<p style=\"padding:16px;color:#C73200\">").add(DesignerUserService.esc(ex.toString())).add("</p>");
+					pWriter.add("<p style=\"padding:16px;color:#C73200\">").add(DesignerUserService.esc(DesignerUserService.fail(locale, "layouts page", ex))).add("</p>");
 					return;
 				}
 				final String base = "/" + LayoutPaths.MODULE_NAME + "/www/";

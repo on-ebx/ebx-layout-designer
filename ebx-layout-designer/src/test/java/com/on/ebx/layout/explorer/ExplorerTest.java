@@ -31,6 +31,7 @@ public final class ExplorerTest
 		ExplorerTest.variants();
 		ExplorerTest.predicates();
 		ExplorerTest.selection();
+		ExplorerTest.orShape();
 		if (ExplorerTest.failures > 0)
 		{
 			System.out.println(ExplorerTest.failures + " explorer check(s) failed");
@@ -144,6 +145,40 @@ public final class ExplorerTest
 		ExplorerTest.check("12".equals(Sql.number(12.0)) && "1.5".equals(Sql.number(1.5)), "numbers");
 		ExplorerTest.check("a.b".equals(Model.dotted(com.orchestranetworks.schema.Path.parse("/a/b"))), "dotted path");
 		ExplorerTest.check("\"my-field\"".equals(Model.dotted(com.orchestranetworks.schema.Path.parse("/my-field"))), "odd step quoted");
+	}
+
+	/** L2-09, L2-16, L2-18: no OR between a sub-query and anything else, favorites by key, a pool that can be stopped. */
+	private static void orShape()
+	{
+		final String t = "t", from = "\"/root/T\"";
+		final Model.Pred like = new Model.Pred(Sql.like("t.name", true, "dup"), "osd:contains-case-insensitive(./name, 'dup')");
+		final Model.Pred linked = new Model.Pred("t.\"$pk\" IN (SELECT FK_AS_STRING(c1.supplier) FROM \"/root/Contact\" c1 WHERE " + Sql.like("c1.name", true, "dup") + ")", null);
+		Model.Pred p = Model.or(Arrays.asList(like, linked), t, from);
+		ExplorerTest.check(p.sql.startsWith("t.\"$pk\" IN (SELECT ") && p.sql.contains(" UNION ") && !p.sql.contains("OR (SELECT") && !p.sql.contains(" OR "),
+			"search + lookup: one IN over a UNION, no OR: " + p.sql);
+		ExplorerTest.check(p.sql.contains("SELECT t.\"$pk\" FROM \"/root/T\" t WHERE LOWER(t.name) LIKE '%dup%'") && !p.sql.contains("CAST"), "the LIKE is a branch, with no CAST");
+		ExplorerTest.check(p.xpath == null, "the union has no XPath form");
+		final Model.Pred pct = new Model.Pred(Sql.like("t.name", true, "50%"), null);
+		p = Model.or(Arrays.asList(pct, linked), t, from);
+		ExplorerTest.check(p.sql.contains("LIKE '%50\\%%' ESCAPE '\\'"), "a value with % gets ESCAPE: " + p.sql);
+		final Model.Pred other = new Model.Pred("t.\"$pk\" IN (SELECT FK_AS_STRING(c2.supplier) FROM \"/root/Bank\" c2 GROUP BY FK_AS_STRING(c2.supplier) HAVING COUNT(*) >= 2)", null);
+		p = Model.or(Arrays.asList(linked, other), t, from);
+		ExplorerTest.check(p.sql.contains(" UNION ") && !p.sql.contains(" OR ") && p.sql.indexOf("SELECT t.\"$pk\" FROM") < 0, "two sets: a UNION of their own SELECTs");
+		p = Model.or(Arrays.asList(like, new Model.Pred("t.n > 1", "./n > 1")), t, from);
+		ExplorerTest.check(p.sql.contains(" OR ") && p.xpath != null, "no sub-query: the plain OR and its XPath stay");
+		final Model.Pred meta = new Model.Pred("rmd.state = 1", null);
+		ExplorerTest.check(Model.or(Arrays.asList(meta, linked), t, from) == null, "a metadataset join beside a sub-query cannot be written: refused (null)");
+		ExplorerTest.check(Model.keySet("t.\"$pk\" IN (SELECT a) OR t.\"$pk\" IN (SELECT b)", t) == null, "two IN joined by OR are not one set");
+		ExplorerTest.check("SELECT 'a)' FROM x".equals(Model.keySet("t.\"$pk\" IN (SELECT 'a)' FROM x)", t)), "a parenthesis in a literal does not close the set");
+		final String f = ExplorerStore.favoritesFilter("u'1", 7, "Ref", "Main");
+		ExplorerTest.check(f.contains("./user = 'u''1'") && f.contains("./explorer = 7") && f.contains("./dataspace = 'Ref'") && f.contains("./dataset = 'Main'"),
+			"favorites: a predicate on the user and the key, not a sweep: " + f);
+		Engine.shutdown();
+		Engine.shutdown();
+		final List<java.util.concurrent.Callable<Integer>> tasks = new ArrayList<java.util.concurrent.Callable<Integer>>();
+		tasks.add(() -> Integer.valueOf(1));
+		tasks.add(() -> Integer.valueOf(2));
+		ExplorerTest.check(Engine.all(tasks).equals(Arrays.asList(Integer.valueOf(1), Integer.valueOf(2))), "after shutdown the tasks run one after the other");
 	}
 
 	private static void selection()

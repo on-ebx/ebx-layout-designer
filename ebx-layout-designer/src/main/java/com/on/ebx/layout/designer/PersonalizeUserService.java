@@ -18,7 +18,6 @@ import com.onwbp.adaptation.Adaptation;
 import com.orchestranetworks.instance.Repository;
 import com.orchestranetworks.schema.Path;
 import com.orchestranetworks.schema.SchemaLocation;
-import com.orchestranetworks.service.LoggingCategory;
 import com.orchestranetworks.service.Profile;
 import com.orchestranetworks.service.Session;
 import com.orchestranetworks.ui.UIButtonSpecNavigation;
@@ -172,8 +171,7 @@ public final class PersonalizeUserService implements UserService<RecordEntitySel
 		}
 		catch (final RuntimeException ex)
 		{
-			LoggingCategory.getKernel().error("[layout-designer] personalization page not built: " + ex, ex);
-			pWriter.add("<p style=\"padding:16px;color:#C73200\">").add(DesignerUserService.esc(ex.toString())).add("</p>");
+			pWriter.add("<p style=\"padding:16px;color:#C73200\">").add(DesignerUserService.esc(DesignerUserService.fail(locale, "personalization page", ex))).add("</p>");
 			return;
 		}
 		this.notice = null;
@@ -259,8 +257,7 @@ public final class PersonalizeUserService implements UserService<RecordEntitySel
 		}
 		catch (final Exception ex)
 		{
-			LoggingCategory.getKernel().error("[layout-designer] personal arrangement not saved: " + ex, ex);
-			this.notice(Messages.get(locale, "personal.saveFailed", ex.getMessage()), true);
+			this.notice(Messages.get(locale, "personal.saveFailed", DesignerUserService.fail(locale, "personal arrangement", ex)), true);
 		}
 	}
 

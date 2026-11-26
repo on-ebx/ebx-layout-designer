@@ -46,19 +46,33 @@ final class LayoutPane implements UIFormPane
 	public void writePane(final UIFormPaneWriter pWriter, final UIFormContext pContext)
 	{
 		Access.begin(pContext.getSession(), this.rc.record, pContext.getCurrentTable());
+		final long t0 = System.currentTimeMillis();
 		try
 		{
 			this.write(pWriter);
+		}
+		catch (final RuntimeException ex)
+		{
+			// audit L2-25: a pane that cannot be drawn says so (the blocks are protected one by one, this is what is left)
+			LoggingCategory.getKernel().error("[layout-designer] LDF-RENDER tab " + this.tabIndex + " not drawn: " + ex, ex);
+			pWriter.add("<div class=\"ldf-more\">").add(LayoutPane.esc(RuntimeText.get("layoutError", this.rc.locale))).add("</div>");
 		}
 		finally
 		{
 			Access.end();
 		}
+		ConfigurableForm.slow("tab " + this.tabIndex + " written", this.rc.context.getCurrentTable().getTablePath().format(), t0);
 	}
 
 	private void write(final UIFormPaneWriter pWriter)
 	{
-		pWriter.add("<style>").add(Css.STYLE).add("</style><div class=\"ldf\">");
+		// the style sheet and the scripts are the same in every tab and every tab is in the page: the first pane writes them (audit L2-17)
+		final boolean assets = this.rc.assets.first();
+		if (assets)
+		{
+			pWriter.add("<style>").add(Css.STYLE).add(Css.themeVars(this.rc.themeMain, this.rc.themeFocus)).add("</style>");
+		}
+		pWriter.add("<div class=\"ldf\">");
 		this.rules = new Behaviors.Rules(pWriter);
 		this.drawn = 0;
 		if (this.tabIndex == 0)
@@ -87,6 +101,7 @@ final class LayoutPane implements UIFormPane
 				for (int k = 0; k < col.size(); k++)
 				{
 					final JsonNode block = col.get(k);
+					final long b0 = System.currentTimeMillis();
 					try
 					{
 						this.block(pWriter, block, RenderContext.blockId(block, this.tabIndex, r, c, k));
@@ -95,6 +110,7 @@ final class LayoutPane implements UIFormPane
 					{
 						LoggingCategory.getKernel().error("[layout-designer] block " + block.path("type").asText() + " not drawn: " + ex, ex);
 					}
+					ConfigurableForm.slow("block " + block.path("type").asText() + " of tab " + this.tabIndex, this.rc.context.getCurrentTable().getTablePath().format(), b0);
 				}
 				pWriter.add("</div>");
 			}
@@ -114,11 +130,14 @@ final class LayoutPane implements UIFormPane
 			pWriter.add("<div class=\"ldf-none\">").add(LayoutPane.esc(RuntimeText.get("pinnedNotHere", this.rc.locale))).add("</div>");
 		}
 		pWriter.add("</div>");
-		pWriter.addJS_cr(Css.GO_JS);
-		pWriter.addJS_cr(DisplayWidgets.JS);
-		pWriter.addJS_cr(OrgChart.JS);
-		pWriter.addJS_cr(OrgChart.BLOCKS_JS);
-		pWriter.addJS_cr(Css.LAZY_JS);
+		if (assets)
+		{
+			pWriter.addJS_cr(Css.GO_JS);
+			pWriter.addJS_cr(DisplayWidgets.JS);
+			pWriter.addJS_cr(OrgChart.JS);
+			pWriter.addJS_cr(OrgChart.BLOCKS_JS);
+			pWriter.addJS_cr(Css.LAZY_JS);
+		}
 		if (!this.rules.isEmpty())
 		{
 			pWriter.addJS_cr(this.rules.js());
@@ -650,7 +669,7 @@ final class LayoutPane implements UIFormPane
 		final String count = b.path("count").asText("");
 		if (!count.isEmpty() && this.rc.canRead(count))
 		{
-			w.add("<div class=\"ldf-fact\"><b>").add(this.rc.creating ? "—" : String.valueOf(this.rc.count(count))).add("</b><span>")
+			w.add("<div class=\"ldf-fact\"><b>").add(this.rc.creating ? "—" : this.rc.countText(count)).add("</b><span>")
 				.add(LayoutPane.esc(this.rc.label(count))).add("</span></div>");
 		}
 		w.add("</div>");
@@ -821,7 +840,7 @@ final class LayoutPane implements UIFormPane
 			{
 				// built when its tab is opened: a frame showing this one native grid (module service LayoutGrid)
 				final int n = this.rc.count(a);
-				this.startPanel(w, b, id, title, String.valueOf(n), null);
+				this.startPanel(w, b, id, title, this.rc.countText(a), null);
 				final String countUrl = this.countUrl(a);
 				w.add("<div class=\"ldf-lazy\" data-n=\"").add(String.valueOf(n)).add("\"").add(countUrl == null ? "" : " data-count=\"" + LayoutPane.esc(countUrl) + "\"")
 					.add(" data-src=\"").add(LayoutPane.esc(src)).add("\" style=\"height:").add(String.valueOf(Math.max(200, b.path("height").asInt(460))))
@@ -829,7 +848,7 @@ final class LayoutPane implements UIFormPane
 				return;
 			}
 		}
-		final String count = this.rc.record == null ? null : String.valueOf(this.rc.count(a));
+		final String count = this.rc.record == null ? null : this.rc.countText(a);
 		final String add = LText.hasText(b.get("addBtn")) ? "<span class=\"ldf-btn\">" + LayoutPane.esc(this.rc.text(b.get("addBtn"))) + "</span>" : null;
 		this.startPanel(w, b, id, title, count, null);
 		if ("cards".equals(b.path("style").asText()) && this.rc.record != null)
@@ -934,26 +953,28 @@ final class LayoutPane implements UIFormPane
 	/** The fields listed in the block's "cardFields", formatted, on one line. */
 	private String cardDetail(final Adaptation r, final JsonNode b)
 	{
+		// Values.display applies the user's field permission on this row, as every other block does (audit L2-03): a
+		// hidden field is neither drawn nor counted, and a field the target table does not have gives ""
+		return LayoutPane.cardLine(b, new java.util.function.Function<String, String>()
+		{
+			@Override
+			public String apply(final String pPath)
+			{
+				return Values.display(r, pPath, LayoutPane.this.rc.locale);
+			}
+		});
+	}
+
+	/** The non-empty values of the block's "cardFields", each shown by {@code pDisplay}, on one line. */
+	static String cardLine(final JsonNode b, final java.util.function.Function<String, String> pDisplay)
+	{
 		final List<String> parts = new ArrayList<String>();
 		for (final JsonNode p : b.path("cardFields"))
 		{
-			try
+			final String s = pDisplay.apply(p.asText());
+			if (s != null && !s.isEmpty())
 			{
-				final Path path = LayoutPaths.relative(p.asText());
-				final SchemaNode n = r.getSchemaNode().getNode(path);
-				final Object v = n == null ? null : r.get(path);
-				if (v != null)
-				{
-					final String s = n.displayOccurrence(v, true, r.createValueContext(), this.rc.locale);
-					if (s != null && !s.isEmpty())
-					{
-						parts.add(s);
-					}
-				}
-			}
-			catch (final RuntimeException ex)
-			{
-				// a field the target table does not have
+				parts.add(s);
 			}
 		}
 		return String.join(" · ", parts);

@@ -19,22 +19,23 @@
     for (var j in o) if (o[j]) return o[j];
     return '';
   };
+  /* [French, English, Italian]; any other language reads English */
   var STR = {
-    search: ['Rechercher…', 'Search…'], records: ['fiches', 'records'], record: ['fiche', 'record'], more: ['Afficher plus', 'Show more'],
-    none: ['Aucune fiche ne correspond à ces critères.', 'No record matches these criteria.'], clear: ['Tout effacer', 'Clear all'],
-    hideF: ['Masquer les filtres', 'Hide filters'], showF: ['Afficher les filtres', 'Show filters'], open: ['Ouvrir la fiche', 'Open'],
-    fav: ['Favori', 'Favorite'], addFav: ['Ajouter aux favoris', 'Add to favorites'], rmFav: ['Retirer des favoris', 'Remove from favorites'],
-    myFav: ['Mes favoris', 'My favorites'], moreV: ['Afficher 10 de plus', 'Show 10 more'], less: ['Réduire', 'Show less'],
-    findV: ['Chercher parmi {n} valeurs', 'Search {n} values'], findMany: ['Chercher une valeur', 'Search a value'],
-    ofMany: ['{a} les plus fréquentes, d\'autres existent', '{a} most frequent, more exist'], foundMany: ['Plus de {n} trouvées', 'More than {n} found'],
-    narrowMany: ['Pour les autres, cherchez.', 'For the others, search.'], found: ['{n} trouvée(s)', '{n} found'], ofTotal: ['{a} sur {b}, les plus fréquentes', '{a} of {b}, most frequent first'],
-    narrow: ['Pour les {n} autres, cherchez.', 'For the other {n}, search.'], all: ['Toutes', 'All'], yes: ['Oui', 'Yes'], no: ['Non', 'No'],
-    copy: ['Copier', 'Copy'], copied: ['Copié', 'Copied'], compliant: ['Rien à signaler', 'Nothing to report'], error: ['Le serveur n’a pas répondu correctement.', 'The server answer could not be read.'],
-    sort: ['Trier', 'Sort'], computed: ['Calculé à {t}', 'Computed at {t}'], agoMin: ['il y a {n} min', '{n} min ago'], now: ['à l’instant', 'just now'],
-    refresh: ['Actualiser', 'Refresh'], asView: ['Affichage', 'View'], v_vertical: ['Cartes', 'Cards'], v_horizontal: ['Cartes larges', 'Wide cards'], v_compact: ['Liste', 'List'],
-    asc: ['Croissant', 'Ascending'], desc: ['Décroissant', 'Descending'], create: ['Créer', 'Create'], inGroup: ['{n} fiche(s)', '{n} record(s)'], noGroup: ['(vide)', '(empty)'], changed: ['Des données ont changé depuis.', 'Data changed since.'], auto: ['Mis à jour automatiquement', 'Updated automatically'], ago: ['il y a {n}', '{n} ago'], inT: ['dans {n}', 'in {n}'], today: ['aujourd’hui', 'today'], d: ['j', 'd'], mo: ['mois', 'mo'], y: ['an(s)', 'y']
+    search: ['Rechercher…', 'Search…', 'Cerca…'], records: ['fiches', 'records', 'schede'], record: ['fiche', 'record', 'scheda'], more: ['Afficher plus', 'Show more', 'Mostra altro'],
+    none: ['Aucune fiche ne correspond à ces critères.', 'No record matches these criteria.', 'Nessuna scheda corrisponde a questi criteri.'], clear: ['Tout effacer', 'Clear all', 'Cancella tutto'],
+    hideF: ['Masquer les filtres', 'Hide filters', 'Nascondi i filtri'], showF: ['Afficher les filtres', 'Show filters', 'Mostra i filtri'], open: ['Ouvrir la fiche', 'Open', 'Apri la scheda'],
+    fav: ['Favori', 'Favorite', 'Preferito'], addFav: ['Ajouter aux favoris', 'Add to favorites', 'Aggiungi ai preferiti'], rmFav: ['Retirer des favoris', 'Remove from favorites', 'Rimuovi dai preferiti'],
+    myFav: ['Mes favoris', 'My favorites', 'I miei preferiti'], moreV: ['Afficher 10 de plus', 'Show 10 more', 'Mostra altri 10'], less: ['Réduire', 'Show less', 'Riduci'],
+    findV: ['Chercher parmi {n} valeurs', 'Search {n} values', 'Cerca tra {n} valori'], findMany: ['Chercher une valeur', 'Search a value', 'Cerca un valore'],
+    ofMany: ['{a} les plus fréquentes, d\'autres existent', '{a} most frequent, more exist', '{a} più frequenti, ne esistono altri'], foundMany: ['Plus de {n} trouvées', 'More than {n} found', 'Più di {n} trovati'],
+    narrowMany: ['Pour les autres, cherchez.', 'For the others, search.', 'Per gli altri, cerca.'], found: ['{n} trouvée(s)', '{n} found', '{n} trovato/i'], ofTotal: ['{a} sur {b}, les plus fréquentes', '{a} of {b}, most frequent first', '{a} su {b}, i più frequenti'],
+    narrow: ['Pour les {n} autres, cherchez.', 'For the other {n}, search.', 'Per gli altri {n}, cerca.'], all: ['Toutes', 'All', 'Tutti'], yes: ['Oui', 'Yes', 'Sì'], no: ['Non', 'No', 'No'],
+    copy: ['Copier', 'Copy', 'Copia'], copied: ['Copié', 'Copied', 'Copiato'], compliant: ['Rien à signaler', 'Nothing to report', 'Nulla da segnalare'], error: ['Le serveur n’a pas répondu correctement.', 'The server answer could not be read.', 'Il server non ha risposto correttamente.'],
+    sort: ['Trier', 'Sort', 'Ordina'], computed: ['Calculé à {t}', 'Computed at {t}', 'Calcolato alle {t}'], agoMin: ['il y a {n} min', '{n} min ago', '{n} min fa'], now: ['à l’instant', 'just now', 'proprio ora'],
+    refresh: ['Actualiser', 'Refresh', 'Aggiorna'], asView: ['Affichage', 'View', 'Visualizzazione'], v_vertical: ['Cartes', 'Cards', 'Schede'], v_horizontal: ['Cartes larges', 'Wide cards', 'Schede larghe'], v_compact: ['Liste', 'List', 'Elenco'],
+    asc: ['Croissant', 'Ascending', 'Crescente'], desc: ['Décroissant', 'Descending', 'Decrescente'], create: ['Créer', 'Create', 'Crea'], inGroup: ['{n} fiche(s)', '{n} record(s)', '{n} scheda/e'], noGroup: ['(vide)', '(empty)', '(vuoto)'], changed: ['Des données ont changé depuis.', 'Data changed since.', 'Da allora i dati sono cambiati.'], auto: ['Mis à jour automatiquement', 'Updated automatically', 'Aggiornato automaticamente'], ago: ['il y a {n}', '{n} ago', '{n} fa'], inT: ['dans {n}', 'in {n}', 'tra {n}'], today: ['aujourd’hui', 'today', 'oggi'], d: ['j', 'd', 'g'], mo: ['mois', 'mo', 'mesi'], y: ['an(s)', 'y', 'anno/i']
   };
-  var S_ = function (k, args) { var v = (STR[k] || [k, k])[LANG === 'fr' ? 0 : 1]; for (var a in args || {}) v = v.split('{' + a + '}').join(args[a]); return v; };
+  var S_ = function (k, args) { var s = STR[k] || [k, k, k], v = s[LANG === 'fr' ? 0 : LANG === 'it' ? 2 : 1] || s[1]; for (var a in args || {}) v = v.split('{' + a + '}').join(args[a]); return v; };
   var nf = function (n, opts) { try { return new Intl.NumberFormat(LOC, opts || {}).format(n); } catch (x) { return String(n); } };
 
   // --- state, kept per EBX user and explorer for the browser tab ---------------------------------------------------

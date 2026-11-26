@@ -1,6 +1,8 @@
 package com.on.ebx.layout.designer;
 
+import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.on.ebx.layout.runtime.LayoutCheck;
@@ -23,6 +25,7 @@ public final class LayoutValidation implements Constraint<String>
 {
 	private static final Path MODEL = Path.parse("../model");
 	private static final Path TABLE = Path.parse("../table");
+	/** The shipped languages; the locales the instance declares are added at each validation (L2-21). */
 	private static final Locale[] LOCALES = { Locale.US, Locale.FRANCE, Locale.ITALY };
 
 	private String checks = "all";
@@ -60,13 +63,19 @@ public final class LayoutValidation implements Constraint<String>
 			pContext.addError("JSON: " + ex.getMessage());
 			return;
 		}
+		final Set<Locale> locales = new LinkedHashSet<Locale>();
+		for (final Locale l : LayoutValidation.LOCALES)
+		{
+			locales.add(l);
+		}
+		locales.addAll(pContext.getHome().getRepository().getLocales());
 		final Object model = pContext.getValue(LayoutValidation.MODEL);
 		final Object table = pContext.getValue(LayoutValidation.TABLE);
 		for (final LayoutCheck.Issue issue : LayoutCheck.check(pContext.getHome().getRepository(), model == null ? null : String.valueOf(model),
 			table == null ? null : String.valueOf(table), layout, Locale.US))
 		{
 			final UserMessageLocalized m = new UserMessageLocalized();
-			for (final Locale l : LayoutValidation.LOCALES)
+			for (final Locale l : locales)
 			{
 				m.setMessage(l, issue.text(l));
 			}

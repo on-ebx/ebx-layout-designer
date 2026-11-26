@@ -309,11 +309,22 @@ public final class Engine
 			return t;
 		}, null, false);
 
+	/**
+	 * Stops the pool and drops the cached answers (L2-18), when the module is unloaded: its threads carry the webapp's class
+	 * loader. Later pages run their statements one after the other. Safe to call twice.
+	 */
+	public static void shutdown()
+	{
+		Engine.POOL.shutdownNow();
+		Engine.ANSWERS.clear();
+		Engine.SEES_ALL.clear();
+	}
+
 	/** Runs the tasks at the same time on the explorer's pool (the caller's context carried over), in order of the list. */
 	static <T> List<T> all(final List<java.util.concurrent.Callable<T>> pTasks)
 	{
 		final List<T> out = new ArrayList<T>();
-		if (pTasks.size() <= 1 || Boolean.TRUE.equals(Engine.SEQUENTIAL.get()))
+		if (pTasks.size() <= 1 || Boolean.TRUE.equals(Engine.SEQUENTIAL.get()) || Engine.POOL.isShutdown())
 		{
 			for (final java.util.concurrent.Callable<T> c : pTasks)
 			{
@@ -647,7 +658,12 @@ public final class Engine
 			break;
 		}
 		any.removeIf(p -> p == null);
-		return any.isEmpty() ? Model.Pred.FALSE : Model.or(any);
+		final Model.Pred found = any.isEmpty() ? Model.Pred.FALSE : m.anyOf(any);
+		if (found == null)
+		{
+			LoggingCategory.getKernel().warn("[layout-designer] explorer: facet " + pFacet.id + " left out, it ORs a sub-query with a metadataset condition (EBX evaluates that record by record)");
+		}
+		return found == null ? Model.Pred.FALSE : found;
 	}
 
 	static Model.Pred tilePred(final View pView, final Spec.Tile pTile)

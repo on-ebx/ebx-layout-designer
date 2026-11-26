@@ -144,8 +144,7 @@ public final class ExplorerDesignerUserService implements UserService<TableViewE
 		}
 		catch (final Exception ex)
 		{
-			LoggingCategory.getKernel().error("[layout-designer] explorer designer data not built: " + ex, ex);
-			pWriter.add("<p style=\"padding:16px;color:#C73200\">").add(DesignerUserService.esc(ex.toString())).add("</p>");
+			pWriter.add("<p style=\"padding:16px;color:#C73200\">").add(DesignerUserService.esc(ExplorerUserService.fail(pSession.getLocale(), "designer data", ex))).add("</p>");
 			return;
 		}
 		this.notice = null;
@@ -270,7 +269,7 @@ public final class ExplorerDesignerUserService implements UserService<TableViewE
 		}
 		catch (final RuntimeException ex)
 		{
-			out.put("error", String.valueOf(ex.getMessage()));
+			out.put("error", ExplorerUserService.fail(pContext.getSession().getLocale(), "designer values", ex));
 		}
 		pResponse.getWriter().add(out.toString());
 	};

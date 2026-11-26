@@ -216,6 +216,14 @@ Peu importe ce qui a posé la valeur dans la session (tâche de workflow, trigge
 tient pas compte de la casse, les deux conditions doivent être vraies, et la session est lue à l'ouverture de la fiche :
 une valeur posée pendant qu'elle est ouverte compte à l'affichage suivant. Le canevas étiquette l'élément avec sa condition.
 
+Cela arrange l'affichage et ne protège rien. Le composant web d'EBX accepte un paramètre `trackingInfo` dans son adresse :
+un utilisateur peut peut-être choisir le tracking info qu'une condition compare (non mesuré : à considérer comme
+possible). Pour une condition qui doit tenir, préférez une **variable de session**, et réservez à EBX (permissions) ce
+qui doit vraiment être refusé. Un bouton de workflow est re-testé au lancement (sa condition sur la fiche, sur les
+workflows et sur la session) : s'il ne tient plus, rien n'est lancé et l'utilisateur en est prévenu. Après un lancement, la
+première tâche s'ouvre si elle est prête dans la seconde environ ; sinon l'utilisateur va dans sa boîte de réception, où
+elle apparaîtra.
+
 ## 8. Enregistrer, déclarer, utiliser
 
 - **Version 1.20.0** : dans le panneau de la carte, *Affichages au choix de l’utilisateur* (cartes, cartes larges, liste) ;

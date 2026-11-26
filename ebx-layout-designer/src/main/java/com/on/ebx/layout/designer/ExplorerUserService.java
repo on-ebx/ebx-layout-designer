@@ -171,8 +171,7 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 		}
 		catch (final RuntimeException ex)
 		{
-			LoggingCategory.getKernel().error("[layout-designer] explorer " + pRow.id + " not shown: " + ex, ex);
-			pWriter.add("<p style=\"padding:16px;color:#C73200\">").add(DesignerUserService.esc(Messages.get(locale, "explorer.failed", ex.getMessage()))).add("</p>");
+			pWriter.add("<p style=\"padding:16px;color:#C73200\">").add(DesignerUserService.esc(ExplorerUserService.fail(locale, "page " + pRow.id, ex))).add("</p>");
 			return;
 		}
 		final String base = "/" + LayoutPaths.MODULE_NAME + "/www/";
@@ -211,7 +210,7 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 		final ObjectNode ajax = boot.putObject("ajax");
 		ajax.put("query", pWriter.getURLForAjaxRequest(this.query));
 		ajax.put("values", pWriter.getURLForAjaxRequest(this.values));
-		if (pSession.isUserInRole(com.orchestranetworks.service.Profile.ADMINISTRATOR))
+		if (ExplorerUserService.loadTestOn() && pSession.isUserInRole(com.orchestranetworks.service.Profile.ADMINISTRATOR))
 		{
 			ajax.put("load", pWriter.getURLForAjaxRequest(this.load));
 		}
@@ -769,11 +768,18 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 		}
 		catch (final RuntimeException ex)
 		{
-			LoggingCategory.getKernel().error("[layout-designer] explorer query failed: " + ex, ex);
-			out.put("error", String.valueOf(ex.getMessage()));
+			out.put("error", ExplorerUserService.fail(pContext.getSession().getLocale(), "query", ex));
 		}
 		pResponse.getWriter().add(out.toString());
 	};
+
+	/** The load test is a bench for a test instance: off unless this JVM property is "true" (L2-18). */
+	static final String LOAD_TEST_PROPERTY = "ebx.layoutDesigner.loadTest";
+
+	static boolean loadTestOn()
+	{
+		return Boolean.getBoolean(ExplorerUserService.LOAD_TEST_PROPERTY);
+	}
 
 	/**
 	 * Administrators only: a load test. {@code n} threads (1-300) each play a user asking the same page at the same time
@@ -783,9 +789,9 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 	private final UserServiceAjaxRequest load = (pContext, pResponse) -> {
 		final Session session = pContext.getSession();
 		final ObjectNode out = LayoutStore.json().createObjectNode();
-		if (!session.isUserInRole(com.orchestranetworks.service.Profile.ADMINISTRATOR))
+		if (!ExplorerUserService.loadTestOn() || !session.isUserInRole(com.orchestranetworks.service.Profile.ADMINISTRATOR))
 		{
-			out.put("error", "administrators only");
+			out.put("error", "administrators only, and only when the server runs with -D" + ExplorerUserService.LOAD_TEST_PROPERTY + "=true");
 			pResponse.getWriter().add(out.toString());
 			return;
 		}
@@ -909,7 +915,7 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 		}
 		catch (final RuntimeException ex)
 		{
-			out.put("error", String.valueOf(ex.getMessage()));
+			out.put("error", ExplorerUserService.fail(pContext.getSession().getLocale(), "values", ex));
 		}
 		pResponse.getWriter().add(out.toString());
 	};
@@ -932,10 +938,21 @@ public final class ExplorerUserService implements UserService<TableViewEntitySel
 		}
 		catch (final Exception ex)
 		{
-			out.put("error", String.valueOf(ex.getMessage()));
+			out.put("error", ExplorerUserService.fail(pContext.getSession().getLocale(), "favorite", ex));
 		}
 		pResponse.getWriter().add(out.toString());
 	};
+
+	/**
+	 * What a user sees of an unexpected failure: a short code and a message, never the exception's own text (class names,
+	 * the SQL EBX refused, paths). The detail and the stack go to {@code kernel.log} under the same code (L2-12).
+	 */
+	static String fail(final Locale pLocale, final String pWhere, final Throwable pCause)
+	{
+		final String code = "LDX-" + Long.toString(System.currentTimeMillis() % 100_000_000L, 36).toUpperCase(Locale.ROOT);
+		LoggingCategory.getKernel().error("[layout-designer] explorer " + pWhere + " failed (" + code + "): " + pCause, pCause);
+		return Messages.get(pLocale, "explorer.error", code);
+	}
 
 	static ObjectNode page(final Query.FacetPage pPage)
 	{

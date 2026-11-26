@@ -74,7 +74,6 @@ public final class Model
 		 * only reads the add-on's values: counted there directly for a user who sees every record (editor's advice).
 		 */
 		public final String meta;
-
 		Pred(final String pSql, final String pXPath)
 		{
 			this(pSql, pXPath, null);
@@ -698,7 +697,7 @@ public final class Model
 				}
 				parts.add(p);
 			}
-			return all ? Model.and(parts) : Model.or(parts);
+			return all ? Model.and(parts) : this.anyOf(parts);
 		}
 		if (pCond.has("not"))
 		{
@@ -791,9 +790,9 @@ public final class Model
 				list.append(list.length() == 0 ? "" : ", ").append(Sql.lit(k));
 			}
 			final String table = "mds." + Model.quote(this.mdsTable);
-			return new Pred("(" + this.t + ".\"$pk\" IN (SELECT " + a + ".sourceId FROM " + table + " " + a + " WHERE " + this.suspectRow(a) + " AND " + a + ".targetId IN ("
-				+ list + ")) OR " + this.t + ".\"$pk\" IN (SELECT " + b + ".targetId FROM " + table + " " + b + " WHERE " + this.suspectRow(b) + " AND " + b
-				+ ".sourceId IN (" + list + ")))", null);
+			// one IN over a UNION, never two IN joined by OR (L2-09)
+			return new Pred(this.t + ".\"$pk\" IN (SELECT " + a + ".sourceId FROM " + table + " " + a + " WHERE " + this.suspectRow(a) + " AND " + a + ".targetId IN ("
+				+ list + ") UNION SELECT " + b + ".targetId FROM " + table + " " + b + " WHERE " + this.suspectRow(b) + " AND " + b + ".sourceId IN (" + list + "))", null);
 		}
 		final StringBuilder sql = new StringBuilder();
 		final StringBuilder xpath = new StringBuilder();
@@ -1049,7 +1048,18 @@ public final class Model
 				}
 			}
 		}
-		return parts.isEmpty() ? Pred.FALSE : Model.or(parts);
+		if (parts.isEmpty())
+		{
+			return Pred.FALSE;
+		}
+		Pred found = this.anyOf(parts);
+		if (found == null)
+		{
+			// a source read through the joined metadataset row cannot sit beside a sub-query: the search leaves it out
+			parts.removeIf(p -> p.sql != null && p.sql.contains(Model.META + "."));
+			found = parts.isEmpty() ? Pred.FALSE : this.anyOf(parts);
+		}
+		return found;
 	}
 
 	/** Records with a linked row whose {@code lookup} field holds the text. */
@@ -1094,7 +1104,24 @@ public final class Model
 		return Model.join(kept, " AND ", " and ");
 	}
 
+	/** The condition any of these holds, on the explorer's table: sub-queries are written as ONE set of keys (see the context-free form). */
+	Pred anyOf(final List<Pred> pParts)
+	{
+		return Model.or(pParts, this.t, this.from);
+	}
+
 	static Pred or(final List<Pred> pParts)
+	{
+		return Model.or(pParts, null, null);
+	}
+
+	/**
+	 * An OR in which a member holds a sub-query is written as {@code t."$pk" IN (<branch> UNION <branch> …)}, each branch
+	 * selecting the keys of the records one member holds. The plain {@code (IN (SELECT …)) OR LIKE …} is evaluated record by
+	 * record by EBX (17 minutes on one core measured 2026-10-16, no way to cancel it). A member reading the joined
+	 * metadataset row ({@code rmd}) cannot be a branch: the result is null, "EBX cannot evaluate it" (the check refuses it, the page leaves it out).
+	 */
+	static Pred or(final List<Pred> pParts, final String pT, final String pFrom)
 	{
 		final List<Pred> kept = new ArrayList<Pred>();
 		for (final Pred p : pParts)
@@ -1116,7 +1143,61 @@ public final class Model
 		{
 			return kept.get(0);
 		}
-		return Model.join(kept, " OR ", " or ");
+		boolean subQuery = false, sqlAll = true, meta = false;
+		for (final Pred p : kept)
+		{
+			sqlAll &= p.sql != null;
+			if (p.sql != null)
+			{
+				subQuery |= p.sql.contains("(SELECT ") || p.sql.contains("EXISTS (");
+				meta |= p.sql.contains(Model.META + ".");
+			}
+		}
+		if (!subQuery || !sqlAll || pT == null)
+		{
+			return Model.join(kept, " OR ", " or ");
+		}
+		if (meta)
+		{
+			return null;
+		}
+		final StringBuilder union = new StringBuilder();
+		for (final Pred p : kept)
+		{
+			final String inner = Model.keySet(p.sql, pT);
+			union.append(union.length() == 0 ? "" : " UNION ").append(
+				inner != null ? inner : "SELECT " + pT + ".\"$pk\" FROM " + pFrom + " " + pT + " WHERE " + p.sql);
+		}
+		return new Pred(pT + ".\"$pk\" IN (" + union + ")", null);
+	}
+
+	/** The inner SELECT of a condition that is exactly {@code t."$pk" IN (SELECT …)}; null for any other text. */
+	static String keySet(final String pSql, final String pT)
+	{
+		final String open = pT + ".\"$pk\" IN (";
+		if (!pSql.startsWith(open + "SELECT ") || !pSql.endsWith(")"))
+		{
+			return null;
+		}
+		int depth = 0;
+		boolean literal = false;
+		for (int i = open.length() - 1; i < pSql.length(); i++)
+		{
+			final char c = pSql.charAt(i);
+			if (c == '\'')
+			{
+				literal = !literal;
+			}
+			else if (!literal && c == '(')
+			{
+				depth++;
+			}
+			else if (!literal && c == ')' && --depth == 0)
+			{
+				return i == pSql.length() - 1 ? pSql.substring(open.length(), i) : null;
+			}
+		}
+		return null;
 	}
 
 	private static Pred join(final List<Pred> pParts, final String pSql, final String pXPath)

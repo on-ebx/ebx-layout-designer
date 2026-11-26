@@ -12,6 +12,7 @@ import com.on.ebx.layout.runtime.LayoutPaths;
 import com.on.ebx.layout.runtime.LayoutStore;
 import com.onwbp.adaptation.Adaptation;
 import com.onwbp.adaptation.AdaptationTable;
+import com.onwbp.adaptation.Request;
 import com.onwbp.adaptation.RequestResult;
 import com.orchestranetworks.instance.Repository;
 import com.orchestranetworks.schema.Path;
@@ -201,31 +202,69 @@ public final class ExplorerStore
 		Views.forget(pId);
 	}
 
+	/** A user's favorites of one explorer and dataset, as read at the table's modification date {@code at}. */
+	private static final class Starred
+	{
+		final Date at;
+		final Set<String> keys;
+
+		Starred(final Date pAt, final Set<String> pKeys)
+		{
+			this.at = pAt;
+			this.keys = pKeys;
+		}
+	}
+
+	/** Short cache of the favorites read: a star or unstar changes the table's date, which retires the entry (L2-16). */
+	private static final java.util.concurrent.ConcurrentHashMap<String, Starred> STARRED = new java.util.concurrent.ConcurrentHashMap<String, Starred>();
+
+	private static final int STARRED_MAX = 2000;
+
+	/** The XPath predicate of one user's favorites of an explorer on a dataset: EBX serves it by key, not by a sweep of the table. */
+	static String favoritesFilter(final String pUser, final int pExplorer, final String pDataspace, final String pDataset)
+	{
+		return LayoutPaths.PREFS_USER.format() + " = " + XPath.lit(pUser) + " and " + LayoutPaths.FAV_EXPLORER.format() + " = " + pExplorer + " and "
+			+ LayoutPaths.FAV_DATASPACE.format() + " = " + XPath.lit(pDataspace) + " and " + LayoutPaths.FAV_DATASET.format() + " = " + XPath.lit(pDataset);
+	}
+
 	/** The keys of the records a user starred in an explorer on a dataset. */
 	public static Set<String> favorites(final Repository pRepository, final String pUser, final int pExplorer, final Adaptation pDataset)
 	{
-		final Set<String> out = new TreeSet<String>();
 		final AdaptationTable fav = ExplorerStore.table(pRepository, LayoutPaths.EXPLORER_FAVORITE);
 		if (fav == null || pUser == null)
 		{
-			return out;
+			return new TreeSet<String>();
 		}
 		final String ds = pDataset.getHome().getKey().getName(), set = pDataset.getAdaptationName().getStringName();
-		final RequestResult rows = fav.createRequest().execute();
+		final String cacheKey = pUser + "\u0000" + pExplorer + "\u0000" + ds + "\u0000" + set;
+		final Date at = fav.getLastModificationDate();
+		final Starred known = at == null ? null : ExplorerStore.STARRED.get(cacheKey);
+		if (known != null && known.at.equals(at))
+		{
+			return new TreeSet<String>(known.keys);
+		}
+		final Set<String> out = new TreeSet<String>();
+		final Request request = fav.createRequest();
+		request.setXPathFilter(ExplorerStore.favoritesFilter(pUser, pExplorer, ds, set));
+		final RequestResult rows = request.execute();
 		try
 		{
 			for (Adaptation r; (r = rows.nextAdaptation()) != null;)
 			{
-				if (pUser.equals(r.getString(LayoutPaths.PREFS_USER)) && Integer.valueOf(pExplorer).equals(r.get(LayoutPaths.FAV_EXPLORER))
-					&& ds.equals(r.getString(LayoutPaths.FAV_DATASPACE)) && set.equals(r.getString(LayoutPaths.FAV_DATASET)))
-				{
-					out.add(r.getString(LayoutPaths.FAV_RECORD));
-				}
+				out.add(r.getString(LayoutPaths.FAV_RECORD));
 			}
 		}
 		finally
 		{
 			rows.close();
+		}
+		if (at != null)
+		{
+			if (ExplorerStore.STARRED.size() >= ExplorerStore.STARRED_MAX)
+			{
+				ExplorerStore.STARRED.clear();
+			}
+			ExplorerStore.STARRED.put(cacheKey, new Starred(at, new TreeSet<String>(out)));
 		}
 		return out;
 	}

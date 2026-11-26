@@ -223,7 +223,7 @@ final class LayoutMcpTools
 		catch (final Exception ex)
 		{
 			com.orchestranetworks.service.LoggingCategory.getKernel().error("[layout-designer] mcp " + pName + " failed: " + ex, ex);
-			return LayoutMcpTools.fail("FAILED", ex.toString());
+			return LayoutMcpTools.fail("FAILED", "The tool \"" + pName + "\" failed on the server. Check the arguments and retry; if it fails again ask an administrator to read kernel.log (lines starting \"[layout-designer] mcp " + pName + " failed\").");
 		}
 	}
 
@@ -538,6 +538,17 @@ final class LayoutMcpTools
 
 	List<Finding> checkLayout(final Target pTarget, final JsonNode pLayout)
 	{
+		final List<Finding> out = LayoutMcpTools.checkShape(pLayout);
+		if (pLayout != null && pLayout.isObject())
+		{
+			out.addAll(this.checkReferences(pTarget, pLayout));
+		}
+		return out;
+	}
+
+	/** What needs no table: JSON shape, size, tabs, block ids and types. Shared by the MCP tools and the designer page (L2-13). */
+	static List<Finding> checkShape(final JsonNode pLayout)
+	{
 		final List<Finding> out = new ArrayList<Finding>();
 		if (pLayout == null || !pLayout.isObject())
 		{
@@ -548,6 +559,12 @@ final class LayoutMcpTools
 		{
 			out.add(new Finding(false, "format", "\"format\" should be \"ebx-form-layout/1\"."));
 		}
+		final int size = pLayout.toString().length();
+		if (size > LayoutMcpEndpoint.maxBodyBytes())
+		{
+			out.add(new Finding(true, "", "The layout is " + size + " characters, more than the " + LayoutMcpEndpoint.maxBodyBytes() + " allowed (-D"
+				+ LayoutMcpEndpoint.PROP_MAX_BODY + "): split it or remove what is unused."));
+		}
 		if (!pLayout.path("tabs").isArray() || pLayout.path("tabs").size() == 0)
 		{
 			out.add(new Finding(true, "tabs", "A layout needs \"tabs\": [{\"label\", \"rows\": [{\"columns\", \"blocks\": [[…]]}]}]."));
@@ -555,6 +572,13 @@ final class LayoutMcpTools
 		final java.util.Map<String, String> ids = new java.util.HashMap<String, String>();
 		LayoutMcpTools.blocks(pLayout.path("tabs"), ids, out);
 		LayoutMcpTools.blocks(pLayout.path("variants"), ids, out);
+		return out;
+	}
+
+	/** Every field, association, table, workflow and component the layout names, against the table. */
+	List<Finding> checkReferences(final Target pTarget, final JsonNode pLayout)
+	{
+		final List<Finding> out = new ArrayList<Finding>();
 		for (final LayoutCheck.Issue i : LayoutCheck.check(this.repository, pTarget.model().format(), pTarget.table.getTablePath().format(), pLayout, this.locale))
 		{
 			out.add(new Finding(i.error, i.where, i.text(this.locale).replaceFirst("^" + Pattern.quote(i.where) + " : ", "")));
@@ -619,6 +643,11 @@ final class LayoutMcpTools
 	List<Finding> checkExplorer(final Target pTarget, final JsonNode pExplorer)
 	{
 		final List<Finding> out = new ArrayList<Finding>();
+		if (pExplorer != null && pExplorer.toString().length() > LayoutMcpEndpoint.maxBodyBytes())
+		{
+			out.add(new Finding(true, "", "The explorer is larger than the " + LayoutMcpEndpoint.maxBodyBytes() + " characters allowed (-D"
+				+ LayoutMcpEndpoint.PROP_MAX_BODY + "): remove what is unused."));
+		}
 		for (final ExplorerCheck.Issue i : ExplorerCheck.check(pTarget.dataset, pTarget.table, pExplorer, this.locale, this.published()))
 		{
 			out.add(new Finding(i.error, i.where, i.text));
@@ -879,11 +908,16 @@ final class LayoutMcpTools
 		{
 			try
 			{
+				LayoutMcpEndpoint.checkDepth(v.asText(), LayoutMcpEndpoint.maxDepth());
 				return LayoutMcpTools.JSON.readTree(v.asText());
+			}
+			catch (final LayoutMcpEndpoint.BodyRefused ex)
+			{
+				throw new Refusal("TOO_DEEP", pName + ": " + ex.getMessage());
 			}
 			catch (final Exception ex)
 			{
-				throw new Refusal("INVALID_JSON", pName + " is not valid JSON: " + ex.getMessage());
+				throw new Refusal("INVALID_JSON", pName + " is not valid JSON: fix its syntax and send it again.");
 			}
 		}
 		return v;
@@ -895,7 +929,7 @@ final class LayoutMcpTools
 		return v == null || v.isNull() || v.asText("").isEmpty() ? null : Integer.valueOf(v.asInt());
 	}
 
-	private static boolean hasError(final List<Finding> pFindings)
+	static boolean hasError(final List<Finding> pFindings)
 	{
 		for (final Finding f : pFindings)
 		{

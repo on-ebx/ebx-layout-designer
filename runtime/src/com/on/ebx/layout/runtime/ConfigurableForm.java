@@ -41,15 +41,38 @@ public class ConfigurableForm extends UIForm
 			super.defineBody(pBody, pContext);
 			return;
 		}
-		layout = ConfigurableForm.forUser(layout, pContext);
-		Access.begin(pContext.getSession(), pContext.isCreatingRecord() ? null : pContext.getCurrentRecord(), pContext.getCurrentTable());
+		final long t0 = System.currentTimeMillis();
 		try
 		{
-			ConfigurableForm.body(pBody, pContext, layout);
+			layout = ConfigurableForm.forUser(layout, pContext);
+			Access.begin(pContext.getSession(), pContext.isCreatingRecord() ? null : pContext.getCurrentRecord(), pContext.getCurrentTable());
+			try
+			{
+				ConfigurableForm.body(pBody, pContext, layout);
+			}
+			finally
+			{
+				Access.end();
+			}
 		}
-		finally
+		catch (final RuntimeException ex)
 		{
-			Access.end();
+			// audit L2-25: whatever fails while the form is built, the user gets EBX's standard form, never a blank page
+			LoggingCategory.getKernel().error("[layout-designer] LDF-RENDER the layout of " + pContext.getCurrentTable().getTablePath().format()
+				+ " could not be drawn, the standard form is shown: " + ex, ex);
+			super.defineBody(pBody, pContext);
+			return;
+		}
+		ConfigurableForm.slow("form built", pContext.getCurrentTable().getTablePath().format(), t0);
+	}
+
+	/** DEBUG line for a step of a display that took more than 200 ms (audit §5: what the product owner reads to measure the render cost). */
+	static void slow(final String pWhat, final String pWhere, final long pStart)
+	{
+		final long ms = System.currentTimeMillis() - pStart;
+		if (ms > 200 && LoggingCategory.getKernel().isDebug())
+		{
+			LoggingCategory.getKernel().debug("[layout-designer] " + pWhat + " " + pWhere + " " + ms + " ms");
 		}
 	}
 

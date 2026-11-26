@@ -57,6 +57,13 @@ public class AudienceTest {
     ObjectNode p4 = (ObjectNode) Audience.resolve(L, buyer, false); p4.put("personal", false);
     Personal.apply(p4, m.readTree("{\"hidden\":[\"buy\"]}"), false);
     check("personal off: ignored", blocks(p4), "id1(ro),pay,buy,vies(ro),gel(ro),hist");
+    // audit L2-25: a tab, row, block or field that is not an object is ignored, it does not break every form of the table
+    JsonNode bad = m.readTree("{\"tabs\":[{\"label\":\"A\",\"rows\":[\"r\",{\"blocks\":[[\"b\",{\"id\":\"ok\",\"type\":\"panel\",\"fields\":[\"f\",{\"p\":\"/a\"}]}]]}]},\"x\"]}");
+    ObjectNode rb = Audience.resolve(bad, none, false);
+    check("non-object tab/row/block/field ignored", blocks(rb), "ok");
+    check("non-object tab dropped", rb.path("tabs").size(), 1);
+    ObjectNode ra = Audience.resolve(bad, none, true);
+    check("non-object ignored for an administrator too", blocks(ra), "ok");
     System.out.println(fail == 0 ? "ALL OK" : fail + " FAILED"); if (fail > 0) System.exit(1);
   }
 }

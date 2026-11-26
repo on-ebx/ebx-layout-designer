@@ -78,7 +78,7 @@ A behaviour changes what is shown, not what EBX validates: to block saving, add 
 | **Key figures** | a row of short values, plus the row count of an association |
 | **Validation report** | see section 5 |
 | **Association** | *Native grid* (EBX's own grid: toolbar, filter, paging, creation) or *Cards* (chosen fields on each card, the full grid under *Manage the rows*); title (default: the association's label), add button label |
-| **Map** | a latitude and a longitude field, or (1.7.0) address fields placed through OpenStreetMap's search by the EBX server; OpenStreetMap in a fixed-height box, *Large map* option. Map computed from the address: each unknown address is looked up in a geocoding service (at most one request a second on the public service) and kept in a cache; it shows at the next opening, or at once with the map’s “Locate now” button. For many records, add latitude and longitude fields to the table and choose them in the block |
+| **Map** | a latitude and a longitude field, or (1.7.0) address fields placed through OpenStreetMap's search by the EBX server; OpenStreetMap in a fixed-height box, *Large map* option. Map computed from the address: each unknown address is looked up in a geocoding service (at most one request a second on the public service) and kept in a cache (1.23.3: only a hash of the address, the position and the date, in `<ebx.home>/layout-designer-geocache.tsv`, mode 600, entries dropped after 90 days, `-Debx.layout.geocoder.cacheDays=N` to change, `-Debx.layout.geocoder.cache=off` for memory only); it shows at the next opening, or with the map’s “Locate now” button, which queues the address and waits for the answer without holding a server thread. For many records, add latitude and longitude fields to the table and choose them in the block |
 | **Opening hours** | open now (in the record's time zone), the current week one card per day, the next exceptional days. Choose the association of the regular hours and its day, opening and closing fields (and an optional "closed" field), optionally the codes of the day field, the association of the exceptional hours and its fields, how many exceptions to list, and the record's time-zone field. Details in the layout format reference |
 | **Group structure** | the parent foreign key and the association of children: parent, the record, its children |
 | **Duplicates** | the Match and Merge state of the record (golden, merged, group). Without the add-on, the block says so |
@@ -108,7 +108,7 @@ Since 1.4.0:
 | **Translations** (1.9.0) | for each language: share translated and missing fields |
 | **Inheritance** (1.9.0) | in a child dataset: what the record inherits and what is changed here |
 | **Value over time** (1.9.0) | a value's curve in the record's history (steps or line), the current value, the change, the list of changes with their author |
-| **Sites on a map** (1.9.0) | the rows of an association (sites, addresses) on an OpenStreetMap map with their list; placed by coordinates or by address. Map computed from the address: each unknown address is looked up in a geocoding service (at most one request a second on the public service) and kept in a cache; it shows at the next opening, or at once with the map’s “Locate now” button. For many records, add latitude and longitude fields to the table and choose them in the block |
+| **Sites on a map** (1.9.0) | the rows of an association (sites, addresses) on an OpenStreetMap map with their list; placed by coordinates or by address. Map computed from the address: each unknown address is looked up in a geocoding service (at most one request a second on the public service) and kept in a cache (1.23.3: only a hash of the address, the position and the date, in `<ebx.home>/layout-designer-geocache.tsv`, mode 600, entries dropped after 90 days, `-Debx.layout.geocoder.cacheDays=N` to change, `-Debx.layout.geocoder.cache=off` for memory only); it shows at the next opening, or with the map’s “Locate now” button, which queues the address and waits for the answer without holding a server thread. For many records, add latitude and longitude fields to the table and choose them in the block |
 | **Hierarchy chart** (1.8.0) | the record's group as an org chart centred on the record, a collapsible tree with a search, or rings; a click opens an entity's record |
 | **Changes in this request** (1.6.0) | in a workflow's work dataspace, what the record changes compared with the reference, field by field (old → new) |
 | **Used by** (1.6.0) | the records of other tables that point to this one, counted per table, with a few examples |
@@ -202,6 +202,13 @@ session* shows it only when the EBX session of the user who opens the form says 
 Whatever put the value in the session counts (a workflow task, a trigger, a user service). Texts are compared ignoring
 case, both conditions must hold, and the session is read when the form opens: a value set while it is open shows at the
 next display. The canvas tags the item with its condition.
+
+This only arranges what is shown; it protects nothing. EBX's web component accepts a `trackingInfo` parameter in its
+address, so a user may be able to set the tracking info a condition compares (not measured yet: consider it possible).
+For a condition that must hold, prefer a **session attribute**, and use EBX permissions for what must really be refused.
+A workflow button is tested again when it is launched (its condition on the record, on workflows and on the session): if
+it no longer holds, nothing is launched and the user is told so. After a launch the first task opens when it is ready
+within about a second; otherwise the user goes to the inbox, where it will appear.
 
 ## 8. Save, declare, use
 

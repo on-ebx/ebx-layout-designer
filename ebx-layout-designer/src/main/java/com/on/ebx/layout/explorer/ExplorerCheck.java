@@ -571,7 +571,8 @@ public final class ExplorerCheck
 			}
 			if (p == null)
 			{
-				this.error(pWhere, "EBX cannot evaluate this condition as one query, and the page would drop it. Usual causes: a sub-field "
+				this.error(pWhere, "EBX cannot evaluate this condition as one query, and the page would drop it. Usual causes: an \"any\" mixing a "
+					+ "Match and Merge state with a counted or looked-up value (EBX would evaluate that OR record by record: write two flags), a sub-field "
 					+ "of a media field (test the media field itself, /Logo rather than /Logo/attachment), a \"provided\" value (computed in "
 					+ "Java), or a field EBX cannot filter on. Use another field, or split the condition into two flags.");
 			}

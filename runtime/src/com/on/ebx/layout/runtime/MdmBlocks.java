@@ -232,7 +232,7 @@ final class MdmBlocks
 			return MdmBlocks.note(MdmBlocks.t("setupBlock", rc));
 		}
 		final Adaptation me = rc.record;
-		final Map<String, ProcessInstance> found = WorkflowState.running(rc, vars, null);
+		final Map<String, ProcessInstance> found = WorkflowState.running(rc, vars, b.path("pub").asText(""));
 		if (found.isEmpty())
 		{
 			return MdmBlocks.note(MdmBlocks.t("wf.none", rc));

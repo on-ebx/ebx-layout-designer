@@ -44,7 +44,8 @@ import com.orchestranetworks.workflow.WorkflowEngine;
 public final class ActionUserService implements UserService<RecordEntitySelection>
 {
 	private static final ObjectKey RECORD = ObjectKey.forName("record");
-	private static final long WAIT_MS = 8000;
+	/** One short second for the first task to appear; never a loop in the HTTP thread (1.23.1, L2-23). */
+	static final long FIRST_TASK_DELAY_MS = 1000;
 
 	private Adaptation record;
 	private String blockId;
@@ -55,6 +56,10 @@ public final class ActionUserService implements UserService<RecordEntitySelectio
 	/** Set once launched: where the user goes next. */
 	private String next;
 	private String error;
+	/** Set when the button exists but its conditions (cond, wf, session) no longer let it show on this record. */
+	private boolean refused;
+	/** Set when the launch gave no first task in time: the user goes to the inbox. */
+	private boolean toInbox;
 
 	@Override
 	public void setupObjectContext(final UserServiceSetupObjectContext<RecordEntitySelection> pContext, final UserServiceObjectContextBuilder pBuilder)
@@ -139,13 +144,13 @@ public final class ActionUserService implements UserService<RecordEntitySelectio
 		pWriter.add("<div style=\"padding:16px 18px;font-size:14px;line-height:1.5;max-width:560px\">");
 		if (this.next != null)
 		{
-			pWriter.add("<p>").add(ActionUserService.esc(Messages.get(locale, "action.started"))).add("</p></div>");
+			pWriter.add("<p>").add(ActionUserService.esc(Messages.get(locale, this.toInbox ? "action.startedInbox" : "action.started"))).add("</p></div>");
 			pWriter.addJS_cr("window.top.location.href=" + ActionUserService.js(this.next) + ";");
 			return;
 		}
 		if (pButton == null || !this.mayLaunch(pSession, pButton))
 		{
-			pWriter.add("<p>").add(ActionUserService.esc(Messages.get(locale, "action.notAllowed"))).add("</p></div>");
+			pWriter.add("<p>").add(ActionUserService.esc(Messages.get(locale, this.refused ? "action.notAvailable" : "action.notAllowed"))).add("</p></div>");
 			return;
 		}
 		if (pRunning != null)
@@ -254,6 +259,7 @@ public final class ActionUserService implements UserService<RecordEntitySelectio
 			if (item == null)
 			{
 				item = ActionUserService.firstWorkItem(engine, result);
+				this.toInbox = item == null;
 			}
 			final ProcessInstance instance = item == null ? engine.getProcessInstance(result.getProcessInstanceKey()) : null;
 			if (instance != null && instance.isInError())
@@ -269,7 +275,8 @@ public final class ActionUserService implements UserService<RecordEntitySelectio
 		catch (final OperationException | RuntimeException ex)
 		{
 			LoggingCategory.getKernel().error("[layout-designer] action " + this.blockId + "/" + this.index + " not launched: " + ex, ex);
-			this.error = String.valueOf(ex.getMessage());
+			// the detail is in kernel.log; the user gets a message that says what to do, not an exception text (L2-12)
+			this.error = Messages.get(pSession.getLocale(), "action.failed");
 		}
 	}
 
@@ -301,7 +308,19 @@ public final class ActionUserService implements UserService<RecordEntitySelectio
 					if (this.blockId.equals(b.path("id").asText()) && "actions".equals(b.path("type").asText()) && BlockAccess.readable(b, pSession, this.record))
 					{
 						final JsonNode a = b.path("items").path(this.index);
-						return a.isObject() && !a.path("workflow").asText("").trim().isEmpty() ? a : null;
+						if (!a.isObject() || a.path("workflow").asText("").trim().isEmpty())
+						{
+							return null;
+						}
+						// 1.23.1 (L2-01): what hid the button when the form was drawn (cond, wf, session) is checked again here
+						if (!com.on.ebx.layout.runtime.ActionsBlock.allowed(pSession, this.record, a))
+						{
+							this.refused = true;
+							LoggingCategory.getKernel().warn("[layout-designer] action " + this.blockId + "/" + this.index + " refused: its conditions do not hold on "
+								+ this.record.toXPathExpression() + " for this user");
+							return null;
+						}
+						return a;
 					}
 				}
 			}
@@ -346,32 +365,38 @@ public final class ActionUserService implements UserService<RecordEntitySelectio
 		}
 	}
 
+	/** The first work item of a launched instance, looked for once after a short delay; null (the inbox) when it is not there yet. */
 	private static WorkItemKey firstWorkItem(final WorkflowEngine pEngine, final ProcessLauncherResult pResult)
 	{
-		final long end = System.currentTimeMillis() + ActionUserService.WAIT_MS;
-		while (System.currentTimeMillis() < end)
+		return ActionUserService.firstWorkItem(new java.util.function.Supplier<ProcessInstance>()
 		{
-			final ProcessInstance instance = pEngine.getProcessInstance(pResult.getProcessInstanceKey());
-			if (instance != null && (instance.isInError() || instance.isCompleted()))
+			@Override
+			public ProcessInstance get()
 			{
-				return null;
+				return pEngine.getProcessInstance(pResult.getProcessInstanceKey());
 			}
-			final java.util.List<UserTask.WorkItem> items = instance == null ? null : instance.getWorkItems();
-			if (items != null && !items.isEmpty())
-			{
-				return items.get(0).getWorkItemKey();
-			}
-			try
-			{
-				Thread.sleep(250);
-			}
-			catch (final InterruptedException e)
-			{
-				Thread.currentThread().interrupt();
-				return null;
-			}
+		}, ActionUserService.FIRST_TASK_DELAY_MS);
+	}
+
+	/** One look after pDelayMs, no loop: the thread of the request is held at most that long. */
+	static WorkItemKey firstWorkItem(final java.util.function.Supplier<ProcessInstance> pInstance, final long pDelayMs)
+	{
+		try
+		{
+			Thread.sleep(pDelayMs);
 		}
-		return null;
+		catch (final InterruptedException e)
+		{
+			Thread.currentThread().interrupt();
+			return null;
+		}
+		final ProcessInstance instance = pInstance.get();
+		if (instance == null || instance.isInError() || instance.isCompleted())
+		{
+			return null;
+		}
+		final java.util.List<UserTask.WorkItem> items = instance.getWorkItems();
+		return items == null || items.isEmpty() ? null : items.get(0).getWorkItemKey();
 	}
 
 	/** The inbox, on the work item when there is one, inside the perspective when one is given (documented web component). */

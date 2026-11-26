@@ -109,10 +109,7 @@
     }
     // "Locate now" (1.15.1): the addresses not known yet, asked one by one to the module (the service takes one a second)
     var left = 0;
-    function ask(q) {
-      return fetch(D.g + '?q=' + encodeURIComponent(q) + '&t=' + encodeURIComponent(D.tk), { credentials: 'same-origin' })
-        .then(function (r) { return r.ok ? r.json() : { found: false }; }).catch(function () { return { found: false }; });
-    }
+    function ask(q) { return geoAsk(D.g, q, D.tk); }
     function locateAll() {
       if (left) return;
       var todo = S.filter(function (s) { return s.pending && s.q; });
@@ -159,12 +156,24 @@
     if (window.ResizeObserver) { var last = 0; new ResizeObserver(function () { var m = body.querySelector('.ldf-sm-map'); if (m && m.clientWidth && m.clientWidth !== last) { if (!last) z = null; last = m.clientWidth; drawMap(); } }).observe(box); }
   }
 
+  // one address asked to the module (1.23.3): 200 = answer, 202 = queued (asked again every 2 s, 60 times at most), 429 or an error = not found
+  function geoAsk(url, q, t, tries) {
+    tries = tries || 0;
+    return fetch(url + '?q=' + encodeURIComponent(q) + '&t=' + encodeURIComponent(t), { credentials: 'same-origin' })
+      .then(function (r) { return r.ok || r.status === 202 ? r.json().then(function (a) { return { s: r.status, a: a }; }) : { s: r.status, a: { found: false } }; })
+      .catch(function () { return { s: 0, a: { found: false } }; })
+      .then(function (x) {
+        if (x.s !== 202) return x.a;
+        if (tries >= 60) return { found: false };
+        return new Promise(function (ok) { setTimeout(ok, 2000); }).then(function () { return geoAsk(url, q, t, tries + 1); });
+      });
+  }
+
   // the "Locate now" button of a map block placed by its address (1.15.1): asks the module, then draws the map
   function locateMap(btn) {
     if (btn.disabled) return;
     btn.disabled = true; btn.textContent = btn.getAttribute('data-wait');
-    fetch(btn.getAttribute('data-g') + '?q=' + encodeURIComponent(btn.getAttribute('data-q')) + '&t=' + encodeURIComponent(btn.getAttribute('data-t')), { credentials: 'same-origin' })
-      .then(function (r) { return r.ok ? r.json() : { found: false }; }).catch(function () { return { found: false }; })
+    geoAsk(btn.getAttribute('data-g'), btn.getAttribute('data-q'), btn.getAttribute('data-t'))
       .then(function (a) {
         var box = btn.closest('.ldf-more');
         if (a.lat == null) { box.textContent = btn.getAttribute('data-miss'); return; }

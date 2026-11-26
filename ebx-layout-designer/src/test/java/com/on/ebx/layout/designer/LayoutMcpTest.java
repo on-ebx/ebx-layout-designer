@@ -18,6 +18,8 @@ public final class LayoutMcpTest
 	{
 		LayoutMcpTest.origin();
 		LayoutMcpTest.protocol();
+		LayoutMcpTest.limits();
+		LayoutMcpTest.failureText();
 		if (LayoutMcpTest.failures > 0)
 		{
 			System.out.println(LayoutMcpTest.failures + " MCP check(s) failed");
@@ -69,6 +71,129 @@ public final class LayoutMcpTest
 			"{\"jsonrpc\":\"2.0\",\"id\":6,\"method\":\"tools/call\",\"params\":{\"name\":\"layout_help\"}}"), tools, false);
 		LayoutMcpTest.check("a call without a session is refused", refused.path("result").path("isError").asBoolean()
 			&& "FORBIDDEN".equals(refused.path("result").path("structuredContent").path("code").asText()));
+	}
+
+	private static String deep(final int pLevels)
+	{
+		final StringBuilder b = new StringBuilder();
+		for (int i = 0; i < pLevels; i++)
+		{
+			b.append("{\"a\":");
+		}
+		b.append("1");
+		for (int i = 0; i < pLevels; i++)
+		{
+			b.append('}');
+		}
+		return b.toString();
+	}
+
+	private static java.io.InputStream stream(final String pText)
+	{
+		return new java.io.ByteArrayInputStream(pText.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+	}
+
+	/** L2-04: size and depth bounds, each refusal naming its JVM property; a non-administrator never reaches the parser. */
+	private static void limits() throws Exception
+	{
+		try
+		{
+			LayoutMcpEndpoint.parseBody(LayoutMcpTest.stream("{\"x\":\"" + new String(new char[3000]).replace('\0', 'x') + "\"}"), 2048, 64);
+			LayoutMcpTest.check("big body refused", false);
+		}
+		catch (final LayoutMcpEndpoint.BodyRefused ex)
+		{
+			LayoutMcpTest.check("big body: 413", ex.status == 413);
+			LayoutMcpTest.check("big body names the property", ex.getMessage().contains(LayoutMcpEndpoint.PROP_MAX_BODY));
+		}
+		try
+		{
+			LayoutMcpEndpoint.parseBody(LayoutMcpTest.stream(LayoutMcpTest.deep(5000)), 2 * 1024 * 1024, 64);
+			LayoutMcpTest.check("deep body refused", false);
+		}
+		catch (final LayoutMcpEndpoint.BodyRefused ex)
+		{
+			LayoutMcpTest.check("deep body: 400", ex.status == 400);
+			LayoutMcpTest.check("deep body names the property", ex.getMessage().contains(LayoutMcpEndpoint.PROP_MAX_DEPTH));
+		}
+		LayoutMcpTest.check("brackets inside strings do not count",
+			LayoutMcpEndpoint.parseBody(LayoutMcpTest.stream("{\"s\":\"[[[[[[[[\\\"[[[[\"}"), 2048, 3).path("s").isTextual());
+		LayoutMcpTest.check("a normal body parses", LayoutMcpEndpoint.parseBody(LayoutMcpTest.stream(LayoutMcpTest.deep(10)), 2048, 64).isObject());
+		try
+		{
+			LayoutMcpEndpoint.parseBody(LayoutMcpTest.stream("{oops"), 2048, 64);
+			LayoutMcpTest.check("bad JSON refused", false);
+		}
+		catch (final LayoutMcpEndpoint.BodyRefused ex)
+		{
+			LayoutMcpTest.check("bad JSON: coded, no parser text", ex.status == 400 && ex.getMessage().indexOf("oops") < 0 && ex.getMessage().indexOf("Unexpected") < 0);
+		}
+		// no session: 401 before anything is read; a stream that explodes when touched proves the body is not read
+		final java.io.InputStream bomb = new java.io.InputStream()
+		{
+			@Override
+			public int read()
+			{
+				throw new IllegalStateException("body was read");
+			}
+		};
+		final com.orchestranetworks.service.Session plain = (com.orchestranetworks.service.Session) java.lang.reflect.Proxy.newProxyInstance(
+			LayoutMcpTest.class.getClassLoader(), new Class<?>[] { com.orchestranetworks.service.Session.class }, new java.lang.reflect.InvocationHandler()
+			{
+				public Object invoke(final Object pProxy, final java.lang.reflect.Method pMethod, final Object[] pArgs)
+				{
+					return "isUserInRole".equals(pMethod.getName()) ? Boolean.FALSE : null;
+				}
+			});
+		final com.orchestranetworks.rest.inject.SessionContext context = (com.orchestranetworks.rest.inject.SessionContext) java.lang.reflect.Proxy.newProxyInstance(
+			LayoutMcpTest.class.getClassLoader(), new Class<?>[] { com.orchestranetworks.rest.inject.SessionContext.class }, new java.lang.reflect.InvocationHandler()
+			{
+				public Object invoke(final Object pProxy, final java.lang.reflect.Method pMethod, final Object[] pArgs)
+				{
+					return "getSessionOrNull".equals(pMethod.getName()) ? plain : null;
+				}
+			});
+		final jakarta.ws.rs.core.Response r = new LayoutMcpEndpoint(context).handle(bomb, null, null, null);
+		LayoutMcpTest.check("not an administrator: 403 without reading the body", r.getStatus() == 403);
+	}
+
+	/** L2-12: a tool that fails answers a coded message, never the exception's class or text. */
+	private static void failureText() throws Exception
+	{
+		final com.orchestranetworks.service.Session admin = (com.orchestranetworks.service.Session) java.lang.reflect.Proxy.newProxyInstance(
+			LayoutMcpTest.class.getClassLoader(), new Class<?>[] { com.orchestranetworks.service.Session.class }, new java.lang.reflect.InvocationHandler()
+			{
+				public Object invoke(final Object pProxy, final java.lang.reflect.Method pMethod, final Object[] pArgs)
+				{
+					return "isUserInRole".equals(pMethod.getName()) ? Boolean.TRUE : null;
+				}
+			});
+		final com.fasterxml.jackson.databind.node.ObjectNode a = LayoutMcpTest.JSON.createObjectNode();
+		a.put("dataspace", "X").put("dataset", "Y").put("table", "/root/T");
+		final String text = new LayoutMcpTools(admin, null, Locale.ENGLISH).invoke("layout_get", a).toString();
+		LayoutMcpTest.check("failure is coded", text.contains("\"code\":\"FAILED\"") && text.contains("kernel.log"));
+		LayoutMcpTest.check("failure shows no exception", !text.contains("Exception") && !text.contains("java."));
+		final java.lang.reflect.Method document = LayoutMcpTools.class.getDeclaredMethod("document", com.fasterxml.jackson.databind.JsonNode.class, String.class);
+		document.setAccessible(true);
+		String doc = "";
+		try
+		{
+			document.invoke(null, LayoutMcpTest.JSON.createObjectNode().put("layout", "{not json"), "layout");
+		}
+		catch (final java.lang.reflect.InvocationTargetException ex)
+		{
+			doc = ex.getCause().getClass().getSimpleName() + " " + ex.getCause().getMessage();
+		}
+		LayoutMcpTest.check("bad layout text: coded, no parser text", doc.startsWith("Refusal") && doc.contains("fix its syntax") && !doc.contains("Unexpected"));
+		try
+		{
+			document.invoke(null, LayoutMcpTest.JSON.createObjectNode().put("layout", deep(5000)), "layout");
+			LayoutMcpTest.check("stringified deep layout refused", false);
+		}
+		catch (final java.lang.reflect.InvocationTargetException ex)
+		{
+			LayoutMcpTest.check("stringified deep layout refused", ex.getCause().getMessage().contains(LayoutMcpEndpoint.PROP_MAX_DEPTH));
+		}
 	}
 
 	private static void check(final String pWhat, final boolean pOk)

@@ -74,6 +74,10 @@ public final class Audience
 		for (int i = 0; i < tabs.size(); i++)
 		{
 			final JsonNode t = tabs.get(i);
+			if (!t.isObject())
+			{
+				continue; // a tab written as something else than an object is ignored, not fatal (audit L2-25)
+			}
 			if (!pSeesAll && !Audience.visible(t, pRoles))
 			{
 				continue;
@@ -87,6 +91,10 @@ public final class Audience
 			final ArrayNode rows = tab.putArray("rows");
 			for (final JsonNode r : t.path("rows"))
 			{
+				if (!r.isObject())
+				{
+					continue;
+				}
 				final ObjectNode row = ((ObjectNode) r).deepCopy();
 				final ArrayNode cols = row.putArray("blocks");
 				for (final JsonNode col : r.path("blocks"))
@@ -94,6 +102,10 @@ public final class Audience
 					final ArrayNode outCol = cols.addArray();
 					for (final JsonNode b : col)
 					{
+						if (!b.isObject())
+						{
+							continue;
+						}
 						if (!pSeesAll && !Audience.visible(b, pRoles))
 						{
 							continue;
@@ -108,7 +120,7 @@ public final class Audience
 							final ArrayNode fields = block.putArray("fields");
 							for (final JsonNode f : b.path("fields"))
 							{
-								if (!Audience.visible(f, pRoles))
+								if (!f.isObject() || !Audience.visible(f, pRoles))
 								{
 									continue;
 								}

@@ -57,3 +57,10 @@ model: the designer's *Activation*, then one restart).
 
 Worked example: [examples/companies-explorer.json](examples/companies-explorer.json), the FastTrack Companies explorer
 (632 companies, six tiles, eleven facets, groups by sector) rebuilt from the Java `CompanyExplorer` service.
+
+## Limits
+
+Only administrators are served: anyone else gets 403 before the request body is read. The body is limited to 2 MB (413;
+`-Debx.layoutDesigner.mcp.maxBodyBytes`), JSON nesting to 64 levels (400; `-Debx.layoutDesigner.mcp.maxDepth`, also applied to a
+`layout`/`explorer` passed as a string), a batch to 50 requests. A failing tool answers `FAILED` without the exception text;
+the detail is in `kernel.log`.

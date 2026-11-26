@@ -40,8 +40,22 @@ public final class DesignerUserService implements UserService<TableViewEntitySel
 {
 	static final String SUBMIT_ID = "ldSubmit";
 	static final String CLOSE_ID = "ldClose";
-	/** Changed at each release, so that browsers fetch the new page script. */
-	static final String ASSET_VERSION = "1.22.0";
+	private static final long STARTED = System.currentTimeMillis();
+	/**
+	 * What follows {@code ?v=} on the page scripts and style sheets: the build's own version (the {@code version} line of the
+	 * stamp {@code build.sh} writes from VERSION and git), so a new release is never served with the old cached script (L2-19).
+	 * A build without a stamp gets the start time of the server: never a constant that can be forgotten.
+	 */
+	static final String ASSET_VERSION = DesignerUserService.assetVersion(ModuleVersion.version());
+
+	static String assetVersion(final String pVersion)
+	{
+		if (pVersion == null || pVersion.trim().isEmpty() || ModuleVersion.UNKNOWN.equals(pVersion))
+		{
+			return "t" + Long.toString(DesignerUserService.STARTED, 36);
+		}
+		return DesignerUserService.encode(pVersion.trim());
+	}
 
 	private AdaptationTable table;
 	private String recordKey;
@@ -143,8 +157,7 @@ public final class DesignerUserService implements UserService<TableViewEntitySel
 		}
 		catch (final Exception ex)
 		{
-			LoggingCategory.getKernel().error("[layout-designer] designer data not built: " + ex, ex);
-			pWriter.add("<p style=\"padding:16px;color:#C73200\">").add(DesignerUserService.esc(ex.toString())).add("</p>");
+			pWriter.add("<p style=\"padding:16px;color:#C73200\">").add(DesignerUserService.esc(DesignerUserService.fail(pSession.getLocale(), "designer page", ex))).add("</p>");
 			return;
 		}
 		this.notice = null;
@@ -215,7 +228,13 @@ public final class DesignerUserService implements UserService<TableViewEntitySel
 			}
 			if ("save".equals(action) || "activate".equals(action))
 			{
-				LayoutStore.json().readTree(layout);
+				final String refused = DesignerUserService.refusal(repository, locale, new LayoutMcpTools.Target(this.table.getContainerAdaptation(), this.table), layout);
+				if (refused != null)
+				{
+					this.draft = layout;
+					this.notice(refused, true);
+					return;
+				}
 				final int version = LayoutWriter.save(repository, session, model, tablePath, this.table.getTableNode().getLabel(Locale.ENGLISH), layout, null);
 				this.draft = null;
 				this.notice(Messages.get(locale, "saved", Integer.valueOf(version)), false);
@@ -228,7 +247,7 @@ public final class DesignerUserService implements UserService<TableViewEntitySel
 				{
 					LayoutWriter.setPreviousForm(repository, session, model, tablePath, previous);
 				}
-				this.notice(Messages.get(locale, "activated", state.file.getName()), false);
+				this.notice(Messages.get(locale, "activated", state.file.getAbsolutePath()) + XsdActivator.otherCandidates(state, locale), false);
 			}
 			if ("deactivate".equals(action))
 			{
@@ -240,12 +259,86 @@ public final class DesignerUserService implements UserService<TableViewEntitySel
 				this.notice(Messages.get(locale, "deactivated", previous == null || previous.isEmpty() ? "—" : previous), false);
 			}
 		}
+		catch (final XsdActivator.Refusal ex)
+		{
+			// a refusal written for the administrator (what is wrong, what to do): safe to show
+			this.draft = layout.isEmpty() ? this.draft : layout;
+			this.notice(Messages.get(locale, "activationFailed", ex.text(locale)), true);
+		}
 		catch (final Exception ex)
 		{
-			LoggingCategory.getKernel().error("[layout-designer] action " + action + " failed: " + ex, ex);
 			this.draft = layout.isEmpty() ? this.draft : layout;
-			this.notice(Messages.get(locale, "activate".equals(action) || "deactivate".equals(action) ? "activationFailed" : "saveFailed", ex.getMessage()), true);
+			this.notice(Messages.get(locale, "activate".equals(action) || "deactivate".equals(action) ? "activationFailed" : "saveFailed",
+				DesignerUserService.fail(locale, "action " + action, ex)), true);
 		}
+	}
+
+	/**
+	 * What a user sees of an unexpected failure: a short code and a message, never the exception's own text (class names,
+	 * paths, what EBX refused). The detail and the stack go to {@code kernel.log} under the same code (L2-12).
+	 */
+	static String fail(final Locale pLocale, final String pWhere, final Throwable pCause)
+	{
+		final String code = "LDD-" + Long.toString(System.currentTimeMillis() % 100_000_000L, 36).toUpperCase(Locale.ROOT);
+		LoggingCategory.getKernel().error("[layout-designer] " + pWhere + " failed (" + code + "): " + pCause, pCause);
+		return Messages.get(pLocale, "designer.error", code);
+	}
+
+	/**
+	 * The same check as the MCP tool {@code layout_put} before anything is stored (L2-13): size, nesting, JSON shape, tabs, block
+	 * ids and types, and every field, association, table, workflow and component the layout names. Answers null when the layout
+	 * may be saved, else the coded refusal (nothing is written). With a null target only what needs no table is checked.
+	 */
+	static String refusal(final Repository pRepository, final Locale pLocale, final LayoutMcpTools.Target pTarget, final String pText)
+	{
+		if (pText == null || pText.trim().isEmpty())
+		{
+			return Messages.get(pLocale, "refused.json", "LD-EMPTY");
+		}
+		if (pText.length() > LayoutMcpEndpoint.maxBodyBytes())
+		{
+			return Messages.get(pLocale, "refused.size", "LD-TOO-LARGE", Integer.valueOf(pText.length()), Integer.valueOf(LayoutMcpEndpoint.maxBodyBytes()));
+		}
+		try
+		{
+			LayoutMcpEndpoint.checkDepth(pText, LayoutMcpEndpoint.maxDepth());
+		}
+		catch (final LayoutMcpEndpoint.BodyRefused ex)
+		{
+			return Messages.get(pLocale, "refused.depth", "LD-TOO-DEEP", Integer.valueOf(LayoutMcpEndpoint.maxDepth()));
+		}
+		final com.fasterxml.jackson.databind.JsonNode node;
+		try
+		{
+			node = LayoutStore.json().readTree(pText);
+		}
+		catch (final Exception ex)
+		{
+			return Messages.get(pLocale, "refused.json", "LD-INVALID-JSON");
+		}
+		final java.util.List<LayoutMcpTools.Finding> findings = LayoutMcpTools.checkShape(node);
+		if (pTarget != null && !LayoutMcpTools.hasError(findings))
+		{
+			findings.addAll(new LayoutMcpTools(null, pRepository, pLocale).checkReferences(pTarget, node));
+		}
+		if (!LayoutMcpTools.hasError(findings))
+		{
+			return null;
+		}
+		final StringBuilder list = new StringBuilder();
+		int errors = 0;
+		for (final LayoutMcpTools.Finding f : findings)
+		{
+			if (f.error && ++errors <= 5)
+			{
+				list.append(list.length() == 0 ? "" : " ; ").append(f.where.isEmpty() ? "" : f.where + " : ").append(f.text);
+			}
+		}
+		if (errors > 5)
+		{
+			list.append(" ; (+").append(errors - 5).append(")");
+		}
+		return Messages.get(pLocale, "refused.layout", "LD-INVALID", Integer.valueOf(errors), list.toString());
 	}
 
 	private void notice(final String pText, final boolean pError)

@@ -9,6 +9,9 @@ import com.onwbp.adaptation.Adaptation;
 import com.onwbp.adaptation.AdaptationHome;
 import com.onwbp.adaptation.AdaptationName;
 import com.onwbp.adaptation.AdaptationTable;
+import com.onwbp.adaptation.PrimaryKey;
+import com.onwbp.adaptation.Request;
+import com.onwbp.adaptation.XPathExpressionHelper;
 import com.onwbp.adaptation.RequestResult;
 import com.orchestranetworks.instance.HomeKey;
 import com.orchestranetworks.instance.Repository;
@@ -17,13 +20,17 @@ import com.orchestranetworks.schema.SchemaLocation;
 import com.orchestranetworks.service.LoggingCategory;
 
 /**
- * Reads the layout rows. A form reads its layout at each display: the table holds one row per (model, table), the
- * read is a scan of a few rows, and the parsed JSON is kept as long as the stored text does not change.
+ * Reads the layout rows. A form reads its layout at each display (and EBX asks the "Arrange my form" permission rule for every
+ * record whose Actions menu opens): the table holds one row per (model, table), found by a predicate on those two fields, its
+ * key kept for as long as the table's modification date is unchanged (audit L2-15), and the parsed JSON is kept as long as the
+ * stored text does not change.
  */
 public final class LayoutStore
 {
 	private static final ObjectMapper JSON = new ObjectMapper();
 	private static final Map<String, Parsed> PARSED = new ConcurrentHashMap<String, Parsed>();
+	/** (model, table) to the primary key of its row, "" for no row; valid for one modification date of the FormLayout table. */
+	private static final StampedCache<String> ROW_KEYS = new StampedCache<String>(2000);
 
 	private static final class Parsed
 	{
@@ -58,22 +65,43 @@ public final class LayoutStore
 		final AdaptationTable table = dataset.getTable(LayoutPaths.FORM_LAYOUT);
 		final String model = pModel.format();
 		final String tablePath = pTable.format();
-		final RequestResult rows = table.createRequest().execute();
+		final String key = LayoutStore.rowKey(model + "|" + tablePath, table.getLastModificationDate(), new StampedCache.Loader<String>()
+		{
+			@Override
+			public String load()
+			{
+				return LayoutStore.scanKey(table, model, tablePath);
+			}
+		});
+		if (key.isEmpty())
+		{
+			return null;
+		}
+		return table.lookupAdaptationByPrimaryKey(PrimaryKey.parseString(key));
+	}
+
+	/** The cached key of a row, or what {@code pLoader} reads when the table changed since (visible to the tests). */
+	static String rowKey(final String pId, final Object pStamp, final StampedCache.Loader<String> pLoader)
+	{
+		return LayoutStore.ROW_KEYS.get(pId, pStamp, pLoader);
+	}
+
+	/** One request with a predicate on model and table: the key of the row, "" when there is none. */
+	private static String scanKey(final AdaptationTable pTable, final String pModel, final String pTablePath)
+	{
+		final Request request = pTable.createRequest();
+		request.setXPathFilter("./model = " + XPathExpressionHelper.encodeLiteralStringWithDelimiters(pModel) + " and ./table = "
+			+ XPathExpressionHelper.encodeLiteralStringWithDelimiters(pTablePath));
+		final RequestResult rows = request.execute();
 		try
 		{
-			for (Adaptation row = rows.nextAdaptation(); row != null; row = rows.nextAdaptation())
-			{
-				if (model.equals(row.getString(LayoutPaths.MODEL)) && tablePath.equals(row.getString(LayoutPaths.TABLE)))
-				{
-					return row;
-				}
-			}
+			final Adaptation row = rows.nextAdaptation();
+			return row == null ? "" : row.getOccurrencePrimaryKey().format();
 		}
 		finally
 		{
 			rows.close();
 		}
-		return null;
 	}
 
 	/** The active layout of this model and table, parsed; null when there is none or when it cannot be read. */

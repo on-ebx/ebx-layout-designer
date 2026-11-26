@@ -24,6 +24,12 @@ import com.orchestranetworks.service.LoggingCategory;
  * the address for a single background thread, so that the position is there at the next display. Positions found are
  * also written to a file ({@code ebx.layout.geocoder.cache}, by default {@code <ebx.home>/layout-designer-geocache.tsv})
  * and read back at the first use, so that a restart does not send every address to the service again.
+ * <p>
+ * Since 1.23.3 (audit L2-10, L2-11): nothing waits for the service inside an HTTP request ({@link #enqueue} answers at once,
+ * one daemon thread serves a bounded queue at the service's pace); the cache is keyed by the SHA-256 of the normalised
+ * address (no address text in memory or in the file, only the hash, the position and the date), entries older than
+ * {@code ebx.layout.geocoder.cacheDays} days (default 90) are dropped when the file is read and when it is compacted, and
+ * the file is created readable by its owner only.
  */
 final class Geocoder
 {
@@ -32,6 +38,8 @@ final class Geocoder
 	private static final long MISS_TTL_MS = 10 * 60 * 1000L;
 	private static final long SPACING_MS = 1100L;
 	private static final int CACHE_SIZE = 5000;
+	private static final String DAYS_PROPERTY = "ebx.layout.geocoder.cacheDays";
+	private static final int DEFAULT_DAYS = 90;
 
 	private static final Map<String, Object[]> CACHE = new LinkedHashMap<String, Object[]>(256, 0.75f, true)
 	{
@@ -57,6 +65,18 @@ final class Geocoder
 			return t;
 		}, new java.util.concurrent.ThreadPoolExecutor.DiscardPolicy());
 	private static boolean loaded;
+	private static int appended;
+
+	/** What {@link #enqueue} answers. */
+	enum Queued
+	{
+		/** The address is in the queue (or already was): ask again later. */
+		PENDING,
+		/** The queue is full: refused, nothing was queued. */
+		REFUSED,
+		/** The service is off: there will be no answer. */
+		OFF
+	}
 
 	static
 	{
@@ -72,14 +92,56 @@ final class Geocoder
 		return !"off".equalsIgnoreCase(System.getProperty(Geocoder.PROPERTY, "").trim());
 	}
 
+	/** The cache key of an address: the SHA-256 (hex) of its normalised text, so that the address itself is never kept (L2-11). */
+	static String keyOf(final String pAddress)
+	{
+		final String q = pAddress == null ? "" : pAddress.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+		try
+		{
+			final byte[] d = java.security.MessageDigest.getInstance("SHA-256").digest(q.getBytes(StandardCharsets.UTF_8));
+			final StringBuilder b = new StringBuilder(64);
+			for (final byte x : d)
+			{
+				b.append(String.format("%02x", Integer.valueOf(x & 0xff)));
+			}
+			return b.toString();
+		}
+		catch (final java.security.NoSuchAlgorithmException ex)
+		{
+			throw new IllegalStateException(ex);
+		}
+	}
+
+	private static long maxAgeMs()
+	{
+		int days = Geocoder.DEFAULT_DAYS;
+		try
+		{
+			days = Integer.parseInt(System.getProperty(Geocoder.DAYS_PROPERTY, "").trim());
+		}
+		catch (final NumberFormatException ex)
+		{
+			// not set or not a number: the default
+		}
+		return Math.max(1, days) * 24L * 60 * 60 * 1000;
+	}
+
+	/** A cache entry still worth answering from: a position younger than the retention, a miss younger than ten minutes. */
+	private static boolean fresh(final Object[] pHit)
+	{
+		final long age = System.currentTimeMillis() - ((Long) pHit[1]).longValue();
+		return pHit[0] != null ? age < Geocoder.maxAgeMs() : age < Geocoder.MISS_TTL_MS;
+	}
+
 	/** True when the answer for this address is in memory (found, or not found less than ten minutes ago): no call needed. */
 	static boolean isKnown(final String pAddress)
 	{
-		final String q = pAddress == null ? "" : pAddress.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+		Geocoder.load();
+		final String q = Geocoder.keyOf(pAddress);
 		synchronized (Geocoder.CACHE)
 		{
 			final Object[] hit = Geocoder.CACHE.get(q);
-			return hit != null && (hit[0] != null || System.currentTimeMillis() - ((Long) hit[1]).longValue() < Geocoder.MISS_TTL_MS);
+			return hit != null && Geocoder.fresh(hit);
 		}
 	}
 
@@ -87,11 +149,11 @@ final class Geocoder
 	static double[] known(final String pAddress)
 	{
 		Geocoder.load();
-		final String q = pAddress == null ? "" : pAddress.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+		final String q = Geocoder.keyOf(pAddress);
 		synchronized (Geocoder.CACHE)
 		{
 			final Object[] hit = Geocoder.CACHE.get(q);
-			return hit == null ? null : (double[]) hit[0];
+			return hit == null || !Geocoder.fresh(hit) ? null : (double[]) hit[0];
 		}
 	}
 
@@ -145,36 +207,78 @@ final class Geocoder
 	/** Queues the address for the background thread, once; the form that asked does not wait. */
 	static void lookLater(final String pAddress, final Locale pLocale)
 	{
+		Geocoder.enqueue(pAddress, pLocale);
+	}
+
+	/**
+	 * Queues the address for the single background thread and answers at once, never waiting for the service (L2-10):
+	 * PENDING when it is queued (or was), REFUSED when the queue is full, OFF when the service is off. An address already
+	 * known is not queued and answers PENDING-free: callers read {@link #known} first.
+	 */
+	static Queued enqueue(final String pAddress, final Locale pLocale)
+	{
 		final String q = pAddress == null ? "" : pAddress.trim().replaceAll("\\s+", " ");
-		if (q.isEmpty() || !Geocoder.enabled() || Geocoder.isKnown(q))
+		if (!Geocoder.enabled())
 		{
-			return;
+			return Queued.OFF;
 		}
-		final String key = q.toLowerCase(Locale.ROOT);
+		if (q.isEmpty() || Geocoder.isKnown(q))
+		{
+			return Queued.PENDING;
+		}
+		final String key = Geocoder.keyOf(q);
 		synchronized (Geocoder.QUEUED)
 		{
-			if (!Geocoder.QUEUED.add(key))
+			if (Geocoder.QUEUED.contains(key))
 			{
-				return;
+				return Queued.PENDING;
 			}
+			if (Geocoder.QUEUED.size() >= Geocoder.QUEUE_MAX)
+			{
+				return Queued.REFUSED;
+			}
+			Geocoder.QUEUED.add(key);
 		}
-		Geocoder.WORKER.execute(() -> {
-			try
-			{
-				final double[] at = Geocoder.locate(q, pLocale);
-				if (at != null)
+		try
+		{
+			Geocoder.WORKER.execute(() -> {
+				try
 				{
-					Geocoder.save(key, at);
+					final double[] at = Geocoder.locate(q, pLocale);
+					if (at != null)
+					{
+						Geocoder.save(key, at);
+					}
 				}
-			}
-			finally
-			{
-				synchronized (Geocoder.QUEUED)
+				finally
 				{
-					Geocoder.QUEUED.remove(key);
+					synchronized (Geocoder.QUEUED)
+					{
+						Geocoder.QUEUED.remove(key);
+					}
 				}
+			});
+		}
+		catch (final java.util.concurrent.RejectedExecutionException ex)
+		{
+			synchronized (Geocoder.QUEUED)
+			{
+				Geocoder.QUEUED.remove(key);
 			}
-		});
+			return Queued.REFUSED;
+		}
+		return Queued.PENDING;
+	}
+
+	/** For tests: forgets the memory cache so that the file is read again. */
+	static void reset()
+	{
+		synchronized (Geocoder.CACHE)
+		{
+			Geocoder.CACHE.clear();
+			Geocoder.loaded = false;
+			Geocoder.appended = 0;
+		}
 	}
 
 	private static java.io.File file()
@@ -192,7 +296,13 @@ final class Geocoder
 		return home.isEmpty() ? null : new java.io.File(home, "layout-designer-geocache.tsv");
 	}
 
-	/** Reads the positions found before (one line per address: address, tab, latitude, tab, longitude). */
+	private static final java.util.regex.Pattern HASH = java.util.regex.Pattern.compile("[0-9a-f]{64}");
+
+	/**
+	 * Reads the positions found before (one line per address: SHA-256 of the address, tab, latitude, tab, longitude, tab,
+	 * date in milliseconds). Lines of the older format (address text, then the two coordinates) are hashed and the file is
+	 * rewritten; so is it when entries are older than the retention (L2-11).
+	 */
 	private static void load()
 	{
 		synchronized (Geocoder.CACHE)
@@ -211,27 +321,48 @@ final class Geocoder
 		try
 		{
 			int n = 0;
+			boolean rewrite = false;
+			final long now = System.currentTimeMillis();
+			final long max = Geocoder.maxAgeMs();
 			for (final String line : java.nio.file.Files.readAllLines(f.toPath(), StandardCharsets.UTF_8))
 			{
 				final String[] p = line.split("\t");
-				if (p.length == 3)
+				if (p.length != 3 && p.length != 4)
 				{
-					try
+					rewrite = true;
+					continue;
+				}
+				try
+				{
+					final double[] at = new double[] { Double.parseDouble(p[1]), Double.parseDouble(p[2]) };
+					final boolean legacy = p.length == 3 || !Geocoder.HASH.matcher(p[0]).matches();
+					final long when = p.length == 4 ? Long.parseLong(p[3]) : now;
+					if (legacy)
 					{
-						final double[] at = new double[] { Double.parseDouble(p[1]), Double.parseDouble(p[2]) };
-						synchronized (Geocoder.CACHE)
-						{
-							Geocoder.CACHE.put(p[0], new Object[] { at, Long.valueOf(System.currentTimeMillis()) });
-						}
-						n++;
+						rewrite = true;
 					}
-					catch (final NumberFormatException ex)
+					if (now - when >= max)
 					{
-						// a damaged line: skipped
+						rewrite = true;
+						continue;
 					}
+					final String key = legacy ? Geocoder.keyOf(p[0]) : p[0];
+					synchronized (Geocoder.CACHE)
+					{
+						Geocoder.CACHE.put(key, new Object[] { at, Long.valueOf(when) });
+					}
+					n++;
+				}
+				catch (final NumberFormatException ex)
+				{
+					rewrite = true;
 				}
 			}
 			LoggingCategory.getKernel().info("[layout-designer] geocoder: " + n + " positions read from " + f);
+			if (rewrite)
+			{
+				Geocoder.compact();
+			}
 		}
 		catch (final Exception ex)
 		{
@@ -239,24 +370,92 @@ final class Geocoder
 		}
 	}
 
-	static void save(final String pKey, final double[] pAt)
+	/** Creates the file readable by its owner only (where the file system has such modes). */
+	private static void secure(final java.nio.file.Path pPath) throws java.io.IOException
+	{
+		if (!java.nio.file.Files.exists(pPath))
+		{
+			try
+			{
+				java.nio.file.Files.createFile(pPath, java.nio.file.attribute.PosixFilePermissions.asFileAttribute(java.nio.file.attribute.PosixFilePermissions.fromString("rw-------")));
+			}
+			catch (final UnsupportedOperationException ex)
+			{
+				java.nio.file.Files.createFile(pPath);
+			}
+		}
+	}
+
+	/** Rewrites the file from memory: the positions still worth keeping, at most {@link #CACHE_SIZE}, nothing older than the retention. */
+	static void compact()
 	{
 		final java.io.File f = Geocoder.file();
-		if (f == null || pKey.indexOf('\t') >= 0 || pKey.indexOf('\n') >= 0)
+		if (f == null)
 		{
 			return;
+		}
+		final StringBuilder b = new StringBuilder();
+		synchronized (Geocoder.CACHE)
+		{
+			for (final Map.Entry<String, Object[]> e : Geocoder.CACHE.entrySet())
+			{
+				final Object[] v = e.getValue();
+				if (v[0] != null && Geocoder.fresh(v))
+				{
+					final double[] at = (double[]) v[0];
+					b.append(e.getKey()).append('\t').append(at[0]).append('\t').append(at[1]).append('\t').append(v[1]).append('\n');
+				}
+			}
 		}
 		synchronized (Geocoder.class)
 		{
 			try
 			{
-				java.nio.file.Files.write(f.toPath(), (pKey + "\t" + pAt[0] + "\t" + pAt[1] + "\n").getBytes(StandardCharsets.UTF_8),
-					java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+				final java.nio.file.Path tmp = new java.io.File(f.getPath() + ".tmp").toPath();
+				java.nio.file.Files.deleteIfExists(tmp);
+				Geocoder.secure(tmp);
+				java.nio.file.Files.write(tmp, b.toString().getBytes(StandardCharsets.UTF_8));
+				java.nio.file.Files.move(tmp, f.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+				Geocoder.appended = 0;
+			}
+			catch (final Exception ex)
+			{
+				LoggingCategory.getKernel().warn("[layout-designer] geocoder cache not compacted (" + f + "): " + ex);
+			}
+		}
+	}
+
+	/** Remembers a position under the hash {@link #keyOf} of its address, in memory and in the file. */
+	static void save(final String pKey, final double[] pAt)
+	{
+		final long now = System.currentTimeMillis();
+		synchronized (Geocoder.CACHE)
+		{
+			Geocoder.CACHE.put(pKey, new Object[] { pAt, Long.valueOf(now) });
+		}
+		final java.io.File f = Geocoder.file();
+		if (f == null)
+		{
+			return;
+		}
+		final boolean compact;
+		synchronized (Geocoder.class)
+		{
+			try
+			{
+				Geocoder.secure(f.toPath());
+				java.nio.file.Files.write(f.toPath(), (pKey + "\t" + pAt[0] + "\t" + pAt[1] + "\t" + now + "\n").getBytes(StandardCharsets.UTF_8),
+					java.nio.file.StandardOpenOption.APPEND);
 			}
 			catch (final Exception ex)
 			{
 				LoggingCategory.getKernel().warn("[layout-designer] geocoder cache not written (" + f + "): " + ex);
 			}
+			compact = ++Geocoder.appended >= Geocoder.CACHE_SIZE;
+		}
+		if (compact)
+		{
+			Geocoder.compact();
 		}
 	}
 
@@ -268,11 +467,11 @@ final class Geocoder
 		{
 			return null;
 		}
-		final String key = q.toLowerCase(Locale.ROOT);
+		final String key = Geocoder.keyOf(q);
 		synchronized (Geocoder.CACHE)
 		{
 			final Object[] hit = Geocoder.CACHE.get(key);
-			if (hit != null && (hit[0] != null || System.currentTimeMillis() - ((Long) hit[1]).longValue() < Geocoder.MISS_TTL_MS))
+			if (hit != null && Geocoder.fresh(hit))
 			{
 				return (double[]) hit[0];
 			}

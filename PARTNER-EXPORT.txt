@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit 40c00e1f2ed759c37c187fc518d4cc9195fdaa51
-1.23.0: display conditions on the user's EBX session (tracking info, session attributes) for blocks, fields and action buttons
+Exported from EBX-Layout-Designer commit 097a420a5129ee8af9e49a3b96cf643dfc628755
+Merge integration/robustesse-2026-10-23: robustness audit of 2026-10-23 (lots A-G, 1.23.3: action conditions, MCP bounds, explorer permissions and paging, theme colours, texts)
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

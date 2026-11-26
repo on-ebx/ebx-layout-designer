@@ -1,5 +1,87 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.23.3 (in progress, robustness audit lots E, F and G)
+
+**Geocoding (lot E)**
+
+**Geocoding (lot E)**
+
+- **"Locate now" no longer holds a server thread** (audit L2-10): `/geocode` answers at once, 200 from the cache, otherwise 202
+  `{"pending":true}` after queueing the address for ONE daemon thread that calls the service at its pace (one request a second);
+  the page asks again every 2 s (60 times at most). The queue is bounded (500): beyond it the answer is 429 `LDG-429` with a
+  message telling to retry in a few minutes. No wait inside the HTTP request any more. Not done: a per-user quota and a
+  ticket tied to the addresses of the form (the ticket still lasts 4 hours); the bounded queue limits the damage.
+- **The geocoding cache keeps no address text** (L2-11): key = SHA-256 of the normalised address, file lines are
+  `hash, latitude, longitude, date`; the file is created readable by its owner only, entries older than 90 days
+  (`-Debx.layout.geocoder.cacheDays=N`) are dropped when it is read and when it is compacted (every 5,000 additions), and a file
+  of the old format (address in clear) is rewritten by hash at the first start.
+
+**Operations, languages, tests (lot G)**
+
+- **Italian in the explorer and the layouts home** (audit L2-21): `explorer.js` and `home.js` now carry French, English and Italian (any other language reads English, as before); the validation messages of a FormLayout row are written in the locales the instance declares as well as EN/FR/IT.
+- **The runtime's own words are a bundle**: `RuntimeText` reads `RuntimeText.properties` (English), `RuntimeText_fr.properties`, `RuntimeText_it.properties` from the runtime jar instead of a table in the code; a language with no file, or a key missing from one, reads English. `RuntimeTextTest` keeps the three files on the same keys, checks every key the code asks for exists, and refuses a new visible literal (tag text, title/aria-label/placeholder/alt, accented literal) in the runtime sources. Not done: `title="map"` of the map's iframe is still in `LayoutPane`; an external folder where an administrator drops a fourth language is not offered.
+- **`docs/OPERATIONS.md`** (L2-22): every `-D` property of the module, the administrators' explorer options (`explain`, `route=sql`, `parallel=0`, load test), the `kernel.log` lines and their levels, the codes (`LD-*`, `LDD-`, `LDX-`, `LDG-429`, MCP codes), the files written (geocache, `.bak`, lock), threads and caches, the jar upgrade. `INSTALL.md` points to it; `LAYOUT-API.md` is reduced to a pointer to `MCP.md`; `LAYOUT-FORMAT.md` documents `usedBy.max` and `workflowTasks.pub`.
+- **`tools/test.sh` runs three more checks**: `RuntimeTextTest`, `GeoTicketTest` (forged, altered, expired and malformed tickets refused, a good one accepted) and `EscapingTest` (`esc` of the runtime blocks and of every page script, `Sql.lit`, `Sql.like`, `XPath.lit`, `Model.quote` on a hostile set). The four checks `tools/package.sh` runs at packaging are untouched.
+
+**Designer, store, activation (lot F)**
+
+**Designer, storage and activation (lot F)**
+
+- **The designer checks a layout before saving it** (audit L2-13): the same size, nesting, shape, block id/type and reference checks as the MCP tool `layout_put`. A layout with no tabs, a block without `id`, an unknown field or table is refused with a coded message (`LD-INVALID`, `LD-INVALID-JSON`, `LD-TOO-LARGE`, `LD-TOO-DEEP`, `LD-EMPTY`) listing the first errors; nothing is written and the draft stays on the page. Warnings still save.
+- **Activation no longer rewrites the XSD blindly** (L2-14): it runs under a lock (this module's monitor plus a lock file `<xsd>.layout-designer.lock` next to the XSD; a second administrator is told to retry, `LD-BUSY`), keeps a time-stamped `.bak-...-layout-designer` copy, checks that the new text is well-formed XML before replacing anything (otherwise the file is left as it was and `LD-MALFORMED` or `LD-XSD-INVALID` says so, the copy is kept) and writes a temporary file moved over the XSD in one step. The confirmation shows the absolute path of the file changed and warns when other folders of the server declare the same module. The lock file is not removed (zero bytes, harmless).
+- **Layout lookup by key** (L2-15): `LayoutStore.findRow` asks for the row of a (model, table) with a predicate and keeps its key until the FormLayout table's modification date changes (a negative answer too), instead of scanning the table at each form display and each opening of an Actions menu ("Arrange my form" permission rule included).
+- **Cache-busting follows the build** (L2-19): `?v=` on the designer, home, personalization and explorer pages is the version the build stamps (`ModuleVersion.version()`, from `VERSION` and git); a build with no stamp uses the server start time. `tools/package.sh` refuses a literal `ASSET_VERSION` in the source.
+- **No exception text in the designer pages** (L2-12, designer, layouts home, personalization): users see "unexpected error (code LDD-...)" in EN, FR and IT; the exception and its stack are in `kernel.log` under the same code. `denied` now says what to do, with code `LD-DENIED`.
+
+## 1.23.2 (2026-10-24, robustness audit lots C and D)
+
+**Explorer (lot D)**
+
+- **No more OR between a sub-query and another condition** (audit L2-09): a search over a `lookup` value, a flag or a tile that
+  combines a count, a "same value" or suspects with another field is written as ONE `t."$pk" IN (SELECT ... UNION SELECT ...)`
+  (each member one branch), never `(IN (SELECT ...)) OR LIKE ...`, which EBX evaluates record by record (17 minutes on one core,
+  not cancellable). The LIKE keeps no CAST on a text field and gets ESCAPE only when the text holds `%`, `_` or `\`. The
+  check refuses (error) an `any` that mixes a Match and Merge state with such a sub-query: write two flags. The search leaves
+  such a metadataset source out when a lookup is searched too.
+- **Favorites read by key** (L2-16): one predicate on user, explorer, dataspace and dataset instead of a sweep of the whole table,
+  and a short cache retired by the table's modification date.
+- **Explorer pool stopped at shutdown** (L2-18): `handleRepositoryShutdown` stops it; pages then run their statements one after
+  the other. The administrator load test is off unless the server runs with `-Debx.layoutDesigner.loadTest=true`.
+- **No exception text in the explorer** (L2-12, explorer and its designer): users see "unexpected error (code LDX-...)" in EN, FR
+  and IT; the exception and its stack are in `kernel.log` under the same code.
+
+**Form rendering (lot C)**
+
+- **Association cards apply field permissions** (L2-03): a field the user may not read is no longer drawn in a `grid` block in `cards` style (same rule as every other block).
+- **Associations are opened once per display** (L2-05): rows and counts are read with the user's own session on the request (EBX leaves out what they may not see, no permission per row), shared by every block and tab, and a count stops at 1000 (`-Debx.layoutDesigner.countCap`): tabs and panels show "1000+". A `lazy` grid counts with the same bound.
+- **"Used by" is bounded** (L2-06): at most `max` referring rows are looked at (default 1000, per block, new key `max`), "1000+" beyond. The referring records are the ones EBX already returns for the relation: no extra XPath scan (a non-key predicate scans the table).
+- **Hierarchy chart index** (L2-07): built by one thread at a time (others use the previous index or wait for the first), at most 500 000 links (`-Debx.layoutDesigner.orgChart.maxIndexLinks`, a partial index is announced by the chart's "large group" note and `kernel.log`), eight indexes at most; entities the user may not see no longer count towards the 2000-node cap.
+- **Workflow conditions** (L2-08): the designer asks for the publication of a `running` condition (it is the only way to ask the engine about one publication); without it a publication that does not declare the variable is remembered for a minute and not asked again, and the first failing value shape ends the loop. The *Workflows in progress* block also reads `pub`.
+- **One style sheet per form** (L2-17): style and scripts are written by the first tab only (about 40 KB less per extra tab).
+- **Perspective colours** (L2-20): the form takes the theme's main and focus colours (`--ldf-main`, `--ldf-focus`), the ON EBX purple stays as fallback; donut and org chart use the main colour first. Not done: explorer.js and personalize.js (not in this lot).
+- **Behaviour configuration tables** (L2-24): cached until the configuration or family table changes (and renewed every ten minutes), shared by all users.
+- **No blank form on a rendering failure** (L2-25): an exception while the form is built writes `LDF-RENDER` in `kernel.log` and shows EBX's standard form; a tab that fails shows the "layout could not be read" text. A tab, row, block or field written as something other than an object is ignored.
+- **For measuring** (audit section 5): with the kernel logger at DEBUG, `kernel.log` lists every block, tab and form that took more than 200 ms ("[layout-designer] block grid of tab 2 … 340 ms").
+
+## 1.23.1 (2026-10-24)
+
+- **Workflow buttons are re-tested when launched** (audit L2-01): the `LayoutAction` service now checks again `cond`, `wf` and
+  `session` of the button, as the form did when it drew it, besides the right to see the block and to launch the publication.
+  A button hidden on this record can no longer be launched by typing the service's address: message "no longer available for
+  this record", nothing launched.
+- **Session conditions documented as display only** (L2-02): they protect nothing; EBX's web component accepts a `trackingInfo`
+  parameter (possible, not measured yet), so prefer a session attribute. Guide, format reference and the designer's hint say so.
+- **No more 8-second wait after a launch** (L2-23): the first task is looked for once after about a second; if it is not there
+  the user goes to the inbox with the message "Launched. The work will appear in your inbox."
+- **No exception text shown** (L2-12, this service only): a failed launch says "could not be launched, ask an administrator to
+  look at the server log"; the detail stays in `kernel.log`.
+- **MCP endpoint bounded** (L2-04): the administrator test now comes before the body is read; the body is capped at 2 MB (413)
+  and its nesting at 64 levels (400), also for a layout passed as a JSON string, a batch at 50 requests. Each refusal names its
+  setting: `-Debx.layoutDesigner.mcp.maxBodyBytes`, `-Debx.layoutDesigner.mcp.maxDepth` (read at each call). `layout_put` and
+  `explorer_put` refuse a document larger than the body cap, besides the existing checks.
+- **MCP tools show no exception text** (L2-12, MCP part): a failing tool answers code `FAILED` and says to read `kernel.log`;
+  a JSON parse error no longer echoes the parser's message.
+
 ## 1.23.0 (2026-10-20)
 
 - **Conditions on the user's session** ([LAYOUT-FORMAT.md](docs/LAYOUT-FORMAT.md#conditions-on-the-users-session-since-1230)):

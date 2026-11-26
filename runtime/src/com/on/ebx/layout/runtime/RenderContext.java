@@ -2,18 +2,22 @@ package com.on.ebx.layout.runtime;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.onwbp.adaptation.Adaptation;
+import com.onwbp.adaptation.Request;
 import com.onwbp.adaptation.RequestResult;
 import com.orchestranetworks.instance.Repository;
 import com.orchestranetworks.instance.ValueContext;
 import com.orchestranetworks.schema.Path;
 import com.orchestranetworks.schema.SchemaNode;
 import com.orchestranetworks.service.LoggingCategory;
+import com.orchestranetworks.service.Session;
 import com.orchestranetworks.ui.form.UIFormContext;
 
 /** What every block of one form display needs: the record, the locale, the layout and where each field landed. */
@@ -45,11 +49,29 @@ final class RenderContext
 	final JsonNode layout;
 	final Map<String, Location> locations = new HashMap<String, Location>();
 	private final Map<String, Integer> counts = new HashMap<String, Integer>();
+	/** Associations whose count stopped at {@link #COUNT_CAP}: shown "1000+". */
+	private final Set<String> capped = new HashSet<String>();
+	/** The rows of each association, read once per display and shared by the blocks and tabs that use it (audit L2-05). */
+	private final SharedRows<Adaptation> shared = new SharedRows<Adaptation>();
+	/** The style sheet and scripts of the form, written by the first pane only (audit L2-17). */
+	final FormAssets assets = new FormAssets();
+	/** The perspective's main and focus colours, null when it gives none (audit L2-20). */
+	final String themeMain;
+	final String themeFocus;
 	/** Fields whose changes re-run the dynamic behaviours (their widget calls ldfDyn). */
 	final java.util.Set<String> controllers = new java.util.HashSet<String>();
 	/** Values computed once per display (a configuration table read by a behaviour). */
 	final Map<String, Object> cache = new HashMap<String, Object>();
 	private List<ReportItems.Item> report;
+
+	/**
+	 * Largest count shown as an exact number; a larger association shows "1000+" (audit L2-05). Read at each display:
+	 * {@code -Debx.layoutDesigner.countCap}, default 1000.
+	 */
+	static int countCap()
+	{
+		return Integer.getInteger("ebx.layoutDesigner.countCap", 1000).intValue();
+	}
 
 	RenderContext(final UIFormContext pContext, final JsonNode pLayout)
 	{
@@ -69,6 +91,9 @@ final class RenderContext
 		this.record = this.creating ? null : pContext.getCurrentRecord();
 		this.root = pContext.getCurrentTable().getTableOccurrenceRootNode();
 		this.layout = pLayout;
+		final String[] theme = RenderContext.theme(pContext);
+		this.themeMain = theme[0];
+		this.themeFocus = theme[1];
 		this.index();
 	}
 
@@ -86,11 +111,13 @@ final class RenderContext
 			return label;
 		}
 		int n = 0;
+		boolean more = false;
 		for (final JsonNode p : count)
 		{
 			n += this.count(p.asText());
+			more |= this.capped.contains(p.asText());
 		}
-		return n > 0 ? label + " (" + n + ")" : label;
+		return n > 0 ? label + " (" + n + (more ? "+" : "") + ")" : label;
 	}
 
 	SchemaNode node(final String pStoredPath)
@@ -156,6 +183,56 @@ final class RenderContext
 		}
 	}
 
+	/** The count of an association as shown: "12", or "1000+" when it stopped at the cap. */
+	String countText(final String pAssociation)
+	{
+		final int n = this.count(pAssociation);
+		return this.capped.contains(pAssociation) ? n + "+" : String.valueOf(n);
+	}
+
+	/** An association opened for this record: the rows, and whether EBX already left out what the user may not see. */
+	private static final class Opened
+	{
+		final RequestResult result;
+		final boolean filtered;
+
+		Opened(final RequestResult pResult, final boolean pFiltered)
+		{
+			this.result = pResult;
+			this.filtered = pFiltered;
+		}
+	}
+
+	/**
+	 * Opens the association with the user's session on the request, so that EBX itself leaves out the records they may not
+	 * see (CLAUDE.md §9, {@code Request.setSession}): no permission is asked row by row. When the request cannot be rerun
+	 * with the session, the unfiltered result is returned and the caller tests each row ({@link Access#canSee}).
+	 */
+	private Opened open(final SchemaNode pAssociation)
+	{
+		final RequestResult plain = pAssociation.getAssociationLink().getAssociationResult(this.record);
+		final Session session = this.context.getSession();
+		if (session != null)
+		{
+			try
+			{
+				final Request request = plain.getRequest();
+				if (request != null)
+				{
+					request.setSession(session);
+					final RequestResult filtered = request.execute();
+					plain.close();
+					return new Opened(filtered, true);
+				}
+			}
+			catch (final RuntimeException ex)
+			{
+				LoggingCategory.getKernel().debug("[layout-designer] association read with the user's own permissions row by row: " + ex);
+			}
+		}
+		return new Opened(plain, false);
+	}
+
 	int count(final String pAssociation)
 	{
 		if (this.record == null)
@@ -171,27 +248,57 @@ final class RenderContext
 		final SchemaNode a = this.node(pAssociation);
 		if (a != null && a.getAssociationLink() != null && Access.canRead(a, this.record))
 		{
-			try
+			final int cap = RenderContext.countCap();
+			final List<Adaptation> already = this.shared.completeRows(pAssociation);
+			if (already != null && already.size() <= cap)
 			{
-				final RequestResult rows = a.getAssociationLink().getAssociationResult(this.record);
+				n = already.size();
+			}
+			else
+			{
 				try
 				{
-					for (Adaptation r = rows.nextAdaptation(); r != null; r = rows.nextAdaptation())
-				{
-					if (Access.canSee(r))
+					final Opened o = this.open(a);
+					try
 					{
-						n++;
+						if (o.filtered)
+						{
+							if (o.result.isSizeGreaterOrEqual(cap + 1))
+							{
+								n = cap;
+								this.capped.add(pAssociation);
+							}
+							else
+							{
+								n = o.result.getSize();
+							}
+						}
+						else
+						{
+							final Bounded<Adaptation> c = Bounded.count(o.result.iterator(), cap, new java.util.function.Predicate<Adaptation>()
+							{
+								@Override
+								public boolean test(final Adaptation pRow)
+								{
+									return Access.canSee(pRow);
+								}
+							}, 0);
+							n = c.count;
+							if (c.more)
+							{
+								this.capped.add(pAssociation);
+							}
+						}
+					}
+					finally
+					{
+						o.result.close();
 					}
 				}
-				}
-				finally
+				catch (final RuntimeException ex)
 				{
-					rows.close();
+					LoggingCategory.getKernel().warn("[layout-designer] rows of " + pAssociation + " not counted: " + ex.getMessage());
 				}
-			}
-			catch (final RuntimeException ex)
-			{
-				LoggingCategory.getKernel().warn("[layout-designer] rows of " + pAssociation + " not counted: " + ex.getMessage());
 			}
 		}
 		this.counts.put(pAssociation, Integer.valueOf(n));
@@ -200,35 +307,63 @@ final class RenderContext
 
 	List<Adaptation> rows(final String pAssociation, final int pMax)
 	{
-		final List<Adaptation> out = new ArrayList<Adaptation>();
 		final SchemaNode a = this.node(pAssociation);
 		if (this.record == null || a == null || a.getAssociationLink() == null || !Access.canRead(a, this.record))
 		{
-			return out;
+			return new ArrayList<Adaptation>();
 		}
-		try
+		return this.shared.get(pAssociation, pMax, new SharedRows.Reader<Adaptation>()
 		{
-			final RequestResult rows = a.getAssociationLink().getAssociationResult(this.record);
-			try
+			@Override
+			public List<Adaptation> read(final int pLimit)
 			{
-				for (Adaptation r = rows.nextAdaptation(); r != null && out.size() < pMax; r = rows.nextAdaptation())
+				final List<Adaptation> out = new ArrayList<Adaptation>();
+				try
 				{
-					if (Access.canSee(r))
+					final Opened o = RenderContext.this.open(a);
+					try
 					{
-						out.add(r);
+						for (Adaptation r = o.result.nextAdaptation(); r != null && out.size() < pLimit; r = o.result.nextAdaptation())
+						{
+							if (o.filtered || Access.canSee(r))
+							{
+								out.add(r);
+							}
+						}
+					}
+					finally
+					{
+						o.result.close();
 					}
 				}
+				catch (final RuntimeException ex)
+				{
+					LoggingCategory.getKernel().warn("[layout-designer] rows of " + pAssociation + " not read: " + ex.getMessage());
+				}
+				return out;
 			}
-			finally
-			{
-				rows.close();
-			}
+		});
+	}
+
+	/** How many associations were really opened during this display (a DEBUG log line, and what a test counts). */
+	int associationReads()
+	{
+		return this.shared.reads();
+	}
+
+	/** The perspective's main and focus colours, each null when absent or not a plain hex colour. */
+	private static String[] theme(final UIFormContext pContext)
+	{
+		try
+		{
+			final com.orchestranetworks.ui.perspective.Perspective p = pContext.getCurrentPerspective();
+			final com.orchestranetworks.ui.perspective.PerspectiveTheme t = p == null ? null : p.getTheme();
+			return t == null ? new String[] { null, null } : new String[] { Css.colour(t.getMainColor()), Css.colour(t.getFocusColor()) };
 		}
 		catch (final RuntimeException ex)
 		{
-			LoggingCategory.getKernel().warn("[layout-designer] rows of " + pAssociation + " not read: " + ex.getMessage());
+			return new String[] { null, null };
 		}
-		return out;
 	}
 
 	List<ReportItems.Item> report()
@@ -262,13 +397,19 @@ final class RenderContext
 	/** An XPath predicate on the record: its result, pDefault when there is no record or it cannot run. */
 	boolean xpath(final String pCondition, final boolean pDefault)
 	{
-		if (pCondition == null || pCondition.trim().isEmpty() || this.record == null)
+		return RenderContext.xpath(this.record, pCondition, pDefault);
+	}
+
+	/** The same test on any record, without a form (1.23.1: a button is checked again when it is launched). */
+	static boolean xpath(final Adaptation pRecord, final String pCondition, final boolean pDefault)
+	{
+		if (pCondition == null || pCondition.trim().isEmpty() || pRecord == null)
 		{
 			return pDefault;
 		}
 		try
 		{
-			final RequestResult result = this.record.getContainerTable().createRequestResult(this.record.toXPathPredicateString() + " and (" + pCondition + ")");
+			final RequestResult result = pRecord.getContainerTable().createRequestResult(pRecord.toXPathPredicateString() + " and (" + pCondition + ")");
 			try
 			{
 				return !result.isEmpty();

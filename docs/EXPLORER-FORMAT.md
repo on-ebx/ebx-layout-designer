@@ -235,3 +235,9 @@ Every answer is EBX's own: the explorer keeps no copy of the data.
   out a value hidden on that record;
 - **actions**: a workflow button shows only to who may launch the publication, a service button only to who may run it;
 - every AJAX call re-checks the records a page names (cards, favorite, suspects named on a card, action).
+
+## Conditions and EBX's evaluation (1.23.2)
+
+An `any` that holds a counted value (`count`, `sameValue`, `suspects`) or a looked-up value beside another field is sent to EBX as one
+`IN (... UNION ...)` over record keys, never as an OR with a sub-query (EBX would run it record by record). The check refuses an
+`any` that mixes such a value with a Match and Merge state (`state`, `hasSuspects`, golden): write two flags.

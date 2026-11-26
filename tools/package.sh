@@ -27,6 +27,13 @@ sha256() { if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$@"; else s
 work="$(mktemp -d "${TMPDIR:-/tmp}/layout-package.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 
+printf '== cache-busting version\n'
+# the page scripts are fetched with ?v=<build version>: a literal left in the source would serve a stale script after an upgrade (L2-19)
+if grep -qE 'ASSET_VERSION[[:space:]]*=[[:space:]]*"[0-9]' "$root/ebx-layout-designer/src/main/java/com/on/ebx/layout/designer/DesignerUserService.java"; then
+	echo "DesignerUserService.ASSET_VERSION is a literal: it must come from ModuleVersion.version() (stamped from VERSION by build.sh)." >&2
+	exit 1
+fi
+
 printf '== help pages\n'
 python3 "$root/tools/build_help.py" --check
 

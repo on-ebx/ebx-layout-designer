@@ -30,11 +30,16 @@ final class SessionState
 	/** Whether the "session" conditions of a block, a field or a button let it show. No "session": always. */
 	static boolean allows(final RenderContext rc, final JsonNode pSession)
 	{
+		return SessionState.allows(rc.context.getSession(), pSession);
+	}
+
+	/** The same test on a session, without a form. */
+	static boolean allows(final Session session, final JsonNode pSession)
+	{
 		if (pSession == null || !pSession.isObject())
 		{
 			return true;
 		}
-		final Session session = rc.context.getSession();
 		final JsonNode ti = pSession.get("trackingInfo");
 		if (ti != null && !ti.path("op").asText("").isEmpty()
 			&& !SessionState.test(ti.path("op").asText(), ti.path("value").asText(""), SessionState.values(session == null ? null : session.getTrackingInfo())))

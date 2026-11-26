@@ -20,6 +20,25 @@ public final class LayoutDesignerRegistration extends ModuleRegistrationListener
 		Installer.install(pContext.getRepository(), pContext.createSystemUserSession("layout-designer"), pContext.getModuleName(), LoggingCategory.getKernel());
 	}
 
+	/**
+	 * Stops the explorer's thread pool (L2-18). Called after the web application is stopped: no class that was not loaded
+	 * yet may be needed here (no lambda, no anonymous class), and a class that cannot load means the pool never started.
+	 */
+	@Override
+	public void handleRepositoryShutdown()
+	{
+		try
+		{
+			com.on.ebx.layout.explorer.Engine.shutdown();
+		}
+		catch (final LinkageError ex)
+		{
+			// the explorer was never used in this run, or its class loader is already stopped: there is no pool to stop
+			ex.getClass();
+		}
+		super.handleRepositoryShutdown();
+	}
+
 	@Override
 	public void handleServiceRegistration(final ModuleServiceRegistrationContext pContext)
 	{

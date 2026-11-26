@@ -9,6 +9,7 @@ import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.onwbp.adaptation.Adaptation;
+import com.orchestranetworks.service.Session;
 import com.orchestranetworks.workflow.ProcessInstance;
 import com.orchestranetworks.workflow.ProcessInstanceKey;
 import com.orchestranetworks.workflow.PublishedProcessKey;
@@ -23,17 +24,56 @@ import com.orchestranetworks.workflow.WorkflowEngine;
  * A block, or a button of an "actions" block, may carry {@code "wf": {"ctx": "outside"|"inside", "running": "hide"|"show",
  * "pub": "<publication, empty: any>", "vars": "<variables holding the record>"}}: {@code ctx} shows it only outside or only
  * inside a workflow task; {@code running} hides it, or shows it only, while such an instance is running for the record.
+ * <p>
+ * Since 1.23.2 (audit L2-08) {@code pub} should always be given (the designer requires it): with it the engine is asked about
+ * one publication; without it about every publication, but a publication that does not declare a variable is remembered for
+ * a minute and not asked again.
  */
 final class WorkflowState
 {
+	/** How long a publication that does not declare a variable is not asked for it again (audit L2-08). */
+	private static final long UNDECLARED_MS = 60000L;
+	/** "publication|variable" → when to ask again. A publication's variables only change when it is republished. */
+	private static final Map<String, Long> UNDECLARED = new java.util.concurrent.ConcurrentHashMap<String, Long>();
+
 	private WorkflowState()
 	{
+	}
+
+	/** True while the publication is known not to declare this variable: the engine is not asked. */
+	static boolean knownUndeclared(final String pPublication, final String pVariable, final long pNow)
+	{
+		final Long until = WorkflowState.UNDECLARED.get(pPublication + "|" + pVariable);
+		if (until == null)
+		{
+			return false;
+		}
+		if (until.longValue() <= pNow)
+		{
+			WorkflowState.UNDECLARED.remove(pPublication + "|" + pVariable);
+			return false;
+		}
+		return true;
+	}
+
+	static void rememberUndeclared(final String pPublication, final String pVariable, final long pNow)
+	{
+		if (WorkflowState.UNDECLARED.size() > 5000)
+		{
+			WorkflowState.UNDECLARED.clear();
+		}
+		WorkflowState.UNDECLARED.put(pPublication + "|" + pVariable, Long.valueOf(pNow + WorkflowState.UNDECLARED_MS));
 	}
 
 	/** True when the form is shown inside a workflow task (this session or a parent one). */
 	static boolean inTask(final RenderContext rc)
 	{
-		final Object known = rc.cache.get("wf.inTask");
+		return WorkflowState.inTask(rc.context.getSession(), rc.cache);
+	}
+
+	static boolean inTask(final Session pSession, final Map<String, Object> pCache)
+	{
+		final Object known = pCache.get("wf.inTask");
 		if (known != null)
 		{
 			return ((Boolean) known).booleanValue();
@@ -41,13 +81,13 @@ final class WorkflowState
 		boolean in;
 		try
 		{
-			in = rc.context.getSession().isInWorkflowInteraction(true);
+			in = pSession.isInWorkflowInteraction(true);
 		}
 		catch (final RuntimeException ex)
 		{
 			in = false;
 		}
-		rc.cache.put("wf.inTask", Boolean.valueOf(in));
+		pCache.put("wf.inTask", Boolean.valueOf(in));
 		return in;
 	}
 
@@ -66,19 +106,25 @@ final class WorkflowState
 	}
 
 	/** The running (not completed) instances whose variable holds this record, in one publication or (empty) in all. */
-	@SuppressWarnings("unchecked")
 	static Map<String, ProcessInstance> running(final RenderContext rc, final List<String> pVars, final String pPublication)
 	{
+		return WorkflowState.running(rc.context.getSession(), rc.record, rc.creating, rc.cache, pVars, pPublication);
+	}
+
+	@SuppressWarnings("unchecked")
+	static Map<String, ProcessInstance> running(final Session pSession, final Adaptation pRecord, final boolean pCreating, final Map<String, Object> pCache,
+		final List<String> pVars, final String pPublication)
+	{
 		final String key = "wf.running|" + pVars + "|" + (pPublication == null ? "" : pPublication);
-		final Object known = rc.cache.get(key);
+		final Object known = pCache.get(key);
 		if (known != null)
 		{
 			return (Map<String, ProcessInstance>) known;
 		}
 		final Map<String, ProcessInstance> found = new LinkedHashMap<String, ProcessInstance>();
-		rc.cache.put(key, found);
-		final Adaptation me = rc.record;
-		if (me == null || rc.creating || pVars.isEmpty())
+		pCache.put(key, found);
+		final Adaptation me = pRecord;
+		if (me == null || pCreating || pVars.isEmpty())
 		{
 			return found;
 		}
@@ -97,7 +143,7 @@ final class WorkflowState
 		final WorkflowEngine engine;
 		try
 		{
-			engine = WorkflowEngine.getFromRepository(me.getHome().getRepository(), rc.context.getSession());
+			engine = WorkflowEngine.getFromRepository(me.getHome().getRepository(), pSession);
 		}
 		catch (final RuntimeException ex)
 		{
@@ -114,8 +160,13 @@ final class WorkflowState
 		}
 		for (final PublishedProcessKey pk : pubs)
 		{
+			final String pubName = String.valueOf(pk.getName());
 			for (final String v : pVars)
 			{
+				if (WorkflowState.knownUndeclared(pubName, v, System.currentTimeMillis()))
+				{
+					continue;
+				}
 				for (final String value : values)
 				{
 					try
@@ -134,7 +185,10 @@ final class WorkflowState
 					}
 					catch (final RuntimeException ex)
 					{
-						// the variable is not declared in this publication, or the publication does not exist
+						// the variable is not declared in this publication, or the publication does not exist: not asked again
+						// for a minute, nor for the other shapes of the value
+						WorkflowState.rememberUndeclared(pubName, v, System.currentTimeMillis());
+						break;
 					}
 				}
 			}
@@ -145,19 +199,25 @@ final class WorkflowState
 	/** Whether the "wf" conditions of a block or a button let it show. No "wf": always. */
 	static boolean allows(final RenderContext rc, final JsonNode pWf)
 	{
+		return WorkflowState.allows(rc.context.getSession(), rc.record, rc.creating, rc.cache, pWf);
+	}
+
+	/** The same test on a session and a record, without a form. */
+	static boolean allows(final Session pSession, final Adaptation pRecord, final boolean pCreating, final Map<String, Object> pCache, final JsonNode pWf)
+	{
 		if (pWf == null || !pWf.isObject())
 		{
 			return true;
 		}
 		final String ctx = pWf.path("ctx").asText("");
-		if ("outside".equals(ctx) && WorkflowState.inTask(rc) || "inside".equals(ctx) && !WorkflowState.inTask(rc))
+		if ("outside".equals(ctx) && WorkflowState.inTask(pSession, pCache) || "inside".equals(ctx) && !WorkflowState.inTask(pSession, pCache))
 		{
 			return false;
 		}
 		final String running = pWf.path("running").asText("");
 		if ("hide".equals(running) || "show".equals(running))
 		{
-			final boolean any = !WorkflowState.running(rc, WorkflowState.vars(pWf.path("vars").asText("")), pWf.path("pub").asText("")).isEmpty();
+			final boolean any = !WorkflowState.running(pSession, pRecord, pCreating, pCache, WorkflowState.vars(pWf.path("vars").asText("")), pWf.path("pub").asText("")).isEmpty();
 			return "hide".equals(running) ? !any : any;
 		}
 		return true;

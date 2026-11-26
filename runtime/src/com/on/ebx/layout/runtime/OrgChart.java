@@ -4,7 +4,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -12,7 +11,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -32,6 +30,11 @@ import com.orchestranetworks.ui.form.UIFormPaneWriter;
  * drawn in the browser as an org chart centred on the record, a collapsible tree or rings ({@code orgchart.js}). The table
  * is read once into a key → parent index, kept until {@code AdaptationTable.getLastModificationDate()} changes; only the
  * records of the group (at most {@link #MAX_NODES}) are then read for their label, line and colour.
+ * <p>
+ * Since 1.23.2 (audit L2-07) the index is built by one thread at a time ({@link StampedCache}: the others use the previous
+ * one, or wait for the first build), at most {@link #maxIndexLinks()} links are kept (a larger table gives a partial index
+ * and the chart says so), at most eight indexes stay in memory, and the entities the user may not see are left out while the
+ * group is walked, so they no longer count towards {@link #MAX_NODES}.
  */
 final class OrgChart
 {
@@ -53,19 +56,46 @@ final class OrgChart
 		OrgChart.TONES.put("muted", "#9A94A3");
 	}
 
-	private static final class Index
+	/** key → parent and parent → children of a table; {@code partial} when the table had more links than the limit. */
+	static final class Index
 	{
-		final Date stamp;
 		final Map<String, String> parentOf = new HashMap<String, String>();
 		final Map<String, List<String>> kids = new HashMap<String, List<String>>();
-
-		Index(final Date pStamp)
-		{
-			this.stamp = pStamp;
-		}
+		boolean partial;
 	}
 
-	private static final Map<String, Index> INDEXES = new ConcurrentHashMap<String, Index>();
+	private static final StampedCache<Index> INDEXES = new StampedCache<Index>(8);
+
+	/** Most links an index keeps ({@code -Debx.layoutDesigner.orgChart.maxIndexLinks}, default 500 000). */
+	static int maxIndexLinks()
+	{
+		return Integer.getInteger("ebx.layoutDesigner.orgChart.maxIndexLinks", 500000).intValue();
+	}
+
+	/**
+	 * The index of {@code {key, parent}} pairs, stopping at {@code pMaxLinks} links (then {@code partial}). A pair with no
+	 * parent, or whose parent is itself, is no link.
+	 */
+	static Index build(final java.util.Iterator<String[]> pPairs, final int pMaxLinks)
+	{
+		final Index ix = new Index();
+		while (pPairs.hasNext())
+		{
+			final String[] kp = pPairs.next();
+			if (kp == null || kp[1] == null || kp[1].isEmpty() || kp[1].equals(kp[0]))
+			{
+				continue;
+			}
+			if (ix.parentOf.size() >= pMaxLinks)
+			{
+				ix.partial = true;
+				break;
+			}
+			ix.parentOf.put(kp[0], kp[1]);
+			ix.kids.computeIfAbsent(kp[1], x -> new ArrayList<String>()).add(kp[0]);
+		}
+		return ix;
+	}
 
 	private OrgChart()
 	{
@@ -90,6 +120,8 @@ final class OrgChart
 		}
 		final Index ix = OrgChart.index(table, LayoutPaths.relative(parent));
 		final String me = rc.record.getOccurrencePrimaryKey().format();
+		final Map<String, Adaptation> loaded = new HashMap<String, Adaptation>();
+		loaded.put(me, rc.record);
 
 		// the root: up the parents, a loop stops the walk
 		final List<String> up = new ArrayList<String>();
@@ -103,7 +135,7 @@ final class OrgChart
 		final Set<String> group = new LinkedHashSet<String>(up);
 		final ArrayDeque<String> queue = new ArrayDeque<String>();
 		queue.add(root);
-		boolean cut = false;
+		boolean cut = ix.partial;
 		while (!queue.isEmpty())
 		{
 			final List<String> ch = ix.kids.get(queue.poll());
@@ -117,6 +149,10 @@ final class OrgChart
 				{
 					queue.add(c);
 					continue;
+				}
+				if (OrgChart.resolve(table, loaded, c) == null)
+				{
+					continue; // an entity the user may not see: left out, and not counted
 				}
 				if (group.size() >= OrgChart.MAX_NODES)
 				{
@@ -152,7 +188,7 @@ final class OrgChart
 		final ArrayNode nodes = data.putArray("nodes");
 		for (final String k : group)
 		{
-			final Adaptation r = k.equals(me) ? rc.record : OrgChart.lookup(table, k);
+			final Adaptation r = OrgChart.resolve(table, loaded, k);
 			if (r == null)
 			{
 				continue;
@@ -170,21 +206,21 @@ final class OrgChart
 			{
 				n.put("s", Values.display(r, sub, rc.locale));
 			}
-			String hex = OrgChart.PALETTE[0];
+			String hex = OrgChart.themed(rc, OrgChart.PALETTE[0]);
 			if (!color.isEmpty())
 			{
 				final String shown = Values.display(r, color, rc.locale);
 				final String tone = Values.tone(colors, Values.key(Values.raw(r, color)), shown).replace(" ldf-t-", "");
 				if (!tone.isEmpty() && OrgChart.TONES.containsKey(tone))
 				{
-					hex = OrgChart.TONES.get(tone);
+					hex = OrgChart.themed(rc, OrgChart.TONES.get(tone));
 				}
 				else
 				{
 					final String key = shown.isEmpty() ? "—" : shown;
 					if (!palette.containsKey(key))
 					{
-						palette.put(key, OrgChart.PALETTE[palette.size() % OrgChart.PALETTE.length]);
+						palette.put(key, OrgChart.themed(rc, OrgChart.PALETTE[palette.size() % OrgChart.PALETTE.length]));
 					}
 					hex = palette.get(key);
 				}
@@ -233,6 +269,22 @@ final class OrgChart
 		}
 	}
 
+	/** The perspective's main colour in place of the ON EBX purple (audit L2-20). */
+	private static String themed(final RenderContext rc, final String pHex)
+	{
+		return rc.themeMain != null && "#7F17FF".equals(pHex) ? rc.themeMain : pHex;
+	}
+
+	/** The record of a key, read once per display ({@code null} when absent or hidden from the user). */
+	private static Adaptation resolve(final AdaptationTable pTable, final Map<String, Adaptation> pLoaded, final String pKey)
+	{
+		if (!pLoaded.containsKey(pKey))
+		{
+			pLoaded.put(pKey, OrgChart.lookup(pTable, pKey));
+		}
+		return pLoaded.get(pKey);
+	}
+
 	private static Adaptation lookup(final AdaptationTable pTable, final String pKey)
 	{
 		try
@@ -247,51 +299,54 @@ final class OrgChart
 		}
 	}
 
-	/** key → parent of the whole table, rebuilt when the table has changed since the last build. */
+	/** key → parent of the whole table, rebuilt (by one thread) when the table has changed since the last build. */
 	private static Index index(final AdaptationTable pTable, final Path pParent)
 	{
 		final Adaptation dataset = pTable.getContainerAdaptation();
 		final String id = dataset.getHome().getKey().getName() + "|" + dataset.getAdaptationName().getStringName() + "|" + pTable.getTablePath().format() + "|"
 			+ pParent.format();
-		final Date stamp = pTable.getLastModificationDate();
-		final Index cached = OrgChart.INDEXES.get(id);
-		if (cached != null && cached.stamp != null && cached.stamp.equals(stamp))
+		return OrgChart.INDEXES.get(id, pTable.getLastModificationDate(), new StampedCache.Loader<Index>()
 		{
-			return cached;
-		}
-		final Index ix = new Index(stamp);
-		final long t0 = System.currentTimeMillis();
-		final RequestResult rows = pTable.createRequest().execute();
-		try
-		{
-			for (Adaptation r = rows.nextAdaptation(); r != null; r = rows.nextAdaptation())
+			@Override
+			public Index load()
 			{
-				final Object p = r.get(pParent);
-				if (p == null || String.valueOf(p).isEmpty())
+				final long t0 = System.currentTimeMillis();
+				// the whole table, without a session: the index is shared; what a user may not see is left out when it is walked
+				final RequestResult rows = pTable.createRequest().execute();
+				final Index ix;
+				try
 				{
-					continue;
+					final java.util.Iterator<Adaptation> it = rows.iterator();
+					ix = OrgChart.build(new java.util.Iterator<String[]>()
+					{
+						@Override
+						public boolean hasNext()
+						{
+							return it.hasNext();
+						}
+
+						@Override
+						public String[] next()
+						{
+							final Adaptation r = it.next();
+							final Object p = r == null ? null : r.get(pParent);
+							return r == null ? null : new String[] { r.getOccurrencePrimaryKey().format(), p == null ? null : String.valueOf(p) };
+						}
+					}, OrgChart.maxIndexLinks());
 				}
-				final String k = r.getOccurrencePrimaryKey().format();
-				final String pk = String.valueOf(p);
-				if (pk.equals(k))
+				finally
 				{
-					continue;
+					rows.close();
 				}
-				ix.parentOf.put(k, pk);
-				ix.kids.computeIfAbsent(pk, x -> new ArrayList<String>()).add(k);
+				final long ms = System.currentTimeMillis() - t0;
+				if (ms > 500 || ix.partial)
+				{
+					LoggingCategory.getKernel().info("[layout-designer] hierarchy index of " + pTable.getTablePath().format() + " built in " + ms + " ms (" + ix.parentOf.size() + " links"
+						+ (ix.partial ? ", PARTIAL: raise -Debx.layoutDesigner.orgChart.maxIndexLinks" : "") + ")");
+				}
+				return ix;
 			}
-		}
-		finally
-		{
-			rows.close();
-		}
-		final long ms = System.currentTimeMillis() - t0;
-		if (ms > 500)
-		{
-			LoggingCategory.getKernel().info("[layout-designer] hierarchy index of " + pTable.getTablePath().format() + " built in " + ms + " ms (" + ix.parentOf.size() + " links)");
-		}
-		OrgChart.INDEXES.put(id, ix);
-		return ix;
+		});
 	}
 
 	static String resource(final String pName)
