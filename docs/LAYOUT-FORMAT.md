@@ -160,7 +160,7 @@ record (`a`, its path); a field of its target table is a path of that table (`/a
 | `pivot` | `a`, `rows`, `cols` (fields of the rows), `value: {field}` (empty: a tick when the pair exists) |
 | `linked` | `fk` (foreign key of the record), `fields` (paths of the target table), `open` (true: link to the record, `getURLForSelection`) |
 | `contacts` | `a`, `name` (default: row label), `role`, `email`, `phone`, `main` (boolean: shown first, highlighted); since 1.6.2 `cardWidth` (minimum card width in px, default 320) and `max` (cards shown, default 60, a notice says when there are more) |
-| `gallery` | `a` + `media` + `caption`, and/or `fields` (media or URL fields of the record), `perRow` (4) |
+| `gallery` | `a` + `media` + `caption`, and/or `fields` (media or URL fields of the record), `perRow` (4), since 1.15.2 `fit` (`cover`, default: square thumbnails, cropped; `contain`: the whole image at its own proportions, for banners and logos) |
 | `documents` | `a`, `file` (media or URL field), `name`, `docType`, `date`, `expiry` (true: a past date shows red) |
 | `links` | `items: [{label, url, sameTab}]`; `${./path}` in `url` inserts the record's value, URL-encoded; a button whose value is empty is hidden; a `url` that is only `${./path}` (a website field) is used as it is, `https://` added when missing; only `http(s):`, `mailto:`, `tel:` and `/` addresses |
 | `validity` | `from`, `to` (date fields), `warnDays` (30): upcoming, in force, ending soon, expired |

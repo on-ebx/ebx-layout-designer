@@ -1023,7 +1023,10 @@ final class MoreBlocks
 			return a.isEmpty() && b.path("fields").size() == 0 ? MoreBlocks.setup(rc) : MoreBlocks.empty(MoreBlocks.t("noImage", rc));
 		}
 		final int per = Math.max(1, Math.min(8, b.path("perRow").asInt(4)));
-		final StringBuilder h = new StringBuilder("<div class=\"ldf-gal\" style=\"grid-template-columns:repeat(").append(per).append(",minmax(0,1fr))\">");
+		// fit: "cover" (default) crops each image to a square thumbnail; "contain" shows the whole image at its own
+		// proportions, for banners and logos (a tagline cropped to a square lost both ends of its text)
+		final boolean whole = "contain".equals(b.path("fit").asText("cover"));
+		final StringBuilder h = new StringBuilder("<div class=\"ldf-gal").append(whole ? " ldf-gal-whole" : "").append("\" style=\"grid-template-columns:repeat(").append(per).append(",minmax(0,1fr))\">");
 		for (int i = 0; i < assets.size(); i++)
 		{
 			final Media.Asset m = assets.get(i);

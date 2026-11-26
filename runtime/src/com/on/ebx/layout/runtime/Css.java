@@ -132,6 +132,7 @@ final class Css
 		+ ".ldf-cp-b{font:inherit;font-size:11px;font-weight:600;color:#5B12C7;background:#fff;border:1px solid #CDB8F5;border-radius:6px;padding:1px 7px;cursor:pointer;vertical-align:middle}"
 		+ ".ldf-gal{display:grid;gap:10px}.ldf-gal-i{display:flex;flex-direction:column;gap:4px;text-decoration:none;color:#6B6575;font-size:11.5px;min-width:0}"
 		+ ".ldf-gal-i img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid #E2DEE6;background:#FAF9FB}.ldf-gal-i span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"
+		+ ".ldf-gal-whole .ldf-gal-i img{aspect-ratio:auto;height:auto;max-height:360px;object-fit:contain}"
 		+ ".ldf-file{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:44px;border-radius:7px;background:#ECEBFD;color:#3931EC;font-weight:800;font-size:10.5px;flex:none}"
 		+ ".ldf-gal-i .ldf-file{width:100%;height:auto;aspect-ratio:1}"
 		+ ".ldf-docs{display:flex;flex-direction:column;gap:8px}.ldf-doc{display:flex;gap:10px;align-items:center;border:1px solid #EFECF3;border-radius:10px;padding:8px 10px}"

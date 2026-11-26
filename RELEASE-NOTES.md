@@ -1,5 +1,12 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.15.2 (2026-10-14)
+
+- **An image gallery can show whole images.** The *image gallery* block cut every image to a square thumbnail, so a wide
+  image (a product's tagline banner) lost both ends of its text. A new setting, *Framing* (`fit` in the layout), keeps
+  the square thumbnails by default (`cover`) or shows each image whole, at its own proportions, up to 360 px high
+  (`contain`).
+
 ## 1.15.1 (2026-10-13)
 
 - **The designer warns when a map is computed from the address.** In the inspector of a *map* or *sites on a map* block

@@ -99,7 +99,7 @@ Since 1.4.0:
 | **Matrix** | an association's rows crossed on two fields (availability by country and channel) |
 | **Linked record** | chosen fields of the record a foreign key points to, with a link to open it |
 | **Contacts** | the people of an association as cards, e-mail and phone with Copy, the main contact first |
-| **Image gallery** | images of media or URL fields, of the record or of an association |
+| **Image gallery** | images of media or URL fields, of the record or of an association; *Framing*: square thumbnails (cropped) or whole images (for banners, logos) |
 | **Documents** | files of an association: name, type, date (red once an expiry date is past), link |
 | **Links and actions** | buttons to an address built from the record's values (`https://shop.example.com/p/${./Sku}`) |
 | **Validity period** | upcoming, in force, ending soon or expired, with the days left |

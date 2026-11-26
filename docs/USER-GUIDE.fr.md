@@ -109,7 +109,7 @@ Depuis la 1.4.0 :
 | **Matrice** | les lignes d'une association croisées sur deux champs (disponibilité par pays et par canal) |
 | **Fiche liée** | les champs choisis de l'enregistrement visé par une clé étrangère, avec un lien pour l'ouvrir |
 | **Contacts** | les personnes d'une association en cartes, e-mail et téléphone avec Copier, le contact principal en tête |
-| **Galerie d'images** | les images de champs média ou d'adresse, de la fiche ou d'une association |
+| **Galerie d'images** | les images de champs média ou d'adresse, de la fiche ou d'une association ; *Cadrage* : vignettes carrées (recadrées) ou images entières (bandeaux, logos) |
 | **Documents** | les fichiers d'une association : nom, type, date (en rouge une fois une échéance passée), lien |
 | **Liens et actions** | des boutons vers une adresse construite avec les valeurs de la fiche (`https://boutique.exemple.fr/p/${./Sku}`) |
 | **Période de validité** | à venir, en vigueur, bientôt échu ou expiré, avec les jours restants |
