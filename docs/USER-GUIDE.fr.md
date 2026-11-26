@@ -222,6 +222,19 @@ Dans l'inspecteur de chaque bloc, et de chaque bouton d'un bloc *Actions*, *Selo
 - **</> Code** : le JSON enregistré, et la même mise en page en classe `UIForm` figée pour un projet qui ne veut pas
   du designer à l'exécution (facultatif).
 
+### Références disparues (1.17.1)
+
+Une mise en page nomme des champs, des tables, des publications de workflow et des composants enregistrés. Quand l'un
+d'eux disparaît (champ supprimé du modèle puis modèle republié, publication retirée, module désinstallé), rien ne
+casse : la fiche l'omet. Mais la mise en page le signale :
+
+- l'enregistrement `FormLayout` porte un message de validation par référence (erreur pour un champ ou une table,
+  avertissement pour une publication, un composant, ou un modèle sans dataset sur cette instance) ; l'enregistrement
+  n'est jamais bloqué ;
+- le designer affiche *N référence(s) à vérifier* dans la barre du haut ; un clic les liste avec *Voir le bloc* et
+  *Retirer*. Un champ disparu d'un panneau s'affiche en ligne rouge avec son propre bouton de retrait ; chaque bloc
+  concerné porte une étiquette rouge.
+
 ## 9. Pour les développeurs : composants enregistrés
 
 Un module peut ajouter son propre bloc. Implémentez `com.on.ebx.layout.runtime.LayoutComponent` (`getLabel(Locale)`,

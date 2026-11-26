@@ -75,7 +75,15 @@ final class ActionsBlock
 				}
 				else if (!service.isEmpty())
 				{
-					wc.setService(ServiceKey.parse(service));
+					final ServiceKey key = ServiceKey.parse(service);
+					// 1.17.1: a service the user may not run on this record, or one EBX does not know, gives no button
+					final com.orchestranetworks.service.ActionPermission permission = rc.context.getSession().getPermissions()
+						.getNodeActionPermissionForService(key, rc.record.getSchemaNode(), rc.record);
+					if (permission != null && permission.isHidden())
+					{
+						continue;
+					}
+					wc.setService(key);
 				}
 				else
 				{

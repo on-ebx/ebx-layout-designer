@@ -281,6 +281,15 @@ its place for everyone.
 None of this is security: a field left out of a form stays readable in the table view, an export or the APIs. EBX
 permissions protect the data.
 
+## Validation (1.17.1)
+
+The `layout` field of `FormLayout` carries a constraint (`com.on.ebx.layout.designer.LayoutValidation`, bean property
+`checks` = `all` or `off`) that never blocks a commit and is re-checked at every validation. It reports: invalid JSON
+(error); the table no longer in the model (error); a path of a block, a field of a panel or the field of a
+`showIf`/`mandatoryIf`/`readOnlyIf` found neither on the record nor on a linked table (error); a `component` no longer
+registered, a `wf.pub` or a workflow button's publication no longer published, a model with no dataset on the instance
+(warning). The runtime itself skips such references silently.
+
 ## Example
 
 ```json

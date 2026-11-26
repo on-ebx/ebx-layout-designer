@@ -206,6 +206,17 @@ In the inspector of any block, and of each button of an *Actions* block, *Depend
 - **</> Code**: the saved JSON, and the same layout as a frozen `UIForm` class for a project that does not want the
   designer at run time (optional).
 
+### References that no longer exist (1.17.1)
+
+A layout names fields, tables, workflow publications and registered components. When one of them goes (a field deleted
+from the model and the model republished, a publication removed, a module uninstalled), nothing breaks: the form leaves
+it out. But the layout reports it:
+
+- the `FormLayout` record shows a validation message per reference (error for a field or table, warning for a
+  publication, a component, or a model with no dataset on this instance); the save is never blocked;
+- the designer shows *N reference(s) to check* in the top bar; a click lists them with *Go to block* and *Remove*. A
+  removed field of a panel shows as a red row, with its own remove button; each block concerned carries a red tag.
+
 ## 9. For developers: registered components
 
 A module can add its own block. Implement `com.on.ebx.layout.runtime.LayoutComponent` (`getLabel(Locale)`,

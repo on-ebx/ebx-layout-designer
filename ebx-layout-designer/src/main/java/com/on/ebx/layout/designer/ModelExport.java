@@ -199,6 +199,20 @@ final class ModelExport
 				labels.put(l.toLanguageTag(), e.getValue().getLabel(l));
 			}
 		}
+		// 1.17.1: the published workflows, so that the designer flags a button or a condition naming one that is gone
+		try
+		{
+			final ArrayNode workflows = boot.putArray("workflows");
+			for (final com.orchestranetworks.workflow.PublishedProcessKey k : com.orchestranetworks.workflow.WorkflowEngine
+				.getFromRepository(dataset.getHome().getRepository(), null).getPublishedKeys())
+			{
+				workflows.add(k.getName());
+			}
+		}
+		catch (final RuntimeException ex)
+		{
+			boot.remove("workflows");
+		}
 		if (pNotice != null)
 		{
 			boot.put("notice", pNotice);

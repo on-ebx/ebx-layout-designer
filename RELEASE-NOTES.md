@@ -1,5 +1,18 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.17.1 (2026-10-14)
+
+- **A layout that names something gone is reported.** A field removed from the model, a table or association that no
+  longer exists, a workflow publication no longer published, a registered component no longer registered: the
+  `FormLayout` record now carries a validation message for each (error for a field or a table, warning for the others;
+  constraint `LayoutValidation` on `layout`, never blocks a save). The designer counts them in the top bar
+  (*N reference(s) to check*), marks each block concerned with a red tag, shows a removed field of a panel as a red row
+  with a remove button, and lists them all with *Go to block* and *Remove*.
+- **At run time a gone reference stays silent**: a removed field is left out of the facts block (it used to show its
+  raw path), and a service button whose service no longer exists for the record is not drawn (it used to answer
+  "Access denied").
+- The map's inspector note no longer mentions the old per-display lookup limit.
+
 ## 1.17.0 (2026-10-14)
 
 - **Conditions tied to workflows**, on any block and on each button of an *Actions* block (inspector, *Depending on

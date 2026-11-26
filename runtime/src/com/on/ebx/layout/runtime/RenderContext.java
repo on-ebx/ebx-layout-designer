@@ -106,11 +106,14 @@ final class RenderContext
 	}
 
 	/** The value as EBX displays it in this locale (foreign key label, enumeration label, formatted date). */
-	/** Whether the user may read this field of the record (EBX permissions); a path that is not a field of the record is not judged here. */
+	/**
+	 * Whether the user may read this field of the record (EBX permissions). Since 1.17.1 a path that is not a node of the
+	 * record (a field removed from the data model) is not readable: blocks leave it out instead of showing its path.
+	 */
 	boolean canRead(final String pStoredPath)
 	{
 		final SchemaNode n = this.node(pStoredPath);
-		return n == null || Access.canRead(n, this.record);
+		return n != null && Access.canRead(n, this.record);
 	}
 
 	String display(final String pStoredPath)

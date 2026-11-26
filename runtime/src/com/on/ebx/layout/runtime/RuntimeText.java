@@ -98,6 +98,13 @@ public final class RuntimeText
 		RuntimeText.put("sm.hq", "Head office", "Si\u00e8ge", "Sede");
 		RuntimeText.put("sm.approx", "Town position", "Position de la ville", "Posizione della citt\u00e0");
 		RuntimeText.put("sm.pending", "Position at the next display", "Position \u00e0 l'affichage suivant", "Posizione alla prossima apertura");
+		// 1.17.1: what a layout refers to that no longer exists
+		RuntimeText.put("chk.where", "Tab \u201c{0}\u201d, block \u201c{1}\u201d", "Onglet \u00ab {0} \u00bb, bloc \u00ab {1} \u00bb", "Scheda \u00ab {0} \u00bb, blocco \u00ab {1} \u00bb");
+		RuntimeText.put("chk.noField", "field or association {0} does not exist in the data model", "le champ ou l\u2019association {0} n\u2019existe pas dans le mod\u00e8le de donn\u00e9es", "il campo o l\u2019associazione {0} non esiste nel modello di dati");
+		RuntimeText.put("chk.noTable", "table {0} does not exist in the data model", "la table {0} n\u2019existe pas dans le mod\u00e8le de donn\u00e9es", "la tabella {0} non esiste nel modello di dati");
+		RuntimeText.put("chk.noDataset", "no dataset of this instance uses the data model {0}: the layout is not checked", "aucun jeu de donn\u00e9es de cette instance n\u2019utilise le mod\u00e8le {0} : la mise en page n\u2019est pas v\u00e9rifi\u00e9e", "nessun dataset di questa istanza usa il modello {0}: il layout non \u00e8 verificato");
+		RuntimeText.put("chk.noWorkflow", "workflow {0} is not published on this instance", "le workflow {0} n\u2019est pas publi\u00e9 sur cette instance", "il workflow {0} non \u00e8 pubblicato su questa istanza");
+		RuntimeText.put("chk.noComponent", "component {0} is not registered on this instance", "le composant {0} n\u2019est pas enregistr\u00e9 sur cette instance", "il componente {0} non \u00e8 registrato su questa istanza");
 		RuntimeText.put("sm.locate", "Locate now", "Localiser maintenant", "Localizza ora");
 		RuntimeText.put("locatingOne", "Locating\u2026", "Localisation\u2026", "Localizzazione\u2026");
 		RuntimeText.put("sm.locating", "Locating\u2026 {n} left (one a second)", "Localisation\u2026 encore {n} (une par seconde)", "Localizzazione\u2026 ancora {n} (una al secondo)");

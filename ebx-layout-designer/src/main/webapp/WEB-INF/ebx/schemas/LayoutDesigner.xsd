@@ -90,6 +90,14 @@
                                     <xs:documentation xml:lang="en-US"><osd:label>Layout (JSON)</osd:label></xs:documentation>
                                     <xs:documentation xml:lang="fr-FR"><osd:label>Mise en page (JSON)</osd:label></xs:documentation>
                                     <xs:documentation xml:lang="it-IT"><osd:label>Layout (JSON)</osd:label></xs:documentation>
+                                    <xs:appinfo>
+                                        <!-- 1.17.1: references that no longer exist (fields, associations, table, workflows, components); never blocks a save -->
+                                        <osd:otherFacets>
+                                            <osd:constraint class="com.on.ebx.layout.designer.LayoutValidation">
+                                                <checks>all</checks>
+                                            </osd:constraint>
+                                        </osd:otherFacets>
+                                    </xs:appinfo>
                                 </xs:annotation>
                                 <xs:simpleType>
                                     <xs:restriction base="osd:text"/>

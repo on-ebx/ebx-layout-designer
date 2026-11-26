@@ -207,6 +207,35 @@ const SEVS = ['error','warning','info'];
 const lab = p => F[p] ? T(F[p].lab) : A[p] ? T(A[p].lab) : G[p] ? T(G[p].lab) : p;
 const glab = g => g && G[g] ? T(G[g].lab) : T(B.model.tableLabel);
 const COMPS = B.components || [];
+/* 1.17.1: what the layout refers to that no longer exists (a field or an association removed from the model, a workflow
+   no longer published, a component this instance does not register); the same rules as the FormLayout validation */
+const WFS = B.workflows || null;
+const PATH_RE = /^(\/[A-Za-z_][A-Za-z0-9_]*)+$/;
+const SKIPK = ['title','note','label','text','showIf','cond','cardFields','week','exceptions','attributesBy','actions','url','icon'];
+function pathsIn(o, out){
+  if (typeof o === 'string'){ if (PATH_RE.test(o)) out.push(o); return out; }
+  if (Array.isArray(o)){ o.forEach(x => pathsIn(x, out)); return out; }
+  if (o && typeof o === 'object') Object.keys(o).forEach(k => { if (SKIPK.indexOf(k) < 0 || (k === 'title' && o.type === 'hero')) pathsIn(o[k], out); });
+  return out;
+}
+function brokenOf(b){
+  const paths = pathsIn(b, []);
+  [b].concat(b.fields || []).forEach(x => ['showIf','mandatoryIf','readOnlyIf'].forEach(k => { const f = x && x[k] && x[k].field; if (f && f.charAt(0) === '/') paths.push(f); }));
+  const ok = new Set(); let partial = false;
+  const take = list => { (list || []).forEach(t => ok.add(t.p)); if (list && list.length >= 300) partial = true; };
+  paths.forEach(p => { if (F[p]){ ok.add(p); take(F[p].tf); } if (A[p]){ ok.add(p); take(A[p].fields); } const t = tableOf(p); if (t){ ok.add(p); take(t.fields); } });
+  const out = [];
+  if (!partial) Array.from(new Set(paths)).forEach(p => { if (!ok.has(p) && p.indexOf('/root/') !== 0) out.push({k:'field', ref:p}); });
+  if (b.type === 'custom' && b.cls && !COMPS.some(x => x.name === b.cls)) out.push({k:'component', ref:b.cls});
+  if (WFS) [b.wf && b.wf.pub].concat((b.items || []).reduce((a, it) => a.concat([it && it.workflow, it && it.wf && it.wf.pub]), [])).filter(Boolean).forEach(w => { if (WFS.indexOf(w) < 0) out.push({k:'workflow', ref:w}); });
+  return out;
+}
+function allBroken(){
+  const out = [];
+  S.tabs.forEach(t => t.rows.forEach(r => r.c.forEach(col => col.forEach(id => { const b = S.blocks[id]; if (b) brokenOf(b).forEach(x => out.push(Object.assign({b:id, tab:t.id}, x))); }))));
+  return out;
+}
+const brokenText = x => x.k === 'field' ? cl(['Champ ou association introuvable dans le modèle','Field or association not found in the model']) : x.k === 'workflow' ? cl(['Workflow non publié sur cette instance','Workflow not published on this instance']) : cl(['Composant non enregistré sur cette instance','Component not registered on this instance']);
 
 const BLOCKS = {
  panel:{l:'kPanel', d:'dPanel'}, hero:{l:'kHero', d:'dHero', full:1}, facts:{l:'kFacts', d:'dFacts', full:1}, validation:{l:'kValidation', d:'dValidation', full:1},
@@ -372,7 +401,7 @@ const BL = {
      {k:'tfield', key:'label', of:'a', l:['Nom du site (vide : libellé de la ligne)','Site name (empty: the row label)']}, {k:'tfield', key:'detail', of:'a', l:['Ligne de détail','Detail line']},
      {k:'tfield', key:'hq', of:'a', types:['bool'], l:['Mis en avant si (oui/non : siège…)','Highlighted when (yes/no: head office…)']}, {k:'tfield', key:'active', of:'a', types:['bool'], l:['Actif (oui/non)','Active (yes/no)']},
      {k:'bool', key:'showInactive', def:false, l:['Montrer aussi les sites inactifs','Also show inactive sites']}, {k:'bool', key:'tall', def:false, l:['Grande carte','Large map']},
-     {k:'hint', l:['Sans coordonnées, chaque adresse est cherchée par le serveur EBX sur OpenStreetMap (Nominatim), au plus six nouvelles par affichage, puis gardée en mémoire ; une rue introuvable est placée sur sa ville et signalée. Le navigateur charge les tuiles d’OpenStreetMap.','Without coordinates, each address is looked up by the EBX server on OpenStreetMap (Nominatim), at most six new ones per display, then kept in memory; an unknown street is placed on its town and flagged. The browser loads OpenStreetMap tiles.']}]},
+     {k:'hint', l:['Sans coordonnées, chaque adresse est cherchée par le serveur EBX sur OpenStreetMap (Nominatim), jamais pendant l’affichage : la position est cherchée à part (bouton « Localiser maintenant ») puis gardée sur le serveur ; une rue introuvable est placée sur sa ville et signalée. Le navigateur charge les tuiles d’OpenStreetMap.','Without coordinates, each address is looked up by the EBX server on OpenStreetMap (Nominatim), never while the form is drawn: the position is looked up apart (button "Locate now") then kept on the server; an unknown street is placed on its town and flagged. The browser loads OpenStreetMap tiles.']}]},
  orgChart:{cat:'relations', l:['Hiérarchie graphique','Hierarchy chart'], d:['Le groupe de la fiche en organigramme, en arbre ou en anneaux.','The record’s group as an org chart, a tree or rings.'], tags:'organigramme arbre groupe filiales maison mère org chart tree sunburst subsidiaries parent',
    def:{parent:'', present:'auto', threshold:24},
    spec:[{k:'field', key:'parent', types:['fk'], l:['Clé vers le parent (dans cette même table)','Key to the parent (in this same table)']},
@@ -823,7 +852,7 @@ function audTags(o, small){
   return h;
 }
 function renderBlock(b){
-  const tag = `<div class="btag"><span draggable="true" data-drag="block" data-id="${b.id}">${esc(bl(b.type))}${b.type === 'custom' ? ' · ' + esc(b.cls) : ''}</span>${audTags(b)}${b.showIf && b.showIf.field ? `<span class="cond">${esc(c('liveIf', lab(b.showIf.field)))}</span>` : ''}${b.attributesBy && b.attributesBy.table ? `<span class="cond">${esc(c('famTag'))}</span>` : ''}${b.cond ? `<span class="cond" title="${esc(b.cond)}">${esc(c('cond2', b.cond))}</span>` : ''}${b.wf && wfTag(b.wf) ? `<span class="cond">${esc(wfTag(b.wf))}</span>` : ''}${b.hideCreate ? `<span class="cond">${esc(c('hiddenCreate'))}</span>` : ''}</div>`;
+  const tag = `<div class="btag"><span draggable="true" data-drag="block" data-id="${b.id}">${esc(bl(b.type))}${b.type === 'custom' ? ' · ' + esc(b.cls) : ''}</span>${audTags(b)}${b.showIf && b.showIf.field ? `<span class="cond">${esc(c('liveIf', lab(b.showIf.field)))}</span>` : ''}${b.attributesBy && b.attributesBy.table ? `<span class="cond">${esc(c('famTag'))}</span>` : ''}${b.cond ? `<span class="cond" title="${esc(b.cond)}">${esc(c('cond2', b.cond))}</span>` : ''}${b.wf && wfTag(b.wf) ? `<span class="cond">${esc(wfTag(b.wf))}</span>` : ''}${(() => { const k = brokenOf(b); return k.length ? `<span class="cond gone" title="${esc(k.map(x => brokenText(x) + ' : ' + x.ref).join('\n'))}">⚠ ${k.length}</span>` : ''; })()}${b.hideCreate ? `<span class="cond">${esc(c('hiddenCreate'))}</span>` : ''}</div>`;
   const selc = sel && sel.k === 'block' && sel.id === b.id ? ' sel' : '';
   if (creating && b.hideCreate && mode === 'preview') return '';
   const tabNow = curTab();
@@ -836,7 +865,8 @@ function renderBlock(b){
   switch (b.type){
     case 'panel': {
       const rows = (b.fields || []).map((f0, i) => {
-        const fd = F[f0.p]; if (!fd) return '';
+        const fd = F[f0.p];
+        if (!fd) return mode === 'preview' ? '' : `<div class="fr gone"><div class="fl">⚠ ${esc(cl(['Champ introuvable','Field not found']))}</div><div class="fv"><code>${esc(f0.p)}</code> <button type="button" class="btn small ghost" data-gonedel="${b.id}|${i}">${esc(c('del'))}</button></div></div>`;
         const fHid = hiddenFor(f0); if (fHid && mode === 'preview') return '';
         const f = roFor(f0) && !f0.ro ? Object.assign({}, f0, {ro:true}) : f0;
         const s = (sel && sel.k === 'field' && sel.b === b.id && sel.i === i ? ' sel' : '') + (flash && flash.b === b.id && flash.i === i ? ' flash' : '');
@@ -1068,6 +1098,12 @@ function renderInspector(){
     h += deployHtml();
   } else if (sel.k === 'aud'){
     h += audPanelHtml();
+  } else if (sel.k === 'refs'){
+    const list = allBroken();
+    h += `<h3 class="sub">${esc(cl(['Références à vérifier','References to check']))}</h3><div class="info">${esc(cl(['Ce que la mise en page cite et qui n’existe plus : un champ ou une association retiré du modèle, un workflow non publié, un composant absent de cette instance. La fiche les ignore ; la validation de la table des mises en page les signale aussi.','What the layout refers to that no longer exists: a field or an association removed from the model, a workflow not published, a component missing on this instance. The form leaves them out; the validation of the layouts table reports them too.']))}</div>`
+      + (list.length ? list.map(x => { const t = tabOf(x.tab), b = S.blocks[x.b];
+          return `<div class="rule"><b>${esc(brokenText(x))}</b><code>${esc(x.ref)}</code><span class="hint">${esc(T(t.label))} · ${esc(hasText(b.title) ? T(b.title) : bl(b.type))}</span><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn small ghost" data-goblk="${x.b}|${x.tab}">${esc(cl(['Voir le bloc','Show the block']))}</button>${x.k === 'field' && b.type === 'panel' && (b.fields || []).some(f => f.p === x.ref) ? `<button type="button" class="btn small ghost" data-gonedel="${x.b}|${(b.fields || []).findIndex(f => f.p === x.ref)}">${esc(c('del'))}</button>` : ''}</div></div>`; }).join('')
+        : `<div class="info">${esc(cl(['Aucune : tout ce que cite la mise en page existe.','None: everything the layout refers to exists.']))}</div>`);
   } else if (sel.k === 'i18n'){
     const texts = allTexts(); const miss = missingByLocale();
     h += `<div class="insp"><span class="kind">${esc(c('translations'))}</span><h3>${esc(c('trTitle'))}</h3><p class="hint">${esc(c('trHint', LOCALES.join(', '), DEF))}</p>
@@ -1266,6 +1302,8 @@ function renderStatus(){
   const miss = missingByLocale(); const n = LOCALES.reduce((a, l) => a + miss[l], 0);
   $('#ld-i18n').innerHTML = `${esc(c('translations'))} <span class="badge ${n ? 'todo' : 'done'}">${esc(n ? c('todo', n) : c('complete'))}</span>`;
   $('#ld-i18n').setAttribute('aria-pressed', !!(sel && sel.k === 'i18n'));
+  const nb = allBroken().length, rb = $('#ld-refs');
+  if (rb){ rb.hidden = !nb; rb.textContent = '⚠ ' + cl(['{0} référence(s) à vérifier','{0} reference(s) to check']).replace('{0}', nb); rb.setAttribute('aria-pressed', !!(sel && sel.k === 'refs')); }
 }
 function renderAll(){ $('#ld-bin').hidden = mode !== 'design'; renderTopPicks(); renderCanvas(); renderPalette(); renderInspector(); renderOutput(); renderStatus(); }
 
@@ -1470,6 +1508,9 @@ root.addEventListener('click', e => {
   if (t.closest('#ld-w-wide')){ narrow = false; return renderAll(); }
   if (t.closest('#ld-w-narrow')){ narrow = true; return renderAll(); }
   if (t.closest('#ld-i18n')){ sel = sel && sel.k === 'i18n' ? null : {k:'i18n'}; explain = ''; return renderAll(); }
+  if (t.closest('#ld-refs')){ sel = sel && sel.k === 'refs' ? null : {k:'refs'}; explain = ''; return renderAll(); }
+  const gd = t.closest('[data-gonedel]'); if (gd){ const [bid, ix] = gd.dataset.gonedel.split('|'); const bk = S.blocks[bid]; if (bk && bk.fields && bk.fields[+ix]){ snapshot(); const gone = bk.fields.splice(+ix, 1)[0]; return commit(esc(cl(['Champ retiré : ','Field removed: ']) + gone.p)); } return; }
+  const gb = t.closest('[data-goblk]'); if (gb){ const [bid, tid] = gb.dataset.goblk.split('|'); cur = tid; sel = {k:'block', id:bid}; explain = ''; renderAll(); const el = root.querySelector(`#ld-canvas .blk[data-id="${bid}"]`); if (el) el.scrollIntoView({block:'center'}); return; }
   if (t.closest('#ld-aud')){ sel = sel && sel.k === 'aud' ? null : {k:'aud'}; explain = ''; return renderAll(); }
   const rt = t.closest('[data-rtog]'); if (rt){ const o = specBase(); if (!o) return; snapshot(); const i = rt.dataset.rtog.indexOf('|'); const k = rt.dataset.rtog.slice(0, i), v = rt.dataset.rtog.slice(i + 1);
     const cur2 = (o[k] || []).filter(x => !sameRole(x, v)); if (cur2.length === (o[k] || []).length) cur2.push(v); if (cur2.length) o[k] = cur2; else delete o[k]; return commit(''); }
@@ -1607,7 +1648,7 @@ root.innerHTML = `<div class="wrap">
     <div class="pick"><label>&nbsp;</label><button type="button" class="btn ghost" id="ld-aud" aria-pressed="false">${esc(c('aud'))}</button></div>
     <div class="pick"><label>${esc(c('mode'))}</label><div class="seg"><button type="button" id="ld-m-design" aria-pressed="true">${esc(c('design'))}</button><button type="button" id="ld-m-preview" aria-pressed="false">${esc(c('previewMode'))}</button></div></div>
     <div class="pick"><label>${esc(c('width'))}</label><div class="seg"><button type="button" id="ld-w-wide" aria-pressed="true">1 440 px</button><button type="button" id="ld-w-narrow" aria-pressed="false">890 px</button></div></div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${B.helpUrl ? `<a class="btn ghost" href="${esc(B.helpUrl)}" target="_blank" rel="noopener">${esc(c('help'))}</a>` : ''}<button type="button" class="btn ghost" id="ld-codebtn">${esc(c('code'))}</button><span class="status saved" id="ld-status"></span><button type="button" class="btn ghost" id="ld-undo" disabled>${esc(c('undo'))}</button><button type="button" class="btn primary" id="ld-save">${esc(c('save'))}</button><button type="button" class="btn ghost" id="ld-close" title="${esc(c('closeTip'))}">${esc(c('closeDesigner'))}</button></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${B.helpUrl ? `<a class="btn ghost" href="${esc(B.helpUrl)}" target="_blank" rel="noopener">${esc(c('help'))}</a>` : ''}<button type="button" class="btn ghost" id="ld-codebtn">${esc(c('code'))}</button><button type="button" class="btn ghost refs" id="ld-refs" hidden aria-pressed="false"></button><span class="status saved" id="ld-status"></span><button type="button" class="btn ghost" id="ld-undo" disabled>${esc(c('undo'))}</button><button type="button" class="btn primary" id="ld-save">${esc(c('save'))}</button><button type="button" class="btn ghost" id="ld-close" title="${esc(c('closeTip'))}">${esc(c('closeDesigner'))}</button></div>
   </header>
   <div class="ld-banner" id="ld-banner" role="status"></div>
   <div class="bench">

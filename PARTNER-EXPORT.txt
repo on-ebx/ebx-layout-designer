@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit f2821c6883b71db2606da7cad53c0707faaf5d3a
-User guides: the workflow conditions belong to "Who sees what", not to the limitations
+Exported from EBX-Layout-Designer commit 9e3bb82fc9b51fdac2f7482938f42ac762e0ca2c
+1.17.1: report references a layout names that no longer exist
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.
