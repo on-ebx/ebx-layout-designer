@@ -252,7 +252,10 @@ public final class Model
 		{
 			return x;
 		}
-		final String sql = this.t + ".\"$pk\" IN (SELECT " + a + ".functionalId FROM mds." + Model.quote("/root/RecordMetadata") + " " + a + " WHERE " + y.sql + ")";
+		// functionalId is a foreign key to the business table (Linked_Field_FunctionalId): EBX SQL compares it only as a string
+		final SchemaNode functionalId = this.mds.getSchemaNode().getNode(Path.parse("/root/RecordMetadata/functionalId"));
+		final String key = functionalId != null && functionalId.getFacetOnTableReference() != null ? "FK_AS_STRING(" + a + ".functionalId)" : a + ".functionalId";
+		final String sql = this.t + ".\"$pk\" IN (SELECT " + key + " FROM mds." + Model.quote("/root/RecordMetadata") + " " + a + " WHERE " + y.sql + ")";
 		return new Pred(sql, x == null ? null : x.xpath);
 	}
 

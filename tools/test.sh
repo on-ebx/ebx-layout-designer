@@ -15,3 +15,6 @@ java -cp "$work:$cp" com.on.ebx.layout.runtime.GeocoderTest
 mcp="$root/ebx-layout-designer/target/classes:$cp"
 javac -nowarn -cp "$mcp" -d "$work" "$root/ebx-layout-designer/src/test/java/com/on/ebx/layout/explorer/ExplorerTest.java"
 java -cp "$work:$mcp" com.on.ebx.layout.explorer.ExplorerTest
+# MCP endpoint (1.21.0): transport and tool catalogue
+javac -nowarn -cp "$mcp" -d "$work" "$root/ebx-layout-designer/src/test/java/com/on/ebx/layout/designer/LayoutMcpTest.java"
+java -cp "$work:$mcp" com.on.ebx.layout.designer.LayoutMcpTest

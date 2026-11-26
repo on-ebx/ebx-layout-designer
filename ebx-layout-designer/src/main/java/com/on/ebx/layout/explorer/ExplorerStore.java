@@ -75,7 +75,7 @@ public final class ExplorerStore
 		}
 	}
 
-	/** Every explorer of a table, in id order. */
+	/** Every explorer of a table, in id order; every explorer of the instance when the model and the table are null. */
 	public static List<Row> list(final Repository pRepository, final SchemaLocation pModel, final Path pTable)
 	{
 		final List<Row> out = new ArrayList<Row>();
@@ -84,13 +84,13 @@ public final class ExplorerStore
 		{
 			return out;
 		}
-		final String model = pModel.format(), table = pTable.format();
+		final String model = pModel == null ? null : pModel.format(), table = pTable == null ? null : pTable.format();
 		final RequestResult rows = t.createRequest().execute();
 		try
 		{
 			for (Adaptation r; (r = rows.nextAdaptation()) != null;)
 			{
-				if (model.equals(r.getString(LayoutPaths.MODEL)) && table.equals(r.getString(LayoutPaths.TABLE)))
+				if ((model == null || model.equals(r.getString(LayoutPaths.MODEL))) && (table == null || table.equals(r.getString(LayoutPaths.TABLE))))
 				{
 					out.add(new Row(r));
 				}

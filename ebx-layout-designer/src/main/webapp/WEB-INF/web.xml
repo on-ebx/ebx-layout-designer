@@ -4,4 +4,23 @@
 	version="5.0" metadata-complete="false">
 	<display-name>ebx-layout-designer</display-name>
 	<!-- The module registers itself through the @WebListener LayoutDesignerRegistration. -->
+
+	<!-- 1.21.0: the MCP endpoint (/rest/mcp) on the EBX REST Toolkit, which maps the application on its @ApplicationPath -->
+	<servlet>
+		<servlet-name>JAX-RS-REST</servlet-name>
+		<servlet-class>com.orchestranetworks.rest.internal.RESTRegistrationServlet</servlet-class>
+		<init-param>
+			<param-name>RESTApplicationAbstract</param-name>
+			<param-value>com.on.ebx.layout.designer.LayoutRestApplication</param-value>
+		</init-param>
+		<init-param>
+			<param-name>ebxModuleName</param-name>
+			<param-value>ebx-layout-designer</param-value>
+		</init-param>
+		<init-param>
+			<param-name>hide-service-list-page</param-name>
+			<param-value>true</param-value>
+		</init-param>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
 </web-app>

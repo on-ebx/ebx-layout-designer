@@ -1,5 +1,13 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.21.0 (2026-10-15)
+
+- **MCP server** (`/ebx-layout-designer/rest/mcp`, administrators only): an agent reads a table as the designer does,
+  starts, checks and saves record form layouts and explorers. Ten tools; a save is refused when the check finds an error
+  or when the stored version moved. See [docs/MCP.md](docs/MCP.md).
+- **Explorer check** (`ExplorerCheck`): every path, computed value, facet, flag, tile, sort, group, card part and action
+  of an explorer, and whether EBX can evaluate each filter (the page drops what it cannot, with only a log line).
+
 ## 1.20.0 (2026-10-15)
 
 - **Cards or list, the user's choice.** The configurator lists the layouts users may switch between (`card.layouts`); the

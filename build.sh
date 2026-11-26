@@ -30,6 +30,8 @@ rm -rf "$out"; mkdir -p "$out"
 find "$root/ebx-layout-designer/src/main/java" -name '*.java' > "$work/module.txt"
 "${bin}javac" --release "$release" -encoding UTF-8 -nowarn -Xlint:none -cp "$work/runtime:$lib/*" -d "$out" @"$work/module.txt"
 cp -R "$root/ebx-layout-designer/src/main/resources/." "$out/"
+# 1.21.0: the formats, served by the MCP tool layout_help
+cp "$root/docs/LAYOUT-FORMAT.md" "$root/docs/EXPLORER-FORMAT.md" "$out/com/on/ebx/layout/designer/mcp/"
 # version stamp read by ModuleVersion (the About page): git describe from a tag, else VERSION; commit; build time (UTC)
 version="$(git -C "$root" describe --tags --always --match 'v[0-9]*' 2>/dev/null || true)"
 case "$version" in v[0-9]*) version="${version#v}" ;; *) version="$(tr -d '[:space:]' < "$root/VERSION")${version:+-dev+$version}" ;; esac

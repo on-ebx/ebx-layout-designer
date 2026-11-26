@@ -84,6 +84,11 @@ favorites), tiles, sorts and cards whose every attribute takes a widget, plus an
 lets them read. Format: [docs/EXPLORER-FORMAT.md](docs/EXPLORER-FORMAT.md); a complete example:
 [docs/examples/tiers-explorer.json](docs/examples/tiers-explorer.json).
 
+## MCP server (1.21.0)
+
+`POST /ebx-layout-designer/rest/mcp` lets an agent describe a table, start, check and save its record form layout and its
+explorers, with the designer's own storage and checks (administrators only). Tools and configuration: [docs/MCP.md](docs/MCP.md).
+
 ## Documentation
 
 | Document | For |
@@ -91,6 +96,8 @@ lets them read. Format: [docs/EXPLORER-FORMAT.md](docs/EXPLORER-FORMAT.md); a co
 | [docs/INSTALL.md](docs/INSTALL.md) | installing, declaring a table's form, upgrading, uninstalling |
 | [docs/USER-GUIDE.md](docs/USER-GUIDE.md), [docs/USER-GUIDE.fr.md](docs/USER-GUIDE.fr.md) | administrators who design forms; limitations |
 | [docs/LAYOUT-FORMAT.md](docs/LAYOUT-FORMAT.md) | the JSON a layout is saved as |
+| [docs/EXPLORER-FORMAT.md](docs/EXPLORER-FORMAT.md) | the JSON an explorer is saved as |
+| [docs/MCP.md](docs/MCP.md) | the MCP server: tools, checks, client configuration |
 | [RELEASE-NOTES.md](RELEASE-NOTES.md) | what each version brings |
 
 The same documents are served by the module as HTML (`/ebx-layout-designer/www/help/`) and linked from its **About**
