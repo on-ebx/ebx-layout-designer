@@ -135,6 +135,7 @@ const c = (k, ...a) => { let s = (C[k] || [k,k])[UI]; a.forEach((v,i) => { s = s
 
 /* the form's own words (as the runtime writes them), in the preview language */
 const U = {
+ riCreatedBy:['Created by','Créé par','Creato da'], riCreatedOn:['Created on','Créé le','Creato il'], riModifiedBy:['Last modified by','Modifié par','Modificato da'], riModifiedOn:['Last modified on','Modifié le','Modificato il'], riNew:['Filled in when the record is saved.','Renseigné à l’enregistrement.','Compilato al salvataggio del record.'],
  completeness:['completeness','complétude','completezza'], noRow:['No rows.','Aucune ligne.','Nessuna riga.'], rows:['rows','lignes','righe'], actions:['Actions ▾','Actions ▾','Azioni ▾'], filter:['Filter','Filtrer','Filtra'],
  noParent:['No parent · head of group','Aucune maison mère · tête de groupe','Nessuna controllante · capogruppo'], mame:['Match and Merge state, read at display','État Match and Merge, lu à l’affichage','Stato Match and Merge, letto alla visualizzazione'],
  noCoords:['No coordinates yet','Pas encore de coordonnées','Nessuna coordinata'], closed:['Closed','Fermé','Chiuso'], newRecord:['New record','Nouvel enregistrement','Nuovo record'],
@@ -242,6 +243,11 @@ const BL = {
    spec:[{k:'items', key:'items', l:['Boutons','Buttons'], add:['+ Bouton','+ Button'], tpl:{label:{}, url:''}, item:[{k:'loc', key:'label', l:['Libellé','Label']}, {k:'str', key:'url', l:['Adresse : ${./chemin} insère une valeur','Address: ${./path} inserts a value'], ph:'https://shop.example.com/p/${./Sku}'},
      {k:'bool', key:'sameTab', def:false, l:['Dans le même onglet','In the same tab']}]},
      {k:'hint', l:['Une valeur vide masque le bouton. Une adresse /ebx/?… ouvre un composant web d’EBX (documenté).','An empty value hides the button. An /ebx/?… address opens an EBX web component (documented).']}]},
+ recordInfo:{cat:'time', l:['Informations de l’enregistrement','Record information'], d:['Qui a créé la fiche et quand, qui l’a modifiée en dernier et quand.','Who created the record and when, who changed it last and when.'], tags:'métadonnées créateur auteur date création modification audit metadata creator author',
+   def:{createdBy:true, createdOn:true, modifiedBy:true, modifiedOn:true, style:'grid', relative:true},
+   spec:[{k:'bool', key:'createdBy', def:true, l:['Créé par','Created by']}, {k:'bool', key:'createdOn', def:true, l:['Créé le','Created on']}, {k:'bool', key:'modifiedBy', def:true, l:['Modifié par','Last modified by']}, {k:'bool', key:'modifiedOn', def:true, l:['Modifié le','Last modified on']},
+     {k:'choice', key:'style', def:'grid', l:['Présentation','Layout'], opts:[['grid',['En grille','As a grid']],['line',['Sur une ligne','On one line']]]}, {k:'bool', key:'relative', def:true, l:['Ajouter « il y a 3 jours »','Add “3 days ago”']},
+     {k:'hint', l:['Valeurs tenues par EBX pour chaque enregistrement, rien à configurer dans le modèle.','Values EBX keeps for every record, nothing to set up in the model.']}]},
  validity:{cat:'time', l:['Période de validité','Validity period'], d:['Début et fin : à venir, en vigueur, bientôt échu ou expiré.','Start and end: upcoming, in force, ending soon or expired.'], tags:'contrat prix promotion dates expiry',
    def:{from:'', to:'', warnDays:30},
    spec:[{k:'field', key:'from', types:['date','dt'], l:['Début','Start']}, {k:'field', key:'to', types:['date','dt'], l:['Fin','End']}, {k:'num', key:'warnDays', def:30, l:['Alerte avant la fin (jours)','Alert before the end (days)']}]},
@@ -427,6 +433,11 @@ function previewMore(b){
       return rows.length ? rows.map(r => `<div class="docx"><span class="file">PDF</span><b>${esc(r)}</b></div>`).join('') : `<div class="note-b">${esc(u('noRow'))}</div>`;
     case 'links': if (!(b.items || []).length) return setupNote();
       return `<div style="display:flex;gap:8px;flex-wrap:wrap">${b.items.map((it, i) => `<span class="pbtn${i === 0 ? ' solid' : ''}">${tx(it.label) || '…'}</span>`).join('')}</div>`;
+    case 'recordInfo': { if (creating) return `<div class="note-b">${esc(u('riNew'))}</div>`;
+      const m = B.record.meta || {}, its = [['createdBy','riCreatedBy'],['createdOn','riCreatedOn'],['modifiedBy','riModifiedBy'],['modifiedOn','riModifiedOn']].filter(([k]) => b[k] !== false);
+      if (!its.length) return setupNote();
+      return b.style === 'line' ? `<div class="rix line">${its.map(([k, l]) => `<span><span class="l">${esc(u(l))}</span> <b>${esc(m[k] || '—')}</b></span>`).join('')}</div>`
+        : `<div class="rix">${its.map(([k, l]) => `<div><span class="l">${esc(u(l))}</span><b>${esc(m[k] || '—')}</b></div>`).join('')}</div>`; }
     case 'validity': { if (!b.from && !b.to) return setupNote();
       const f = vd(b.from), t = vd(b.to), warn = b.warnDays == null ? 30 : b.warnDays;
       if (!f && !t) return `<div class="note-b">${esc(c('noDates'))}</div>`;

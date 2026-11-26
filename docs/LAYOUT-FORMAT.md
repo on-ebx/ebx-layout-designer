@@ -48,7 +48,7 @@ A layout is one JSON document, stored in field `layout` of `LayoutDesigner/FormL
 
 | Key | Meaning |
 |---|---|
-| `type` | `panel`, `hero`, `facts`, `validation`, `grid`, `map`, `tree`, `hours`, `duplicates`, `note`, `custom`; since 1.4.0 `timeline`, `history`, `completeness`, `stepper`, `checklist`, `chart`, `aggregates`, `pivot`, `linked`, `contacts`, `gallery`, `documents`, `links`, `validity`, `address`, `hierarchy` |
+| `type` | `panel`, `hero`, `facts`, `validation`, `grid`, `map`, `tree`, `hours`, `duplicates`, `note`, `custom`; since 1.4.0 `timeline`, `history`, `completeness`, `stepper`, `checklist`, `chart`, `aggregates`, `pivot`, `linked`, `contacts`, `gallery`, `documents`, `links`, `validity`, `address`, `hierarchy`; since 1.5.0 `recordInfo` |
 | `id` | unique in the layout |
 | `title`, `note` | texts |
 | `cond` | XPath predicate on the record; the block shows only when it is true (always shown on creation) |
@@ -144,6 +144,7 @@ record (`a`, its path); a field of its target table is a path of that table (`/a
 | `documents` | `a`, `file` (media or URL field), `name`, `docType`, `date`, `expiry` (true: a past date shows red) |
 | `links` | `items: [{label, url, sameTab}]`; `${./path}` in `url` inserts the record's value, URL-encoded; a button whose value is empty is hidden; a `url` that is only `${./path}` (a website field) is used as it is, `https://` added when missing; only `http(s):`, `mailto:`, `tel:` and `/` addresses |
 | `validity` | `from`, `to` (date fields), `warnDays` (30): upcoming, in force, ending soon, expired |
+| `recordInfo` | `createdBy`, `createdOn`, `modifiedBy`, `modifiedOn` (booleans, true by default), `style` (`grid` or `line`), `relative` (true: adds "3 days ago"). Read from EBX's record API (`getCreator`, `getTimeOfCreation`, `getLastUser`, `getTimeOfLastModification`), user names through the directory; nothing to set up in the model |
 | `address` | `lines` (street paths), `number` (street number, put on the first line; `numberPlace`: `auto` = after the street for DE, AT, CH, NL, BE, IT, ES and the other countries that write it so, before elsewhere; `numberBefore`; `numberAfter`), `zip`, `city`, `region`, `country`, `format` (`auto` by country, `zipFirst`, `cityFirst`, `zipAfter`), `mapLink` (true) |
 | `hierarchy` | `parent` (foreign key), `up` (the parent's own parent key when the target is another table; same path by default on a self-referencing table), `label`, `depth` (6), `children` (association) |
 

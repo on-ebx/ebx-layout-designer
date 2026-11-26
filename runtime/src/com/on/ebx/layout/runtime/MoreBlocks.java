@@ -1143,6 +1143,109 @@ final class MoreBlocks
 		return h.toString();
 	}
 
+	// ------------------------------------------------------------------------------------------------ record information
+
+	/**
+	 * Who created the record and when, who changed it last and when: {@code Adaptation.getCreator()},
+	 * {@code getTimeOfCreation()}, {@code getLastUser()}, {@code getTimeOfLastModification()}, the user's name through
+	 * {@code DirectoryHandler.displayUser}. {@code createdBy}, {@code createdOn}, {@code modifiedBy}, {@code modifiedOn}
+	 * (true by default) pick the items, {@code style} "line" puts them on one line, {@code relative} adds "3 days ago".
+	 */
+	static String recordInfo(final RenderContext rc, final JsonNode b)
+	{
+		final List<String> show = new ArrayList<String>();
+		for (final String k : new String[] { "createdBy", "createdOn", "modifiedBy", "modifiedOn" })
+		{
+			if (b.path(k).asBoolean(true))
+			{
+				show.add(k);
+			}
+		}
+		if (rc.creating || rc.record == null)
+		{
+			return MoreBlocks.empty(MoreBlocks.t("riNew", rc));
+		}
+		final Adaptation r = rc.record;
+		final boolean relative = b.path("relative").asBoolean(true);
+		final List<String[]> items = new ArrayList<String[]>();
+		for (final String k : show)
+		{
+			switch (k)
+			{
+			case "createdBy":
+				items.add(new String[] { MoreBlocks.t("riCreatedBy", rc), MoreBlocks.user(rc, r.getCreator()), "" });
+				break;
+			case "createdOn":
+				items.add(new String[] { MoreBlocks.t("riCreatedOn", rc), MoreBlocks.dateTime(rc, r.getTimeOfCreation()), relative ? MoreBlocks.ago(rc, r.getTimeOfCreation()) : "" });
+				break;
+			case "modifiedBy":
+				items.add(new String[] { MoreBlocks.t("riModifiedBy", rc), MoreBlocks.user(rc, r.getLastUser()), "" });
+				break;
+			case "modifiedOn":
+				items.add(new String[] { MoreBlocks.t("riModifiedOn", rc), MoreBlocks.dateTime(rc, r.getTimeOfLastModification()), relative ? MoreBlocks.ago(rc, r.getTimeOfLastModification()) : "" });
+				break;
+			default:
+				break;
+			}
+		}
+		final boolean line = "line".equals(b.path("style").asText(""));
+		final StringBuilder h = new StringBuilder(line ? "<div class=\"ldf-ri-line\">" : "<div class=\"ldf-ri\">");
+		for (final String[] it : items)
+		{
+			if (line)
+			{
+				h.append("<span><span class=\"ldf-l\">").append(MoreBlocks.esc(it[0])).append("</span> <b>").append(MoreBlocks.esc(it[1])).append("</b>");
+				if (!it[2].isEmpty())
+				{
+					h.append(" <span class=\"ldf-more\">(").append(MoreBlocks.esc(it[2])).append(")</span>");
+				}
+				h.append("</span>");
+			}
+			else
+			{
+				h.append("<div class=\"ldf-ri-i\"><span class=\"ldf-l\">").append(MoreBlocks.esc(it[0])).append("</span><b>").append(MoreBlocks.esc(it[1])).append("</b>");
+				if (!it[2].isEmpty())
+				{
+					h.append("<span class=\"ldf-more\">").append(MoreBlocks.esc(it[2])).append("</span>");
+				}
+				h.append("</div>");
+			}
+		}
+		return h.append("</div>").toString();
+	}
+
+	private static String user(final RenderContext rc, final com.orchestranetworks.service.UserReference pUser)
+	{
+		if (pUser == null)
+		{
+			return "—";
+		}
+		try
+		{
+			final String s = com.orchestranetworks.service.directory.DirectoryHandler.getInstance(rc.record.getHome().getRepository()).displayUser(pUser, rc.locale);
+			return s == null || s.trim().isEmpty() ? pUser.getUserId() : s;
+		}
+		catch (final RuntimeException ex)
+		{
+			return pUser.getUserId();
+		}
+	}
+
+	private static String dateTime(final RenderContext rc, final Date pDate)
+	{
+		return pDate == null ? "—" : java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT, rc.locale).format(pDate);
+	}
+
+	private static String ago(final RenderContext rc, final Date pDate)
+	{
+		if (pDate == null)
+		{
+			return "";
+		}
+		final long days = ChronoUnit.DAYS.between(Values.date(pDate), LocalDate.now());
+		return days <= 0 ? MoreBlocks.t("today", rc) : days == 1 ? MoreBlocks.t("riYesterday", rc) : RuntimeText.get("riAgo", rc.locale, Long.valueOf(days));
+	}
+
 	private static final Set<String> CITY_FIRST = new HashSet<String>(java.util.Arrays.asList("US", "CA", "AU", "NZ", "USA", "CAN", "AUS", "NZL"));
 	private static final Set<String> ZIP_AFTER = new HashSet<String>(java.util.Arrays.asList("GB", "IE", "GBR", "IRL", "UK"));
 

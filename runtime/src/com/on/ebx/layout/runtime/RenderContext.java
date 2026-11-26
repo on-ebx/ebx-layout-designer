@@ -286,6 +286,10 @@ final class RenderContext
 		{
 			return RuntimeText.get("historyTitle", this.locale);
 		}
+		if ("recordInfo".equals(type))
+		{
+			return RuntimeText.get("recordInfoTitle", this.locale);
+		}
 		if ("linked".equals(type))
 		{
 			return this.label(pBlock.path("fk").asText());

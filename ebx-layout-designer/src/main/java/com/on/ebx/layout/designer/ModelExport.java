@@ -75,6 +75,14 @@ final class ModelExport
 		{
 			record.put("key", pRecord.getOccurrencePrimaryKey().format());
 			record.put("label", pRecord.getLabel(pUserLocale));
+			// who created and last changed it, for the "Record information" block's preview
+			final ObjectNode meta = record.putObject("meta");
+			final java.text.DateFormat df = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT, pUserLocale);
+			final com.orchestranetworks.service.directory.DirectoryHandler dir = com.orchestranetworks.service.directory.DirectoryHandler.getInstance(pRepository);
+			meta.put("createdBy", ModelExport.user(dir, pRecord.getCreator(), pUserLocale));
+			meta.put("createdOn", pRecord.getTimeOfCreation() == null ? "" : df.format(pRecord.getTimeOfCreation()));
+			meta.put("modifiedBy", ModelExport.user(dir, pRecord.getLastUser(), pUserLocale));
+			meta.put("modifiedOn", pRecord.getTimeOfLastModification() == null ? "" : df.format(pRecord.getTimeOfLastModification()));
 		}
 		final ArrayNode records = boot.putArray("records");
 		final RequestResult rows = pTable.createRequest().execute();
@@ -560,5 +568,22 @@ final class ModelExport
 			}
 		}
 		return pLocales.isEmpty() ? Locale.US : pLocales.get(0);
+	}
+
+	private static String user(final com.orchestranetworks.service.directory.DirectoryHandler pDir, final com.orchestranetworks.service.UserReference pUser, final Locale pLocale)
+	{
+		if (pUser == null)
+		{
+			return "";
+		}
+		try
+		{
+			final String s = pDir.displayUser(pUser, pLocale);
+			return s == null || s.trim().isEmpty() ? pUser.getUserId() : s;
+		}
+		catch (final RuntimeException ex)
+		{
+			return pUser.getUserId();
+		}
 	}
 }

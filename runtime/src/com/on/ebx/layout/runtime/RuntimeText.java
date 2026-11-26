@@ -30,6 +30,14 @@ public final class RuntimeText
 		RuntimeText.put("afterCreate", "Shown once the record is created.", "Affiché une fois l'enregistrement créé.", "Visibile dopo la creazione del record.");
 		RuntimeText.put("setupBlock", "Choose this block's settings in the designer.", "Choisissez les réglages de ce bloc dans le designer.", "Scegli le impostazioni di questo blocco nel designer.");
 		RuntimeText.put("historyOff", "History is not activated on this table.", "L'historique n'est pas activé sur cette table.", "La cronologia non è attivata su questa tabella.");
+		RuntimeText.put("recordInfoTitle", "Record information", "Informations de l'enregistrement", "Informazioni sul record");
+		RuntimeText.put("riCreatedBy", "Created by", "Cr\u00e9\u00e9 par", "Creato da");
+		RuntimeText.put("riCreatedOn", "Created on", "Cr\u00e9\u00e9 le", "Creato il");
+		RuntimeText.put("riModifiedBy", "Last modified by", "Modifi\u00e9 par", "Modificato da");
+		RuntimeText.put("riModifiedOn", "Last modified on", "Modifi\u00e9 le", "Modificato il");
+		RuntimeText.put("riAgo", "{n} days ago", "il y a {n} jours", "{n} giorni fa");
+		RuntimeText.put("riYesterday", "yesterday", "hier", "ieri");
+		RuntimeText.put("riNew", "Filled in when the record is saved.", "Renseign\u00e9 \u00e0 l'enregistrement.", "Compilato al salvataggio del record.");
 		RuntimeText.put("historyTitle", "Change history", "Historique des modifications", "Cronologia delle modifiche");
 		RuntimeText.put("historyNone", "No change recorded yet.", "Aucune modification enregistrée pour l'instant.", "Nessuna modifica registrata.");
 		RuntimeText.put("histCreated", "Created", "Création", "Creazione");

@@ -222,6 +222,8 @@ final class LayoutPane implements UIFormPane
 			return MoreBlocks.address(this.rc, b);
 		case "hierarchy":
 			return MoreBlocks.hierarchy(this.rc, b);
+		case "recordInfo":
+			return MoreBlocks.recordInfo(this.rc, b);
 		default:
 			return null;
 		}

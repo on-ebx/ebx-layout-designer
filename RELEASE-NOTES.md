@@ -1,5 +1,13 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.5.0 (2026-10-09)
+
+- **New block "Record information"** (palette › Time): who created the record and when, who changed it last and when.
+  Each of the four items can be hidden, the block shows as a grid or on one line, with "3 days ago" if wanted. The values
+  are those EBX keeps for every record (`Adaptation.getCreator`, `getTimeOfCreation`, `getLastUser`,
+  `getTimeOfLastModification`), user names through the directory: nothing to set up in the model. The designer's preview
+  shows the real values of the record chosen.
+
 ## 1.4.4 (2026-10-09)
 
 Fixes from the "layout module tests" report.

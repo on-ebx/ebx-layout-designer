@@ -109,6 +109,7 @@ Depuis la 1.4.0 :
 | **Documents** | les fichiers d'une association : nom, type, date (en rouge une fois une échéance passée), lien |
 | **Liens et actions** | des boutons vers une adresse construite avec les valeurs de la fiche (`https://boutique.exemple.fr/p/${./Sku}`) |
 | **Période de validité** | à venir, en vigueur, bientôt échu ou expiré, avec les jours restants |
+| **Informations de l'enregistrement** (1.5.0) | qui a créé la fiche et quand, qui l'a modifiée en dernier et quand, en grille ou sur une ligne ; rien à configurer |
 | **Adresse formatée** | les champs d'adresse mis en forme selon le pays, avec un lien vers la carte |
 | **Arborescence** | le fil d'Ariane d'une clé parent sur plusieurs niveaux, et les enfants |
 
