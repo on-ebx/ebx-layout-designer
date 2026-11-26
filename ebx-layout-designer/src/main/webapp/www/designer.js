@@ -182,7 +182,7 @@ const c = (k, ...a) => { let s = (C[k] || [k,k])[UI]; a.forEach((v,i) => { s = s
 const U = {
  svGolden:['Golden record','Fiche de référence','Record di riferimento'], wfSample:['Validation request · with the reviewer since 3 days','Demande de validation · chez le valideur depuis 3 jours','Richiesta di validazione · dal revisore da 3 giorni'], inSample:['2 fields changed here','2 champs modifiés ici','2 campi modificati qui'],
  ocChild:['Subsidiary','Filiale','Controllata'],
- afterCreate2:['Shown once the record is created.','Affiché une fois l’enregistrement créé.','Visibile dopo la creazione del record.'], chCount:['2 fields changed','2 champs modifiés','2 campi modificati'], chEmpty:['(empty)','(vide)','(vuoto)'],
+ afterCreate2:['Shown once the record is created.','Affiché une fois l’enregistrement créé.','Visibile dopo la creazione del record.'], chCount:['2 fields changed','2 champs modifiés','2 campi modificati'], chRelChanged:['changed','modifiée','modificato'], chRelAdded:['added','ajoutée','aggiunto'], chEmpty:['(empty)','(vide)','(vuoto)'],
  ubSample1:['Contacts, through Company','Contacts, par Société','Contatti, tramite Società'], ubSample2:['Addresses, through Company','Adresses, par Société','Indirizzi, tramite Società'],
  riCreatedBy:['Created by','Créé par','Creato da'], riCreatedOn:['Created on','Créé le','Creato il'], riModifiedBy:['Last modified by','Modifié par','Modificato da'], riModifiedOn:['Last modified on','Modifié le','Modificato il'], riNew:['Filled in when the record is saved.','Renseigné à l’enregistrement.','Compilato al salvataggio del record.'],
  completeness:['completeness','complétude','completezza'], noRow:['No rows.','Aucune ligne.','Nessuna riga.'], rows:['rows','lignes','righe'], actions:['Actions ▾','Actions ▾','Azioni ▾'], filter:['Filter','Filtrer','Filtra'],
@@ -376,9 +376,14 @@ const BL = {
      {k:'bool', key:'sameTab', def:false, l:['Dans le même onglet','In the same tab']}]},
      {k:'hint', l:['Une valeur vide masque le bouton. Une adresse /ebx/?… ouvre un composant web d’EBX (documenté).','An empty value hides the button. An /ebx/?… address opens an EBX web component (documented).']}]},
  changes:{cat:'quality', l:['Changements de la demande','Changes in this request'], d:['Dans l’espace de travail d’un workflow : ce que la fiche change par rapport à la référence.','In a workflow’s work dataspace: what the record changes compared with the reference.'], tags:'workflow validation approbation diff comparaison différences review approval compare',
-   def:{against:'creation', max:20},
+   def:{against:'creation', max:20, follow:[], businessObject:false, light:false, rows:50},
    spec:[{k:'choice', key:'against', def:'creation', l:['Comparer avec','Compare with'], opts:[['creation',['La référence à la création de la demande','The reference when the request was created']],['current',['La référence telle qu’elle est maintenant','The reference as it is now']]]},
-     {k:'num', key:'max', def:20, l:['Lignes au plus','Rows at most']},
+     {k:'num', key:'max', def:20, l:['Champs au plus (par fiche)','Fields at most (per record)']},
+     {k:'items', key:'follow', l:['Objets liés suivis','Linked objects followed'], add:['+ Association','+ Association'], tpl:{a:''}, item:[{k:'assoc', key:'a', l:['Association','Association']}]},
+     {k:'bool', key:'businessObject', def:false, l:['Suivre l’objet métier déclaré sur la table','Follow the business object declared on the table']},
+     {k:'bool', key:'light', def:false, l:['Relations légères aussi','Light relationships too'], when:b => !!b.businessObject},
+     {k:'num', key:'rows', def:50, l:['Lignes liées affichées au plus (par relation)','Linked rows shown at most (per relation)'], when:b => !!b.businessObject || (b.follow || []).length > 0},
+     {k:'hint', l:['Chaque objet lié est lu des deux côtés (espace de travail, référence) et apparié par clé : ligne modifiée (détail champ par champ), ajoutée ou supprimée. L’objet métier est suivi sur 3 niveaux. Au-delà de 2 000 lignes, une relation est comptée mais non comparée.','Each linked object is read on both sides (work dataspace, reference) and paired by key: a row changed (field by field), added or removed. A business object is followed 3 levels down. Beyond 2,000 rows a relation is counted but not compared.'], when:b => !!b.businessObject || (b.follow || []).length > 0},
      {k:'hint', l:['Hors d’un espace de données enfant, le bloc dit qu’il n’y a rien à comparer. Comparaison par l’API publique d’EBX (DifferenceHelper).','Outside a child dataspace the block says there is nothing to compare. Compared through EBX’s public API (DifferenceHelper).']}]},
  usedBy:{cat:'relations', l:['Utilisé par','Used by'], d:['Les enregistrements d’autres tables qui pointent vers celui-ci, comptés par table.','The records of other tables that point to this one, counted per table.'], tags:'références inverses dépendances impact suppression reverse references dependencies where used',
    def:{samples:3, showZero:false, otherDatasets:true},
@@ -652,7 +657,9 @@ function previewMore(b){
     case 'links': if (!(b.items || []).length) return setupNote();
       return `<div style="display:flex;gap:8px;flex-wrap:wrap">${b.items.map((it, i) => `<span class="pbtn${i === 0 ? ' solid' : ''}">${tx(it.label) || '…'}</span>`).join('')}</div>`;
     case 'changes': if (creating) return `<div class="note-b">${esc(u('afterCreate2'))}</div>`;
-      return `<span class="w-badge t-warn">${esc(u('chCount'))}</span><table class="chx"><tr><th>${esc(F[Object.keys(F)[0]] ? lab(Object.keys(F)[0]) : '…')}</th><td class="o">12,90 €</td><td>→</td><td class="n">13,50 €</td></tr><tr><th>${esc(F[Object.keys(F)[1]] ? lab(Object.keys(F)[1]) : '…')}</th><td class="o">${esc(u('chEmpty'))}</td><td>→</td><td class="n">…</td></tr></table>${indicative()}`;
+      { const fol = (b.follow || []).map(f => f && f.a).filter(Boolean);
+      const rel = (b.businessObject || fol.length) ? `<div class="more" style="margin-top:8px"><b>${esc(fol.length ? lab(fol[0]) : (B.assocs[0] ? lab(B.assocs[0].p) : '…'))}</b> <span class="w-badge t-warn">1 ${esc(u('chRelChanged'))}</span> <span class="w-badge t-info">1 ${esc(u('chRelAdded'))}</span></div>` : '';
+      return `<span class="w-badge t-warn">${esc(u('chCount'))}</span><table class="chx"><tr><th>${esc(F[Object.keys(F)[0]] ? lab(Object.keys(F)[0]) : '…')}</th><td class="o">12,90 €</td><td>→</td><td class="n">13,50 €</td></tr><tr><th>${esc(F[Object.keys(F)[1]] ? lab(Object.keys(F)[1]) : '…')}</th><td class="o">${esc(u('chEmpty'))}</td><td>→</td><td class="n">…</td></tr></table>${rel}${indicative()}`; }
     case 'usedBy': if (creating) return `<div class="note-b">${esc(u('afterCreate2'))}</div>`;
       return `<div class="ubx"><div><b>12</b><span>${esc(u('ubSample1'))}</span></div><div><b>3</b><span>${esc(u('ubSample2'))}</span></div></div>${indicative()}`;
     case 'recordInfo': { if (creating) return `<div class="note-b">${esc(u('riNew'))}</div>`;

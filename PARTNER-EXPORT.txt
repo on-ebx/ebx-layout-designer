@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit ee01d7b6591b16e9c57cbcf4db4f54c2538c8603
-Merge feature/rosa-blocks-out: 1.27.0, ROSA blocks move to the ebx-rosa module, component API (ComponentSupport, designerSpec, title)
+Exported from EBX-Layout-Designer commit dd660a2ebce1adbee0c1d42312ef0d6f5b18f285
+Merge feature/changes-follow: 1.28.0, the changes block follows linked objects (associations, business object)
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

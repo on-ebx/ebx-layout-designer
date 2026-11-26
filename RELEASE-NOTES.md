@@ -1,5 +1,15 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.28.0 (2026-11-02)
+
+- **Changes in this request follows linked objects** ([LAYOUT-FORMAT.md](docs/LAYOUT-FORMAT.md)): the block compared the
+  record alone; it now also compares the rows of the associations it is given (`follow`) and, with `businessObject`, every
+  relationship of the business object declared on the table (strong ones, 3 levels down; `light` adds the light ones).
+  On a product's form, the recipes the request changes, adds or removes show under the product's own changes, each
+  changed row openable field by field (old → new). Rows are read with the user's session on both sides and paired by
+  primary key; a new record's linked rows are only counted; beyond 2,000 rows a relation is counted but not compared.
+  Settings in the designer (associations to follow, business object, light relationships, rows shown per relation).
+
 ## 1.27.0 (2026-11-02)
 
 - **Breaking:** `asOfTree`, `stateTimeline` and `delta` leave the Layout Designer. They were written for one project

@@ -47,7 +47,7 @@ final class MoreBlocks
 		return i == 0 && rc.themeMain != null ? rc.themeMain : MoreBlocks.PALETTE[i];
 	}
 
-	private static String esc(final String s)
+	static String esc(final String s)
 	{
 		return LayoutPane.esc(s);
 	}
@@ -60,6 +60,11 @@ final class MoreBlocks
 	private static String empty(final String pText)
 	{
 		return "<div class=\"ldf-more\">" + MoreBlocks.esc(pText) + "</div>";
+	}
+
+	static String emptyNote(final String pText)
+	{
+		return MoreBlocks.empty(pText);
 	}
 
 	private static String creatingNote(final RenderContext rc)
@@ -1329,20 +1334,47 @@ final class MoreBlocks
 		{
 			return MoreBlocks.empty(MoreBlocks.t("chOutside", rc));
 		}
+		final int max = Math.max(1, b.path("max").asInt(20));
+		// 1.28.0: the linked rows followed (associations named, business object)
+		final boolean follows = b.path("follow").size() > 0 || b.path("businessObject").asBoolean(false);
+		final String linked = follows ? ChangesFollow.render(rc, ChangesFollow.compare(rc, b, before, r), Math.max(1, b.path("rows").asInt(50)), max) : "";
 		if (before == null)
 		{
-			return "<div class=\"ldf-val\"><span class=\"ldf-badge ldf-t-info\">" + MoreBlocks.esc(MoreBlocks.t("chCreated", rc)) + "</span></div>";
+			return "<div class=\"ldf-val\"><span class=\"ldf-badge ldf-t-info\">" + MoreBlocks.esc(MoreBlocks.t("chCreated", rc)) + "</span></div>" + linked;
 		}
+		final List<com.orchestranetworks.service.comparison.NodeDifference> diffs = MoreBlocks.fieldDiffs(rc, before, r);
+		if (diffs == null)
+		{
+			return MoreBlocks.empty(MoreBlocks.t("chNone", rc).replace("{n}", againstLabel)) + linked;
+		}
+		if (diffs.isEmpty())
+		{
+			return (linked.isEmpty() ? MoreBlocks.empty(RuntimeText.get("chNone", rc.locale, againstLabel))
+				: MoreBlocks.empty(RuntimeText.get("chNoneRecord", rc.locale, againstLabel))) + linked;
+		}
+		final StringBuilder h = new StringBuilder("<div class=\"ldf-val\"><span class=\"ldf-badge ldf-t-warn\">")
+			.append(MoreBlocks.esc(RuntimeText.get("chCount", rc.locale, Integer.valueOf(diffs.size())))).append("</span><span class=\"ldf-more\">")
+			.append(MoreBlocks.esc(againstLabel)).append("</span></div>");
+		h.append(MoreBlocks.diffTable(rc, before, r, diffs, max));
+		h.append(linked);
+		return h.toString();
+	}
+
+	/**
+	 * The fields that differ between two versions of a record, those the user may read (EBX permissions), through
+	 * {@code DifferenceHelper.compareOccurrences}; null when the comparison itself failed.
+	 */
+	static List<com.orchestranetworks.service.comparison.NodeDifference> fieldDiffs(final RenderContext rc, final Adaptation pBefore, final Adaptation pAfter)
+	{
 		final List<com.orchestranetworks.service.comparison.NodeDifference> diffs = new ArrayList<com.orchestranetworks.service.comparison.NodeDifference>();
 		try
 		{
-			// only the fields the user may read (EBX permissions)
-			for (final com.orchestranetworks.service.comparison.NodeDifference d : com.orchestranetworks.service.comparison.DifferenceHelper.compareOccurrences(before, r, true)
+			for (final com.orchestranetworks.service.comparison.NodeDifference d : com.orchestranetworks.service.comparison.DifferenceHelper.compareOccurrences(pBefore, pAfter, true)
 				.getNodeDifferences())
 			{
 				final com.orchestranetworks.schema.Path dp = d.getRightValuePath() != null ? d.getRightValuePath() : d.getLeftValuePath();
-				final SchemaNode dn = MoreBlocks.diffNode(r, dp);
-				if (dn != null && Access.canRead(dn, r) && !MoreBlocks.sameSecond(d.getLeftValue(), d.getRightValue()))
+				final SchemaNode dn = MoreBlocks.diffNode(pAfter, dp);
+				if (dn != null && Access.canRead(dn, pAfter) && !MoreBlocks.sameSecond(d.getLeftValue(), d.getRightValue()))
 				{
 					diffs.add(d);
 				}
@@ -1351,33 +1383,33 @@ final class MoreBlocks
 		catch (final RuntimeException ex)
 		{
 			LoggingCategory.getKernel().warn("[layout-designer] changes block: comparison failed: " + ex);
-			return MoreBlocks.empty(MoreBlocks.t("chNone", rc).replace("{n}", againstLabel));
+			return null;
 		}
-		if (diffs == null || diffs.isEmpty())
-		{
-			return MoreBlocks.empty(RuntimeText.get("chNone", rc.locale, againstLabel));
-		}
-		final int max = Math.max(1, b.path("max").asInt(20));
-		final StringBuilder h = new StringBuilder("<div class=\"ldf-val\"><span class=\"ldf-badge ldf-t-warn\">")
-			.append(MoreBlocks.esc(RuntimeText.get("chCount", rc.locale, Integer.valueOf(diffs.size())))).append("</span><span class=\"ldf-more\">")
-			.append(MoreBlocks.esc(againstLabel)).append("</span></div><table class=\"ldf-ch\">");
+		return diffs;
+	}
+
+	/** The old → new table of a record's differences, {@code pMax} rows at most. */
+	static String diffTable(final RenderContext rc, final Adaptation pBefore, final Adaptation pAfter, final List<com.orchestranetworks.service.comparison.NodeDifference> pDiffs,
+		final int pMax)
+	{
+		final StringBuilder h = new StringBuilder("<table class=\"ldf-ch\">");
 		int n = 0;
-		for (final com.orchestranetworks.service.comparison.NodeDifference d : diffs)
+		for (final com.orchestranetworks.service.comparison.NodeDifference d : pDiffs)
 		{
-			if (n++ >= max)
+			if (n++ >= pMax)
 			{
 				break;
 			}
 			final com.orchestranetworks.schema.Path p = d.getRightValuePath() != null ? d.getRightValuePath() : d.getLeftValuePath();
-			final SchemaNode node = MoreBlocks.diffNode(r, p);
+			final SchemaNode node = MoreBlocks.diffNode(pAfter, p);
 			final String label = node == null ? String.valueOf(p) : node.getLabel(rc.locale);
-			h.append("<tr><th>").append(MoreBlocks.esc(label)).append("</th><td class=\"ldf-ch-o\">").append(MoreBlocks.esc(MoreBlocks.shown(rc, node, before, d.getLeftValue())))
-				.append("</td><td class=\"ldf-ch-a\">\u2192</td><td class=\"ldf-ch-n\">").append(MoreBlocks.esc(MoreBlocks.shown(rc, node, r, d.getRightValue()))).append("</td></tr>");
+			h.append("<tr><th>").append(MoreBlocks.esc(label)).append("</th><td class=\"ldf-ch-o\">").append(MoreBlocks.esc(MoreBlocks.shown(rc, node, pBefore, d.getLeftValue())))
+				.append("</td><td class=\"ldf-ch-a\">\u2192</td><td class=\"ldf-ch-n\">").append(MoreBlocks.esc(MoreBlocks.shown(rc, node, pAfter, d.getRightValue()))).append("</td></tr>");
 		}
 		h.append("</table>");
-		if (diffs.size() > max)
+		if (pDiffs.size() > pMax)
 		{
-			h.append(MoreBlocks.empty(RuntimeText.get("chMore", rc.locale, Integer.valueOf(diffs.size() - max))));
+			h.append(MoreBlocks.empty(RuntimeText.get("chMore", rc.locale, Integer.valueOf(pDiffs.size() - pMax))));
 		}
 		return h.toString();
 	}
