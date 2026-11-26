@@ -60,6 +60,7 @@ Since 1.10.0 the document may also hold `personal`, `adminSeesAll` and `variants
 | `showIf` | a live condition (see *Behaviours*): the block shows or hides while the user types, without saving |
 | `onHide` | on a panel with `showIf`: `keep` (default) or `clear` the values of its fields when it hides |
 | `roles`, `roRoles`, `locked` | since 1.10.0, see *Who sees what* (a field of a panel also takes `roles` and `roRoles`) |
+| `session` | since 1.23.0, a condition on the user's EBX session (tracking information, attributes), see *Conditions on the user's session*; a field of a panel and a button of an `actions` block take it too |
 
 ## Block types
 
@@ -74,6 +75,7 @@ follows the record; a missing branch falls back to `tone`). A field:
 | `label` | text replacing the model's label on this form |
 | `w` | widget: `line`, `area`, `check`, `yesno`, `select`, `nocreate`, `radio`; read-only display forms `fig`, `badge`, `link`, `mono`, and the display widgets of 1.4.0 (below) |
 | `showIf`, `mandatoryIf`, `readOnlyIf`, `onHide` | behaviours (below) |
+| `session` | since 1.23.0, shown only when the user's session meets the condition (see *Conditions on the user's session*) |
 | `ro` | read only (a computed field always is) |
 | `wide` | label above, full width |
 
@@ -362,3 +364,25 @@ Any block, and any button of an `actions` block, may carry `"wf"`:
 Example: the "Change bank details" button hidden inside any workflow task and while a bank-details change is running for
 the supplier: `"wf": {"ctx": "outside", "running": "hide", "pub": "FournisseursChangementRIB", "vars": "tiersXPath"}`.
 The running instances are looked up once per display and shared with the *Workflows in progress* block.
+
+### Conditions on the user's session (since 1.23.0)
+
+Any block, any field of a panel and any button of an `actions` block may carry `"session"`, read in the EBX session of
+the user who opens the form: its tracking information (`Session.getTrackingInfo()`) and its attributes
+(`Session.getAttribute(name)`), whatever set them in that session (a workflow task, a trigger, a user service).
+
+| Key | Values | Effect |
+|---|---|---|
+| `trackingInfo.op` | `equals`, `contains`, `notEquals`, `notContains`, `filled`, `empty` | compares the tracking information with `trackingInfo.value`; no `op`: no condition on it |
+| `attribute.name` | an attribute name | the session attribute to read; empty: no condition on attributes |
+| `attribute.op` | the same operators, `filled` by default | compares the attribute's value with `attribute.value` |
+
+Both parts must hold. Texts are trimmed and compared ignoring case; an attribute holding a collection or an array matches
+when one of its values does, any other object is read through its text. The session is read when the form is drawn, like
+the roles: a value set while the form is open shows at the next display. An item whose condition fails is not drawn at
+all; for a field this is display only (EBX's own validation still applies).
+
+Example: the purchasing panel shown only while the session carries the attribute `etape` = `validation_achat`, and the
+"Reject" button hidden when the tracking information says the record comes from an import:
+`"session": {"attribute": {"name": "etape", "op": "equals", "value": "validation_achat"}}` on the panel,
+`"session": {"trackingInfo": {"op": "notContains", "value": "IMPORT"}}` on the button.

@@ -45,10 +45,11 @@ stage="$work/$name"
 mkdir -p "$stage/server-lib/if-missing" "$stage/docs/examples"
 
 printf '== checks\n'
-"${java_home:+$java_home/bin/}javac" --release 11 -cp "$root/dist/ebx-layout-designer-runtime.jar:$lib/*" -d "$work/checks" "$root/runtime/test/com/on/ebx/layout/runtime/OpeningHoursCheck.java" "$root/runtime/test/com/on/ebx/layout/runtime/BarcodeCheck.java" "$root/runtime/test/com/on/ebx/layout/runtime/FamilyCheck.java"
+"${java_home:+$java_home/bin/}javac" --release 11 -cp "$root/dist/ebx-layout-designer-runtime.jar:$lib/*" -d "$work/checks" "$root/runtime/test/com/on/ebx/layout/runtime/OpeningHoursCheck.java" "$root/runtime/test/com/on/ebx/layout/runtime/BarcodeCheck.java" "$root/runtime/test/com/on/ebx/layout/runtime/FamilyCheck.java" "$root/runtime/test/com/on/ebx/layout/runtime/SessionStateCheck.java"
 "${java_home:+$java_home/bin/}java" -cp "$root/dist/ebx-layout-designer-runtime.jar:$lib/*:$work/checks" com.on.ebx.layout.runtime.OpeningHoursCheck
 "${java_home:+$java_home/bin/}java" -cp "$root/dist/ebx-layout-designer-runtime.jar:$lib/*:$work/checks" com.on.ebx.layout.runtime.BarcodeCheck
 "${java_home:+$java_home/bin/}java" -cp "$root/dist/ebx-layout-designer-runtime.jar:$lib/*:$work/checks" com.on.ebx.layout.runtime.FamilyCheck
+"${java_home:+$java_home/bin/}java" -cp "$root/dist/ebx-layout-designer-runtime.jar:$lib/*:$work/checks" com.on.ebx.layout.runtime.SessionStateCheck
 
 printf '== runtime jar\n'
 mkdir -p "$work/runtime"

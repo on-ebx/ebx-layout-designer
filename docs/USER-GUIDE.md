@@ -190,6 +190,19 @@ In the inspector of any block, and of each button of an *Actions* block, *Depend
 - by **request running on the record**: *Hide while running* or *Only while running*, for one workflow publication or any,
   given the variables that point to the record (`tiersXPath`…).
 
+### Conditions on the user's session (1.23.0)
+
+In the inspector of any block, of any field of a panel and of each button of an *Actions* block, *Depending on the user's
+session* shows it only when the EBX session of the user who opens the form says so:
+
+- by **session tracking info** (`Session.getTrackingInfo()`): *Equals*, *Contains*, *Not equal to*, *Does not contain*,
+  *Set* or *Empty*, with the text to compare;
+- by a **session attribute** (`Session.getAttribute(name)`): its name, then the same choices (*Set* by default).
+
+Whatever put the value in the session counts (a workflow task, a trigger, a user service). Texts are compared ignoring
+case, both conditions must hold, and the session is read when the form opens: a value set while it is open shows at the
+next display. The canvas tags the item with its condition.
+
 ## 8. Save, declare, use
 
 - **Save** writes the layout (JSON) as a new version in `LayoutDesigner/FormLayout`. It shows at the next opening of a

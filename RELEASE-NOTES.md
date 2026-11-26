@@ -1,5 +1,15 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.23.0 (2026-10-20)
+
+- **Conditions on the user's session** ([LAYOUT-FORMAT.md](docs/LAYOUT-FORMAT.md#conditions-on-the-users-session-since-1230)):
+  a block, a field of a panel or a button of an Actions block may carry `"session"`, shown only when the EBX session of the
+  user who opens the form meets it: its tracking information (`equals`, `contains`, `notEquals`, `notContains`, `filled`,
+  `empty`) and/or one of its attributes (`Session.getAttribute`, same operators). Whatever set the value in that session
+  counts: a workflow task, a trigger, a user service. Read when the form opens, compared ignoring case. In the designer:
+  *Depending on the user's session* in the inspector, and a tag on the canvas; the layout check flags an unknown operator,
+  a comparison without its text and an attribute condition without a name.
+
 ## 1.22.1 (2026-10-20)
 
 - Release package: the worked explorer examples (`docs/examples/`) are shipped, as the README and the MCP guide link to

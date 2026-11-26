@@ -210,6 +210,48 @@ public final class LayoutCheck
 		{
 			LayoutCheck.workflow(a.path("workflow").asText(""), where, pPublished, pOut);
 			LayoutCheck.workflow(a.path("wf").path("pub").asText(""), where, pPublished, pOut);
+			LayoutCheck.session(a.get("session"), where, pOut);
+		}
+		// conditions on the user's session (1.23.0)
+		LayoutCheck.session(b.get("session"), where, pOut);
+		for (final JsonNode f : b.path("fields"))
+		{
+			LayoutCheck.session(f.get("session"), where, pOut);
+		}
+	}
+
+	/** An unknown operator, a comparison without its text, an attribute condition without the attribute's name. */
+	private static void session(final JsonNode pSession, final String pWhere, final List<Issue> pOut)
+	{
+		if (pSession == null || !pSession.isObject())
+		{
+			return;
+		}
+		for (final String part : new String[] { "trackingInfo", "attribute" })
+		{
+			final JsonNode c = pSession.get(part);
+			if (c == null || !c.isObject())
+			{
+				continue;
+			}
+			final String op = c.path("op").asText("");
+			final String name = c.path("name").asText("").trim();
+			if ("attribute".equals(part) && name.isEmpty())
+			{
+				if (!op.isEmpty() || !c.path("value").asText("").isEmpty())
+				{
+					pOut.add(new Issue(false, "chk.sessionNoName", pWhere, ""));
+				}
+				continue;
+			}
+			if (!op.isEmpty() && !java.util.Arrays.asList(SessionState.OPS).contains(op))
+			{
+				pOut.add(new Issue(false, "chk.sessionOp", pWhere, op));
+			}
+			else if (("equals".equals(op) || "contains".equals(op) || "notEquals".equals(op) || "notContains".equals(op)) && c.path("value").asText("").trim().isEmpty())
+			{
+				pOut.add(new Issue(false, "chk.sessionNoValue", pWhere, "attribute".equals(part) ? name : "trackingInfo"));
+			}
 		}
 	}
 

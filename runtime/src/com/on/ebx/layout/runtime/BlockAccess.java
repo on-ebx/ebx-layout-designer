@@ -121,7 +121,8 @@ public final class BlockAccess
 				final String k = e.getKey();
 				// localized texts, conditions on the behaviour of the block, and the fields of an association's or another table's rows
 				if ("title".equals(k) && !"hero".equals(pNode.path("type").asText()) || "note".equals(k) || "label".equals(k) || "text".equals(k) || "showIf".equals(k)
-					|| "cond".equals(k) || "cardFields".equals(k) || "week".equals(k) || "exceptions".equals(k) || "attributesBy".equals(k) || "actions".equals(k))
+					|| "cond".equals(k) || "cardFields".equals(k) || "week".equals(k) || "exceptions".equals(k) || "attributesBy".equals(k) || "actions".equals(k)
+					|| "session".equals(k))
 				{
 					continue;
 				}

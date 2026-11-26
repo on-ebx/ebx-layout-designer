@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit 92760a9987fc9b2ce6095a28a6fac26d65256613
-1.22.1: ship the worked explorer examples in the release; no internal note referenced in the API page
+Exported from EBX-Layout-Designer commit 40c00e1f2ed759c37c187fc518d4cc9195fdaa51
+1.23.0: display conditions on the user's EBX session (tracking info, session attributes) for blocks, fields and action buttons
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

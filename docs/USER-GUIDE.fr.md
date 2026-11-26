@@ -203,6 +203,19 @@ Dans l'inspecteur de chaque bloc, et de chaque bouton d'un bloc *Actions*, *Selo
 - selon une **demande en cours sur la fiche** : *Masquer si en cours* ou *Seulement si en cours*, pour une publication de
   workflow précise ou toutes, avec les variables qui désignent la fiche (`tiersXPath`…).
 
+### Conditions sur la session de l'utilisateur (1.23.0)
+
+Dans l'inspecteur de chaque bloc, de chaque champ d'un panneau et de chaque bouton d'un bloc *Actions*, *Selon la session
+de l'utilisateur* ne l'affiche que si la session EBX de la personne qui ouvre la fiche le permet :
+
+- selon le **tracking info de la session** (`Session.getTrackingInfo()`) : *Est égal à*, *Contient*, *Différent de*,
+  *Ne contient pas*, *Renseigné* ou *Vide*, avec le texte à comparer ;
+- selon une **variable de session** (`Session.getAttribute(nom)`) : son nom, puis les mêmes choix (*Renseigné* par défaut).
+
+Peu importe ce qui a posé la valeur dans la session (tâche de workflow, trigger, service utilisateur). La comparaison ne
+tient pas compte de la casse, les deux conditions doivent être vraies, et la session est lue à l'ouverture de la fiche :
+une valeur posée pendant qu'elle est ouverte compte à l'affichage suivant. Le canevas étiquette l'élément avec sa condition.
+
 ## 8. Enregistrer, déclarer, utiliser
 
 - **Version 1.20.0** : dans le panneau de la carte, *Affichages au choix de l’utilisateur* (cartes, cartes larges, liste) ;

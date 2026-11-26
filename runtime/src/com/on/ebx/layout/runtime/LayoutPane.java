@@ -142,6 +142,11 @@ final class LayoutPane implements UIFormPane
 		{
 			return;
 		}
+		// 1.23.0: the tracking information or an attribute of the user's session
+		if (!SessionState.allows(this.rc, b.get("session")))
+		{
+			return;
+		}
 		if (!this.readable(b))
 		{
 			return;
@@ -396,7 +401,7 @@ final class LayoutPane implements UIFormPane
 			final JsonNode f = fields.get(i);
 			final String stored = f.path("p").asText();
 			final SchemaNode node = this.rc.node(stored);
-			if (node == null || !Access.canRead(node, this.rc.record))
+			if (node == null || !Access.canRead(node, this.rc.record) || !SessionState.allows(this.rc, f.get("session")))
 			{
 				continue;
 			}

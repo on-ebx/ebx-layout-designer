@@ -211,7 +211,7 @@ const COMPS = B.components || [];
    no longer published, a component this instance does not register); the same rules as the FormLayout validation */
 const WFS = B.workflows || null;
 const PATH_RE = /^(\/[A-Za-z_][A-Za-z0-9_]*)+$/;
-const SKIPK = ['title','note','label','text','showIf','cond','cardFields','week','exceptions','attributesBy','actions','url','icon'];
+const SKIPK = ['title','note','label','text','showIf','cond','cardFields','week','exceptions','attributesBy','actions','url','icon','session'];
 function pathsIn(o, out){
   if (typeof o === 'string'){ if (PATH_RE.test(o)) out.push(o); return out; }
   if (Array.isArray(o)){ o.forEach(x => pathsIn(x, out)); return out; }
@@ -261,6 +261,20 @@ const WFSPEC = [
 ];
 const wfTag = w => [w.ctx === 'outside' ? cl(['hors workflow','outside workflow']) : w.ctx === 'inside' ? cl(['dans une tâche','in a task']) : '',
   w.running === 'hide' ? cl(['masqué si demande en cours','hidden while a request runs']) : w.running === 'show' ? cl(['si demande en cours','while a request runs']) : ''].filter(Boolean).join(' · ');
+/* 1.23.0: conditions on the user's EBX session (its tracking information, its attributes), for a block, a field of a
+   panel and a button of an Actions block; read when the form opens, whatever set the value in that session */
+const SOPS = [['equals',['Est égal à','Equals']],['contains',['Contient','Contains']],['notEquals',['Différent de','Not equal to']],['notContains',['Ne contient pas','Does not contain']],['filled',['Renseigné','Set']],['empty',['Vide','Empty']]];
+const sNeedsV = op => ['equals','contains','notEquals','notContains'].includes(op);
+const SESSSPEC = [
+  {k:'choice', key:'session.trackingInfo.op', def:'', l:['Tracking info de la session','Session tracking info'], opts:[['',['Ignorer','Ignore']]].concat(SOPS)},
+  {k:'str', key:'session.trackingInfo.value', when:o => sNeedsV(getP(o, 'session.trackingInfo.op')), l:['Texte comparé au tracking info','Text compared with the tracking info'], ph:'WF_ACHAT'},
+  {k:'str', key:'session.attribute.name', l:['Variable de session (nom, vide : ignorer)','Session attribute (name, empty: ignore)'], ph:'etape'},
+  {k:'choice', key:'session.attribute.op', def:'filled', when:o => !!getP(o, 'session.attribute.name'), l:['Condition sur la variable','Condition on the attribute'], opts:SOPS},
+  {k:'str', key:'session.attribute.value', when:o => !!getP(o, 'session.attribute.name') && sNeedsV(getP(o, 'session.attribute.op') || 'filled'), l:['Texte comparé à la variable','Text compared with the attribute'], ph:'validation_achat'},
+  {k:'hint', when:o => !!(getP(o, 'session.trackingInfo.op') || getP(o, 'session.attribute.name')), l:['Lu dans la session EBX de l’utilisateur à l’ouverture de la fiche (Session.getTrackingInfo, Session.getAttribute), quel que soit ce qui l’a posé : tâche de workflow, trigger, service utilisateur. Comparaison sans tenir compte de la casse ; les deux conditions doivent être vraies.','Read in the user’s EBX session when the form opens (Session.getTrackingInfo, Session.getAttribute), whatever set it: a workflow task, a trigger, a user service. Compared ignoring case; both conditions must hold.']}
+];
+const sessTag = x => { const s = x && x.session; if (!s) return ''; const ti = s.trackingInfo || {}, at = s.attribute || {}; const opl = op => cl((SOPS.find(o => o[0] === op) || [op, [op, op]])[1]).toLowerCase();
+  return [ti.op ? 'tracking info ' + opl(ti.op) + (sNeedsV(ti.op) ? ' « ' + (ti.value || '') + ' »' : '') : '', at.name ? at.name + ' ' + opl(at.op || 'filled') + (sNeedsV(at.op || 'filled') ? ' « ' + (at.value || '') + ' »' : '') : ''].filter(Boolean).join(' · '); };
 const NUMS = ['int','dec'];
 const getP = (o, path) => path.split('.').reduce((x, k) => x == null ? undefined : x[k], o);
 function setP(o, path, v){
@@ -388,7 +402,7 @@ const BL = {
      {k:'bool', key:'single', def:false, l:['Une demande à la fois par fiche (une demande en cours s’ouvre au lieu d’en lancer une autre)','One request at a time per record (a request in progress opens instead of launching another)']},
      {k:'str', key:'service', l:['Ou un service à ouvrir sur la fiche (module@Service)','Or a service to open on the record (module@Service)'], ph:'ebx-tiers@ChangementRib'},
      {k:'choice', key:'tone', def:'', l:['Couleur','Colour'], opts:[['',['Par défaut','Default']]].concat(TONES)},
-     {k:'str', key:'cond', l:['Afficher seulement si (XPath sur la fiche)','Show only if (XPath on the record)'], ph:"./statut='ACTIF'"}].concat(WFSPEC)},
+     {k:'str', key:'cond', l:['Afficher seulement si (XPath sur la fiche)','Show only if (XPath on the record)'], ph:"./statut='ACTIF'"}].concat(WFSPEC, SESSSPEC)},
      {k:'hint', l:['Un bouton de workflow n’apparaît qu’à qui peut lancer la publication ; il demande confirmation, lance le workflow au nom de l’utilisateur et ouvre la première tâche. Rien n’est affiché pendant une création.','A workflow button shows only to who may launch the publication; it asks for confirmation, launches the workflow as the user and opens the first task. Nothing is shown while a record is created.']}]},
  workflowTasks:{cat:'actions', l:['Workflows en cours','Workflows in progress'], d:['Les workflows ouverts sur la fiche : qui doit agir, depuis quand, avec la tâche à ouvrir.','The workflows open on the record: who must act, since when, with the task to open.'], tags:'workflow tâches validation demande approbation tasks approval inbox',
    def:{variables:''},
@@ -536,6 +550,7 @@ function specBase(){
 function behaviourBlockHtml(b){
   let h = `<h3 class="sub">${esc(c('behaviours'))}</h3>` + condHtml('showIf', b.showIf, ['Afficher seulement si (en direct)','Show only if (live)']);
   h += `<h3 class="sub">${esc(cl(['Selon les workflows','Depending on workflows']))}</h3>` + specHtml(WFSPEC, b, '');
+  h += `<h3 class="sub">${esc(cl(['Selon la session de l’utilisateur','Depending on the user’s session']))}</h3>` + specHtml(SESSSPEC, b, '');
   if (b.showIf && b.type === 'panel') h += ctlHtml({k:'choice', key:'onHide', def:'keep', l:['Valeurs des champs cachés','Values of hidden fields'], opts:[['keep',['Gardées','Kept']],['clear',['Vidées','Cleared']]]}, b, '');
   if (b.type === 'panel') h += ctlHtml({k:'choice', key:'tone', def:'', l:['Couleur du panneau','Panel colour'], opts:[['',['Aucune','None']],['ok',['Vert (ok)','Green (ok)']],['warn',['Orange (attention)','Orange (warning)']],['bad',['Rouge (anomalie)','Red (problem)']],['info',['Bleu (info)','Blue (info)']],['accent',['Violet','Purple']],['muted',['Gris','Grey']]]}, b, '');
   if (b.type === 'panel'){
@@ -566,7 +581,8 @@ function behaviourFieldHtml(f){
       f.showIf ? ctlHtml({k:'choice', key:'onHide', def:'keep', l:['Valeur une fois caché','Value once hidden'], opts:[['keep',['Gardée','Kept']],['clear',['Vidée','Cleared']]]}, f, '') : '')
     + condHtml('mandatoryIf', f.mandatoryIf, ['Obligatoire si (astérisque en direct)','Mandatory if (live asterisk)'])
     + condHtml('readOnlyIf', f.readOnlyIf, ['Lecture seule si','Read only if'], ctlHtml({k:'codes', key:'readOnlyIf.roles', l:['… ou pour les rôles','… or for the roles']}, f, '') + ctlHtml({k:'codes', key:'readOnlyIf.exceptRoles', l:['Sauf pour les rôles','Except for the roles']}, f, ''))
-    + `<p class="hint">${esc(c('behHint'))}</p>`;
+    + `<p class="hint">${esc(c('behHint'))}</p>`
+    + `<h3 class="sub">${esc(cl(['Selon la session de l’utilisateur','Depending on the user’s session']))}</h3>` + specHtml(SESSSPEC, f, '');
 }
 
 /* ---------- previews of the 1.4.0 blocks: real values of the previewed record where the page has them, else indicative ---------- */
@@ -878,7 +894,7 @@ function audTags(o, small){
   return h;
 }
 function renderBlock(b){
-  const tag = `<div class="btag"><span draggable="true" data-drag="block" data-id="${b.id}">${esc(bl(b.type))}${b.type === 'custom' ? ' · ' + esc(b.cls) : ''}</span>${audTags(b)}${b.showIf && b.showIf.field ? `<span class="cond">${esc(c('liveIf', lab(b.showIf.field)))}</span>` : ''}${b.attributesBy && b.attributesBy.table ? `<span class="cond">${esc(c('famTag'))}</span>` : ''}${b.cond ? `<span class="cond" title="${esc(b.cond)}">${esc(c('cond2', b.cond))}</span>` : ''}${b.wf && wfTag(b.wf) ? `<span class="cond">${esc(wfTag(b.wf))}</span>` : ''}${(() => { const k = brokenOf(b); return k.length ? `<span class="cond gone" title="${esc(k.map(x => brokenText(x) + ' : ' + x.ref).join('\n'))}">⚠ ${k.length}</span>` : ''; })()}${b.hideCreate ? `<span class="cond">${esc(c('hiddenCreate'))}</span>` : ''}</div>`;
+  const tag = `<div class="btag"><span draggable="true" data-drag="block" data-id="${b.id}">${esc(bl(b.type))}${b.type === 'custom' ? ' · ' + esc(b.cls) : ''}</span>${audTags(b)}${b.showIf && b.showIf.field ? `<span class="cond">${esc(c('liveIf', lab(b.showIf.field)))}</span>` : ''}${b.attributesBy && b.attributesBy.table ? `<span class="cond">${esc(c('famTag'))}</span>` : ''}${b.cond ? `<span class="cond" title="${esc(b.cond)}">${esc(c('cond2', b.cond))}</span>` : ''}${b.wf && wfTag(b.wf) ? `<span class="cond">${esc(wfTag(b.wf))}</span>` : ''}${sessTag(b) ? `<span class="cond">${esc(sessTag(b))}</span>` : ''}${(() => { const k = brokenOf(b); return k.length ? `<span class="cond gone" title="${esc(k.map(x => brokenText(x) + ' : ' + x.ref).join('\n'))}">⚠ ${k.length}</span>` : ''; })()}${b.hideCreate ? `<span class="cond">${esc(c('hiddenCreate'))}</span>` : ''}</div>`;
   const selc = sel && sel.k === 'block' && sel.id === b.id ? ' sel' : '';
   if (creating && b.hideCreate && mode === 'preview') return '';
   const tabNow = curTab();
@@ -897,7 +913,7 @@ function renderBlock(b){
         const f = roFor(f0) && !f0.ro ? Object.assign({}, f0, {ro:true}) : f0;
         const s = (sel && sel.k === 'field' && sel.b === b.id && sel.i === i ? ' sel' : '') + (flash && flash.b === b.id && flash.i === i ? ' flash' : '');
         const label = hasText(f.label) ? tx(f.label) : esc(lab(f.p));
-        return `<div class="fr${f.wide ? ' wide' : ''}${s}${fHid ? ' ashid' : ''}" data-item="field" data-b="${b.id}" data-i="${i}"><div class="fl" draggable="true" data-drag="field" data-b="${b.id}" data-i="${i}">${label}${fd.req ? ' <i>*</i>' : ''}${mode === 'design' ? audTags(f0, true) : ''}</div><div class="fv" draggable="true" data-drag="field" data-b="${b.id}" data-i="${i}">${renderWidget(f, b)}</div></div>`;
+        return `<div class="fr${f.wide ? ' wide' : ''}${s}${fHid ? ' ashid' : ''}" data-item="field" data-b="${b.id}" data-i="${i}"><div class="fl" draggable="true" data-drag="field" data-b="${b.id}" data-i="${i}">${label}${fd.req ? ' <i>*</i>' : ''}${mode === 'design' ? audTags(f0, true) + (sessTag(f0) ? `<span class="cond">${esc(sessTag(f0))}</span>` : '') : ''}</div><div class="fv" draggable="true" data-drag="field" data-b="${b.id}" data-i="${i}">${renderWidget(f, b)}</div></div>`;
       }).join('');
       inner = `<div class="panel${(b.toneIf && b.toneIf.if && b.toneIf.then) || b.tone ? ' tone t-' + esc((b.toneIf && b.toneIf.if && b.toneIf.then) || b.tone) : ''}">${head(b)}<div class="pf" data-drop="fields" data-b="${b.id}">${rows || (mode === 'design' ? `<div class="pf-empty">${esc(c('dropFields'))}</div>` : '')}</div></div>`; break; }
     case 'hero': {
