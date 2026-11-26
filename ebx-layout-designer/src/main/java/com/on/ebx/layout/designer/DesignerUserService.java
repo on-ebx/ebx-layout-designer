@@ -40,7 +40,7 @@ public final class DesignerUserService implements UserService<TableViewEntitySel
 {
 	static final String SUBMIT_ID = "ldSubmit";
 	/** Changed at each release, so that browsers fetch the new page script. */
-	static final String ASSET_VERSION = "1.4.0";
+	static final String ASSET_VERSION = "1.4.1";
 
 	private AdaptationTable table;
 	private String recordKey;

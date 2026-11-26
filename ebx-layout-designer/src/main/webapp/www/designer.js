@@ -244,8 +244,8 @@ const BL = {
    def:{from:'', to:'', warnDays:30},
    spec:[{k:'field', key:'from', types:['date','dt'], l:['Début','Start']}, {k:'field', key:'to', types:['date','dt'], l:['Fin','End']}, {k:'num', key:'warnDays', def:30, l:['Alerte avant la fin (jours)','Alert before the end (days)']}]},
  address:{cat:'location', l:['Adresse formatée','Formatted address'], d:['Les champs d’adresse mis en forme selon le pays, avec un lien vers la carte.','Address fields laid out after the country, with a map link.'], tags:'adresse postale postal',
-   def:{lines:[], zip:'', city:'', region:'', country:'', format:'auto', mapLink:true},
-   spec:[{k:'fields', key:'lines', l:['Lignes de rue','Street lines']}, {k:'field', key:'zip', l:['Code postal','Postcode']}, {k:'field', key:'city', l:['Ville','City']}, {k:'field', key:'region', l:['Région, état','Region, state']},
+   def:{lines:[], number:'', zip:'', city:'', region:'', country:'', format:'auto', mapLink:true},
+   spec:[{k:'fields', key:'lines', l:['Lignes de rue','Street lines']}, {k:'field', key:'number', l:['Numéro (sur la première ligne)','Number (on the first line)']}, {k:'choice', key:'numberPlace', def:'auto', l:['Place du numéro','Number position'], opts:[['auto',['Selon le pays','By country']],['numberBefore',['Avant la rue','Before the street']],['numberAfter',['Après la rue','After the street']]], when:b => b.number}, {k:'field', key:'zip', l:['Code postal','Postcode']}, {k:'field', key:'city', l:['Ville','City']}, {k:'field', key:'region', l:['Région, état','Region, state']},
      {k:'field', key:'country', l:['Pays','Country']}, {k:'choice', key:'format', def:'auto', l:['Mise en forme','Layout'], opts:[['auto',['Selon le pays','By country']],['zipFirst',['Code postal puis ville','Postcode then city']],['cityFirst',['Ville, région code','City, region code']],['zipAfter',['Ville puis code (UK)','City then code (UK)']]]},
      {k:'bool', key:'mapLink', def:true, l:['Lien vers la carte','Map link']}]},
  hierarchy:{cat:'relations', l:['Arborescence','Hierarchy'], d:['Le chemin dans une hiérarchie (fil d’Ariane) et les enfants.','The path in a hierarchy (breadcrumb) and the children.'], tags:'catégories classification arbre tree breadcrumb',
@@ -422,7 +422,7 @@ function previewMore(b){
       const n = new Date(new Date().toDateString());
       const st = f && n < f ? ['valUpcoming','t-info'] : t && n > t ? ['valExpired','t-bad'] : t && dayDiff(t) <= warn ? ['valEnding','t-warn'] : ['valActive','t-ok'];
       return `<span class="w-badge ${st[1]}">${esc(c(st[0]))}</span> <span class="more">${esc(val(b.from) || '…')} → ${esc(val(b.to) || '…')}</span>`; }
-    case 'address': { const ls = (b.lines || []).map(val).filter(Boolean); const zc = [val(b.zip), val(b.city)].filter(Boolean).join(' ');
+    case 'address': { const ls = (b.lines || []).map(val).filter(Boolean); if (val(b.number)) { if (ls.length) ls[0] = (b.numberPlace === 'numberAfter' ? ls[0] + ' ' + val(b.number) : val(b.number) + ' ' + ls[0]); else ls.push(val(b.number)); } const zc = [val(b.zip), val(b.city)].filter(Boolean).join(' ');
       if (zc) ls.push(zc); if (val(b.region)) ls.push(val(b.region)); if (val(b.country)) ls.push(val(b.country));
       return ls.length ? `<address class="addrx">${ls.map(esc).join('<br>')}</address>` : !b.city && !(b.lines || []).length ? setupNote() : `<div class="note-b">${esc(c('noAddress'))}</div>`; }
     case 'hierarchy': if (!b.parent) return setupNote();

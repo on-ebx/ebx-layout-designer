@@ -1063,6 +1063,13 @@ final class MoreBlocks
 	/** A URL template with ${./path} replaced by the record's values, URL-encoded; null when a value is missing. */
 	static String fill(final RenderContext rc, final String pTemplate)
 	{
+		final Matcher whole = MoreBlocks.VAR.matcher(pTemplate.trim());
+		if (whole.matches())
+		{
+			// the whole address comes from one field (a website): used as it is
+			final String v = Values.key(rc.raw(whole.group(1))).trim();
+			return v.isEmpty() ? null : v.matches("(?i)^(https?://|mailto:|tel:|/).*") ? v : "https://" + v;
+		}
 		final Matcher m = MoreBlocks.VAR.matcher(pTemplate);
 		final StringBuffer out = new StringBuffer();
 		while (m.find())
@@ -1139,6 +1146,11 @@ final class MoreBlocks
 	private static final Set<String> CITY_FIRST = new HashSet<String>(java.util.Arrays.asList("US", "CA", "AU", "NZ", "USA", "CAN", "AUS", "NZL"));
 	private static final Set<String> ZIP_AFTER = new HashSet<String>(java.util.Arrays.asList("GB", "IE", "GBR", "IRL", "UK"));
 
+	/** Countries that write the street number after the street name ("Hauptstraße 5"). */
+	private static final Set<String> NUMBER_AFTER = new HashSet<String>(java.util.Arrays.asList("DE", "AT", "CH", "NL", "BE", "IT", "ES", "PT", "PL", "CZ", "SK",
+		"DK", "SE", "NO", "FI", "HU", "HR", "SI", "GR", "DEU", "AUT", "CHE", "NLD", "BEL", "ITA", "ESP", "PRT", "POL", "CZE", "SVK", "DNK", "SWE", "NOR", "FIN", "HUN", "HRV",
+		"SVN", "GRC"));
+
 	static String address(final RenderContext rc, final JsonNode b)
 	{
 		final List<String> lines = new ArrayList<String>();
@@ -1148,6 +1160,22 @@ final class MoreBlocks
 			if (!v.isEmpty())
 			{
 				lines.add(v);
+			}
+		}
+		// the street number goes on the first street line, before or after the street after the country's custom
+		final String number = rc.display(b.path("number").asText(""));
+		if (!number.isEmpty())
+		{
+			final String key = Values.key(rc.raw(b.path("country").asText(""))).toUpperCase(Locale.ROOT);
+			final String fmt0 = b.path("format").asText("auto");
+			final boolean after = "numberAfter".equals(b.path("numberPlace").asText("")) || !"numberBefore".equals(b.path("numberPlace").asText("")) && "auto".equals(fmt0) && MoreBlocks.NUMBER_AFTER.contains(key);
+			if (lines.isEmpty())
+			{
+				lines.add(number);
+			}
+			else
+			{
+				lines.set(0, after ? lines.get(0) + " " + number : number + " " + lines.get(0));
 			}
 		}
 		final String zip = rc.display(b.path("zip").asText(""));

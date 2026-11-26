@@ -1,5 +1,12 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.4.1 (2026-10-08)
+
+- **Formatted address**: a `number` field goes on the first street line, before or after the street after the country
+  (`numberPlace` to force it): "201 Sussex Street", "Hauptstraße 5".
+- **Links and actions**: an address made of one field only (`${./Contact/website}`) is used as it is (it used to be
+  URL-encoded and the button hidden); `https://` is added when missing.
+
 ## 1.4.0 (2026-10-08)
 
 - **Component library**: the palette's blocks are grouped by category and searchable (name, description, keywords);

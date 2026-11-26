@@ -142,9 +142,9 @@ record (`a`, its path); a field of its target table is a path of that table (`/a
 | `contacts` | `a`, `name` (default: row label), `role`, `email`, `phone`, `main` (boolean: shown first, highlighted) |
 | `gallery` | `a` + `media` + `caption`, and/or `fields` (media or URL fields of the record), `perRow` (4) |
 | `documents` | `a`, `file` (media or URL field), `name`, `docType`, `date`, `expiry` (true: a past date shows red) |
-| `links` | `items: [{label, url, sameTab}]`; `${./path}` in `url` inserts the record's value, URL-encoded; a button whose value is empty is hidden; only `http(s):`, `mailto:`, `tel:` and `/` addresses |
+| `links` | `items: [{label, url, sameTab}]`; `${./path}` in `url` inserts the record's value, URL-encoded; a button whose value is empty is hidden; a `url` that is only `${./path}` (a website field) is used as it is, `https://` added when missing; only `http(s):`, `mailto:`, `tel:` and `/` addresses |
 | `validity` | `from`, `to` (date fields), `warnDays` (30): upcoming, in force, ending soon, expired |
-| `address` | `lines` (street paths), `zip`, `city`, `region`, `country`, `format` (`auto` by country, `zipFirst`, `cityFirst`, `zipAfter`), `mapLink` (true) |
+| `address` | `lines` (street paths), `number` (street number, put on the first line; `numberPlace`: `auto` = after the street for DE, AT, CH, NL, BE, IT, ES and the other countries that write it so, before elsewhere; `numberBefore`; `numberAfter`), `zip`, `city`, `region`, `country`, `format` (`auto` by country, `zipFirst`, `cityFirst`, `zipAfter`), `mapLink` (true) |
 | `hierarchy` | `parent` (foreign key), `up` (the parent's own parent key when the target is another table; same path by default on a self-referencing table), `label`, `depth` (6), `children` (association) |
 
 A media field is read through the Digital Asset Manager's public API (`MediaType.getAttachment`,
