@@ -52,7 +52,7 @@ Since 1.10.0 the document may also hold `personal`, `adminSeesAll` and `variants
 
 | Key | Meaning |
 |---|---|
-| `type` | `panel`, `hero`, `facts`, `validation`, `grid`, `map`, `tree`, `hours`, `duplicates`, `note`, `custom`; since 1.4.0 `timeline`, `history`, `completeness`, `stepper`, `checklist`, `chart`, `aggregates`, `pivot`, `linked`, `contacts`, `gallery`, `documents`, `links`, `validity`, `address`, `hierarchy`; since 1.5.0 `recordInfo`; since 1.6.0 `changes`, `usedBy`; since 1.8.0 `orgChart`; since 1.9.0 `valueHistory`, `sitesMap`, `sourceValues`, `workflowTasks`, `translations`, `inheritance` |
+| `type` | `panel`, `hero`, `facts`, `validation`, `grid`, `map`, `tree`, `hours`, `duplicates`, `note`, `custom`; since 1.4.0 `timeline`, `history`, `completeness`, `stepper`, `checklist`, `chart`, `aggregates`, `pivot`, `linked`, `contacts`, `gallery`, `documents`, `links`, `validity`, `address`, `hierarchy`; since 1.5.0 `recordInfo`; since 1.6.0 `changes`, `usedBy`; since 1.8.0 `orgChart`; since 1.9.0 `valueHistory`, `sitesMap`, `sourceValues`, `workflowTasks`, `translations`, `inheritance`; since 1.22.0 `heatmap`, `gantt`, `compare`, `coverage` |
 | `id` | unique in the layout |
 | `title`, `note` | texts |
 | `cond` | XPath predicate on the record; the block shows only when it is true (always shown on creation) |
@@ -78,7 +78,7 @@ follows the record; a missing branch falls back to `tone`). A field:
 | `wide` | label above, full width |
 
 **`hero`**: `title` (a path here, not a text), `sub` (paths), `chips` (paths), `meter` (path of a 0–100 value),
-`status` (path).
+`meterLabel` (text or locale map shown after the value; empty: "completeness", since 1.22.0), `status` (path).
 
 **`facts`**: `items` (paths), `count` (path of an association whose rows are counted).
 
@@ -180,6 +180,19 @@ record (`a`, its path); a field of its target table is a path of that table (`/a
 A media field is read through the Digital Asset Manager's public API (`MediaType.getAttachment`,
 `AssetManager.getDigitalAsset`, `DigitalAsset.getURL`), called by reflection so the form works without the add-on; a text
 field holding an `http(s)` or `/` address works as well.
+
+## Blocks added in 1.22.0
+
+Each reads the rows of an association `a` of the record (5,000 at most). Every one accepts `only`:
+`{"field": "status", "values": ["OPEN", "MITIGATED"], "not": false}` keeps the rows whose field holds one of the values
+(`not: true` keeps the others).
+
+| Type | Keys |
+|---|---|
+| `heatmap` | `x`, `y` (two fields of the rows, e.g. impact and probability), `xSteps`, `ySteps` (codes in order; empty: the field's enumeration, else the values met, sorted), `label` (shown on hover; empty: the row label). One cell per pair of values, the number of rows in it, green → orange → red by (x rank × y rank), highest `y` on top. Rows whose values are outside the axes are counted under the matrix |
+| `gantt` | `start`, `end` (planned dates), `actualStart`, `actualEnd` (optional), `label`, `status` + `colors` (tone of the actual bar). One line per row sorted by start: a grey planned bar, a coloured actual bar (green when finished on time, red when late, purple while running, up to today), month ticks and a line on today. Each label opens the row |
+| `compare` | `planned`, `actual` (number fields summed), `by` (optional: one line per value, else the total only), `plannedLabel`, `actualLabel` (texts; empty: the field labels), `unit`, `decimals` (0), `higherIsBetter` (false: an actual above planned is red, as for spending). Three figures (planned, actual, variance) and, with `by`, a pair of bars per value with its variance in % |
+| `coverage` | `field` (the field each row should have), `label`, `target` (100: percentage under which the figure turns orange, under 80 % of it red), `max` (8: missing rows listed). Shows "N of M with <field>" and the rows without it, each a link |
 
 Tones (`color.map`, `colors`): `ok` (green), `warn` (orange), `bad` (red), `accent` (purple), `info` (blue), `muted` (grey).
 

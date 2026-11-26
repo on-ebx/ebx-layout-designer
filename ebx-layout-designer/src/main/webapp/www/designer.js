@@ -72,7 +72,7 @@ const C = {
  columns:['Colonnes','Columns'], ratio:['Proportions','Proportions'], rowHint:['Sous 900 px, une ligne à deux colonnes s’affiche sur une seule, colonne de gauche d’abord.','Under 900 px, a two-column row stacks, left column first.'],
  up:['Monter','Up'], down:['Descendre','Down'], dup:['Dupliquer','Duplicate'], del:['Retirer','Remove'], delRow:['Retirer la ligne','Remove the row'],
  titleF:['Titre','Title'], note:['Note sous le titre','Note under the title'], allRo:['Tout le panneau en lecture seule','Whole panel read only'], none:['Aucun','None'],
- heroTitle:['Titre','Title'], logo:['Logo','Logo'], meter:['Jauge','Gauge'], statusPill:['Pastille d’état','Status pill'], sub:['Sous-titre','Subtitle'], chips:['Puces','Chips'], add:['+ Ajouter…','+ Add…'],
+ heroTitle:['Titre','Title'], logo:['Logo','Logo'], meter:['Jauge','Gauge'], meterLabel:['Libellé de la jauge (vide : complétude)','Gauge label (empty: completeness)'], statusPill:['Pastille d’état','Status pill'], sub:['Sous-titre','Subtitle'], chips:['Puces','Chips'], add:['+ Ajouter…','+ Add…'],
  values:['Valeurs','Values'], countRows:['Compter les lignes de','Count the rows of'],
  vInfo:['Source : le rapport de validation de la fiche, tel qu’EBX le calcule. Les messages arrivent dans la langue de l’utilisateur.','Source: the record’s validation report, as EBX computes it. Messages come in the user’s language.'],
  vPreview:['Aperçu : {0} message(s) du rapport de la fiche « {1} ».','Preview: {0} message(s) from the report of record “{1}”.'],
@@ -312,6 +312,24 @@ const BL = {
  pivot:{cat:'relations', l:['Matrice (tableau croisé)','Matrix (cross table)'], d:['Les lignes d’une association croisées sur deux champs.','An association’s rows crossed on two fields.'], tags:'disponibilité canaux pays croisement availability',
    def:{a:'', rows:'', cols:'', value:{}},
    spec:[{k:'assoc', key:'a'}, {k:'tfield', key:'rows', of:'a', l:['Lignes','Rows']}, {k:'tfield', key:'cols', of:'a', l:['Colonnes','Columns']}, {k:'tfield', key:'value.field', of:'a', l:['Valeur (vide : une coche si la ligne existe)','Value (empty: a tick when the row exists)']}]},
+ heatmap:{cat:'kpi', l:['Matrice de chaleur','Heatmap'], d:['Les lignes d’une association comptées sur deux champs ordonnés (probabilité × impact d’un risque), colorées du vert au rouge.','An association’s rows counted on two ordered fields (probability × impact of a risk), coloured green to red.'], tags:'risque matrice probabilité impact criticité risk matrix',
+   def:{a:'', x:'', y:''},
+   spec:[{k:'assoc', key:'a'}, {k:'tfield', key:'x', of:'a', l:['Axe horizontal (ex. impact)','Horizontal axis (e.g. impact)']}, {k:'tfield', key:'y', of:'a', l:['Axe vertical (ex. probabilité)','Vertical axis (e.g. probability)']},
+     {k:'tfield', key:'label', of:'a', l:['Libellé au survol (vide : libellé de la ligne)','Hover label (empty: the row label)']}, {k:'hint', l:['L’ordre des axes est celui de l’énumération ; « only » filtre les lignes (voir la documentation).','Axis order follows the enumeration; “only” filters rows (see the documentation).']}]},
+ gantt:{cat:'relations', l:['Planning (Gantt)','Schedule (Gantt)'], d:['Une barre par ligne entre deux dates, prévu et réel, avec la date du jour.','One bar per row between two dates, planned and actual, with today’s date.'], tags:'phases planning jalons calendrier schedule gantt',
+   def:{a:'', start:'', end:''},
+   spec:[{k:'assoc', key:'a'}, {k:'tfield', key:'start', of:'a', types:['date','dt'], l:['Début prévu','Planned start']}, {k:'tfield', key:'end', of:'a', types:['date','dt'], l:['Fin prévue','Planned end']},
+     {k:'tfield', key:'actualStart', of:'a', types:['date','dt'], l:['Début réel','Actual start']}, {k:'tfield', key:'actualEnd', of:'a', types:['date','dt'], l:['Fin réelle','Actual end']},
+     {k:'tfield', key:'label', of:'a', l:['Libellé (vide : libellé de la ligne)','Label (empty: the row label)']}, {k:'tfield', key:'status', of:'a', l:['Couleur selon','Colour by']}, {k:'tones', key:'colors', of:'status', l:['Couleurs par valeur','Colours by value']}]},
+ compare:{cat:'kpi', l:['Prévu / réel','Planned / actual'], d:['Deux mesures d’une association additionnées, côte à côte, avec l’écart (budget et dépensé…).','Two measures of an association summed side by side, with the variance (budget and spent…).'], tags:'budget écart variance prévu réel dépensé planned actual',
+   def:{a:'', planned:'', actual:''},
+   spec:[{k:'assoc', key:'a'}, {k:'tfield', key:'planned', of:'a', types:NUMS, l:['Prévu','Planned']}, {k:'tfield', key:'actual', of:'a', types:NUMS, l:['Réel','Actual']}, {k:'tfield', key:'by', of:'a', l:['Détail par (vide : total seul)','Break down by (empty: total only)']},
+     {k:'loc', key:'plannedLabel', l:['Libellé du prévu','Planned label']}, {k:'loc', key:'actualLabel', l:['Libellé du réel','Actual label']}, {k:'str', key:'unit', l:['Unité (EUR, h…)','Unit (EUR, h…)']}, {k:'num', key:'decimals', def:0, l:['Décimales','Decimals']},
+     {k:'bool', key:'higherIsBetter', def:false, l:['Plus haut est mieux (recettes, heures produites)','Higher is better (revenue, hours produced)']}]},
+ coverage:{cat:'kpi', l:['Couverture','Coverage'], d:['Combien de lignes d’une association ont un champ renseigné, et lesquelles non (comptes non rattachés au plan groupe…).','How many rows of an association have a field filled, and which do not (accounts not mapped to the group chart…).'], tags:'couverture mapping rattachement complétude manquants coverage',
+   def:{a:'', field:''},
+   spec:[{k:'assoc', key:'a'}, {k:'tfield', key:'field', of:'a', l:['Champ attendu','Expected field']}, {k:'tfield', key:'label', of:'a', l:['Libellé des manquants (vide : libellé de la ligne)','Label of the missing (empty: the row label)']},
+     {k:'num', key:'target', def:100, l:['Objectif (%)','Target (%)']}, {k:'num', key:'max', def:8, l:['Manquants listés','Missing rows listed']}]},
  linked:{cat:'relations', l:['Fiche liée (aperçu)','Linked record (preview)'], d:['Les champs choisis de l’enregistrement visé par une clé étrangère, avec un lien pour l’ouvrir.','Chosen fields of the record a foreign key points to, with a link to open it.'], tags:'fournisseur marque référence supplier',
    def:{fk:'', fields:[], open:true},
    spec:[{k:'field', key:'fk', types:['fk'], l:['Clé étrangère','Foreign key']}, {k:'fkfields', key:'fields', of:'fk', l:['Champs affichés','Fields shown']}, {k:'bool', key:'open', def:true, l:['Lien « Ouvrir la fiche »','“Open the record” link']}]},
@@ -588,6 +606,14 @@ function previewMore(b){
       return `<div class="facts">${b.items.map(it => `<div class="fact"><b>—</b><span>${hasText(it.label) ? tx(it.label) : esc(cl({sum:['Somme','Sum'],avg:['Moyenne','Average'],min:['Minimum','Minimum'],max:['Maximum','Maximum'],count:['Lignes','Rows']}[it.fn || 'sum']) + (it.field ? ' · ' + tfl(b.a, it.field) : ''))}</span></div>`).join('')}</div>${indicative()}`;
     case 'pivot': if (!b.a || !b.rows || !b.cols) return setupNote();
       return `<div class="gtab"><table><thead><tr><th></th><th>${esc(tfl(b.a, b.cols))} 1</th><th>${esc(tfl(b.a, b.cols))} 2</th></tr></thead><tbody>${(rows.length ? rows.slice(0, 4) : ['…']).map(r => `<tr><th>${esc(r)}</th><td>✓</td><td>·</td></tr>`).join('')}</tbody></table></div>${indicative()}`;
+    case 'heatmap': if (!b.a || !b.x || !b.y) return setupNote();
+      return `<div class="hmx">${[2,1,0].map(y => [0,1,2].map(x => `<span class="t${(x+1)*(y+1) > 4 ? 'b' : (x+1)*(y+1) > 2 ? 'w' : 'o'}">${(x+y)%2 ? '' : x+y}</span>`).join('')).join('')}</div>${indicative()}`;
+    case 'gantt': if (!b.a || !b.start || !b.end) return setupNote();
+      return `<div class="barsx">${(rows.length ? rows.slice(0, 5) : ['A', 'B', 'C']).map((r, i) => `<span>${esc(r)}</span><span class="barx"><i style="margin-left:${i * 15}%;width:30%"></i></span>`).join('')}</div>${indicative()}`;
+    case 'compare': if (!b.a || !b.planned || !b.actual) return setupNote();
+      return `<div class="facts"><div class="fact"><b>—</b><span>${esc(tx(b.plannedLabel) || tfl(b.a, b.planned))}</span></div><div class="fact"><b>—</b><span>${esc(tx(b.actualLabel) || tfl(b.a, b.actual))}</span></div><div class="fact"><b>—</b><span>Δ</span></div></div>${indicative()}`;
+    case 'coverage': if (!b.a || !b.field) return setupNote();
+      return `<div class="more"><b>— %</b> ${esc(tfl(b.a, b.field))}</div>${indicative()}`;
     case 'linked': { if (!b.fk) return setupNote(); const fk = F[b.fk] || {};
       return `<b>${esc(val(b.fk) || '—')}</b>${(b.fields || []).map(p => { const f = (fk.tf || []).find(x => x.p === p); return `<div class="fr"><div class="fl">${esc(f ? T(f.lab) : p)}</div><div class="fv"><div class="w-ro">…</div></div></div>`; }).join('')}${b.open !== false ? `<div style="margin-top:6px"><span class="pbtn">${esc(c('openRecord'))}</span></div>` : ''}`; }
     case 'contacts': if (!b.a) return setupNote();
@@ -753,7 +779,7 @@ function whereIs(node){
   for (const {t, b} of blocks){ if (b.type === 'panel'){ const i = (b.fields || []).findIndex(f => f.p.startsWith(node + '/')); if (i >= 0) return {t, b, i}; } }
   return null;
 }
-const defTitle = b => ['grid','timeline','contacts','documents','chart','pivot','aggregates'].includes(b.type) || (b.type === 'gallery' && b.a) ? (b.a ? lab(b.a) : '') : b.type === 'linked' && b.fk ? lab(b.fk) : b.type === 'stepper' && b.field ? lab(b.field) : '';
+const defTitle = b => ['grid','timeline','contacts','documents','chart','pivot','aggregates','heatmap','gantt','compare','coverage'].includes(b.type) || (b.type === 'gallery' && b.a) ? (b.a ? lab(b.a) : '') : b.type === 'linked' && b.fk ? lab(b.fk) : b.type === 'stepper' && b.field ? lab(b.field) : '';
 const blockName = b => hasText(b.title) ? T(b.title) : defTitle(b) || bl(b.type);
 
 const isLoc = v => !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length > 0 && Object.keys(v).every(k => LOCALES.includes(k) && typeof v[k] === 'string');
@@ -881,7 +907,7 @@ function renderBlock(b){
       const m = creating ? 0 : Math.max(0, Math.min(100, Math.round(V[b.meter + '#n'] || +val(b.meter) || 0)));
       const st = !creating && b.status ? val(b.status) : '';
       inner = `<div class="hero"><div class="hero-l"><div class="logo">${esc((t || '?').slice(0,3))}</div><div style="min-width:0"><div class="ey">${esc(T(B.model.tableLabel))}${creating || !B.record.key ? '' : ' · #' + esc(B.record.key)}</div><h1>${esc(t)}</h1><div class="sub">${esc(sub)}</div><div class="chips">${chips}</div></div></div>
-        <div class="hero-r">${b.meter ? `<span class="meter" style="--v:${m}%"><i></i>${m} % <small>${esc(u('completeness'))}</small></span>` : ''}${st ? `<span class="w-badge warn">${esc(lab(b.status))} : ${esc(st)}</span>` : ''}</div></div>`; break; }
+        <div class="hero-r">${b.meter ? `<span class="meter" style="--v:${m}%"><i></i>${m} % <small>${esc(tx(b.meterLabel) || u('completeness'))}</small></span>` : ''}${st ? `<span class="w-badge warn">${esc(lab(b.status))} : ${esc(st)}</span>` : ''}</div></div>`; break; }
     case 'facts': {
       const items = (b.items || []).map(p => `<div class="fact"><b>${esc(val(p) || '—')}</b><span>${esc(lab(p))}</span></div>`);
       if (b.count && A[b.count]) items.push(`<div class="fact"><b>${creating ? '—' : A[b.count].n}</b><span>${esc(lab(b.count))}</span></div>`);
@@ -1132,7 +1158,7 @@ function renderInspector(){
     if (BL[b.type]) h += specHtml(BL[b.type].spec, b);
     if (b.type === 'panel') h += `<label class="chk"><input type="checkbox" id="ld-i-ro"${b.ro ? ' checked' : ''}> ${esc(c('allRo'))}</label><div class="fld"><span class="l">${esc(c('fields'))} (${(b.fields || []).length})</span><div class="list-mini">${(b.fields || []).map((f, i) => `<label><button type="button" class="btn small ghost" data-fsel="${i}" style="height:24px">${esc(hasText(f.label) ? T(f.label) : lab(f.p))}</button></label>`).join('')}</div></div>`;
     if (b.type === 'hero') h += `<div class="fld"><label for="ld-i-ht">${esc(c('heroTitle'))}</label><select id="ld-i-ht" data-bk="title">${fieldOpts(b.title, f => f.t === 'str' || f.t === 'fk')}</select></div>
-      <div class="fld"><label for="ld-i-hm">${esc(c('meter'))}</label><select id="ld-i-hm" data-bk="meter">${fieldOpts(b.meter, f => f.t === 'int' || f.t === 'dec')}</select></div>
+      <div class="fld"><label for="ld-i-hm">${esc(c('meter'))}</label><select id="ld-i-hm" data-bk="meter">${fieldOpts(b.meter, f => f.t === 'int' || f.t === 'dec')}</select></div>${b.meter ? locField('spec.meterLabel', c('meterLabel'), b.meterLabel, () => u('completeness')) : ''}
       <div class="fld"><label for="ld-i-hs">${esc(c('statusPill'))}</label><select id="ld-i-hs" data-bk="status">${fieldOpts(b.status, f => f.t === 'enum' || f.t === 'fk' || f.t === 'str')}</select></div>
       <div class="fld"><span class="l">${esc(c('sub'))}</span>${pathList('sub', b.sub)}</div><div class="fld"><span class="l">${esc(c('chips'))}</span>${pathList('chips', b.chips)}</div>`;
     if (b.type === 'facts') h += `<div class="fld"><span class="l">${esc(c('values'))}</span>${pathList('items', b.items)}</div><div class="fld"><label for="ld-i-fc">${esc(c('countRows'))}</label><select id="ld-i-fc" data-bk="count"><option value="">—</option>${assocOpts(b.count)}</select></div>`;
@@ -1316,7 +1342,7 @@ function newBlock(type, extra){
     grid:{a:(B.assocs[0] || {}).p || '', style:'native'}, map:{title:L('Localisation','Location','Posizione'), lat:'', lng:''},
     tree:{title:L('Structure du groupe','Group structure','Struttura del gruppo'), parent:'', children:''},
     hours:{title:L('Horaires d’ouverture','Opening hours','Orari di apertura'), week:{a:'', day:'', open:'', close:'', closed:''}, days:{}, exceptions:{a:'', date:'', open:'', close:'', closed:'', reason:''}, max:3, tz:''}, duplicates:{title:L('Doublons','Duplicates','Duplicati')},
-    note:{text:L('Texte d’aide pour l’utilisateur.','Help text for the user.','Testo di aiuto per l’utente.')}, custom:{cls:'', title:{}}}[type] || Object.assign({title:BL[type] && !['timeline','contacts','documents','chart','pivot','aggregates','linked','stepper'].includes(type) ? L(BL[type].l[0], BL[type].l[1]) : {}}, BL[type] ? BL[type].def : {});
+    note:{text:L('Texte d’aide pour l’utilisateur.','Help text for the user.','Testo di aiuto per l’utente.')}, custom:{cls:'', title:{}}}[type] || Object.assign({title:BL[type] && !['timeline','contacts','documents','chart','pivot','aggregates','linked','stepper','heatmap','gantt','compare','coverage'].includes(type) ? L(BL[type].l[0], BL[type].l[1]) : {}}, BL[type] ? BL[type].def : {});
   S.blocks[id] = Object.assign({id, type}, JSON.parse(JSON.stringify(base)), extra || {});
   return id;
 }

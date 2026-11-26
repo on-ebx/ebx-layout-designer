@@ -22,7 +22,7 @@ public final class BlockTitles
 		}
 		final String type = pBlock.path("type").asText();
 		if ("grid".equals(type) || "timeline".equals(type) || "contacts".equals(type) || "documents".equals(type) || "chart".equals(type) || "pivot".equals(type)
-			|| "aggregates".equals(type) || ("gallery".equals(type) && !pBlock.path("a").asText("").isEmpty()))
+			|| "aggregates".equals(type) || "heatmap".equals(type) || "gantt".equals(type) || "compare".equals(type) || "coverage".equals(type) || ("gallery".equals(type) && !pBlock.path("a").asText("").isEmpty()))
 		{
 			return BlockTitles.label(pRoot, pLocale, pBlock.path("a").asText());
 		}

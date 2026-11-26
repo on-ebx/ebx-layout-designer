@@ -317,6 +317,14 @@ final class LayoutPane implements UIFormPane
 			return MoreBlocks.changes(this.rc, b);
 		case "usedBy":
 			return MoreBlocks.usedBy(this.rc, b);
+		case "heatmap":
+			return ChartBlocks.heatmap(this.rc, b);
+		case "gantt":
+			return ChartBlocks.gantt(this.rc, b);
+		case "compare":
+			return ChartBlocks.compare(this.rc, b);
+		case "coverage":
+			return ChartBlocks.coverage(this.rc, b);
 		default:
 			return null;
 		}
@@ -602,10 +610,12 @@ final class LayoutPane implements UIFormPane
 		if (!meter.isEmpty() && !this.rc.creating && this.rc.canRead(meter))
 		{
 			final Object raw = this.rc.raw(meter);
+			// 1.22.0: "meterLabel" names what the meter measures (progress, score…); completeness by default
+			final String meterLabel = LText.pick(b.get("meterLabel"), locale, locale);
 			int m = raw instanceof Number ? ((Number) raw).intValue() : raw instanceof BigDecimal ? ((BigDecimal) raw).intValue() : 0;
 			m = Math.max(0, Math.min(100, m));
 			w.add("<span class=\"ldf-meter\"><i><b style=\"width:").add(String.valueOf(m)).add("%\"></b></i>").add(String.valueOf(m)).add(" % <small>")
-				.add(LayoutPane.esc(RuntimeText.get("completeness", locale))).add("</small></span>");
+				.add(LayoutPane.esc(meterLabel.isEmpty() ? RuntimeText.get("completeness", locale) : meterLabel)).add("</small></span>");
 		}
 		final String status = b.path("status").asText("");
 		if (!status.isEmpty() && !this.rc.creating)

@@ -70,8 +70,9 @@ public final class RuntimeText
 		RuntimeText.put("oc.open", "Open the record", "Ouvrir la fiche", "Apri la scheda");
 		RuntimeText.put("oc.oneOther", "+ 1 other entity", "+ 1 autre entit\u00e9", "+ 1 altra entit\u00e0");
 		RuntimeText.put("oc.others", "+ {n} other entities", "+ {n} autres entit\u00e9s", "+ altre {n} entit\u00e0");
-		RuntimeText.put("oc.oneChild", "1 direct subsidiary", "1 filiale directe", "1 controllata diretta");
-		RuntimeText.put("oc.children", "{n} direct subsidiaries", "{n} filiales directes", "{n} controllate dirette");
+		RuntimeText.put("oc.oneChild", "1 entity directly below", "1 entit\u00e9 directement dessous", "1 entit\u00e0 direttamente sotto");
+		RuntimeText.put("oc.children", "{n} entities directly below", "{n} entit\u00e9s directement dessous", "{n} entit\u00e0 direttamente sotto");
+		RuntimeText.put("oc.noChild", "No entity below", "Aucune entit\u00e9 dessous", "Nessuna entit\u00e0 sotto");
 		RuntimeText.put("oc.below", "{n} entities below", "{n} entit\u00e9s dessous", "{n} entit\u00e0 sotto");
 		RuntimeText.put("oc.level", "level {n} of {m}", "niveau {n} sur {m}", "livello {n} di {m}");
 		RuntimeText.put("oc.search", "Search an entity of the group", "Chercher une entit\u00e9 du groupe", "Cerca un'entit\u00e0 del gruppo");
@@ -207,6 +208,16 @@ public final class RuntimeText
 		RuntimeText.put("absent", "Field not on this form", "Champ absent de cette fiche", "Campo assente da questa scheda");
 		RuntimeText.put("offForm", "Not on this form", "Hors de la fiche", "Fuori dalla scheda");
 		RuntimeText.put("more", "{n} more", "{n} autres", "altri {n}");
+		RuntimeText.put("hmOutside", "{n} rows outside the matrix", "{n} lignes hors matrice", "{n} righe fuori matrice");
+		RuntimeText.put("gtPlanned", "Planned", "Pr\u00e9vu", "Previsto");
+		RuntimeText.put("gtActual", "Actual", "R\u00e9el", "Effettivo");
+		RuntimeText.put("gtOnTime", "Done on time", "Termin\u00e9 \u00e0 temps", "Concluso in tempo");
+		RuntimeText.put("gtRunning", "Running", "En cours", "In corso");
+		RuntimeText.put("gtLate", "Late", "En retard", "In ritardo");
+		RuntimeText.put("cmpVariance", "Variance", "\u00c9cart", "Scostamento");
+		RuntimeText.put("covOf", "{n} of {m} with {f}", "{n} sur {m} avec {f}", "{n} su {m} con {f}");
+		RuntimeText.put("covMissing", "{n} without it", "{n} sans", "{n} senza");
+		RuntimeText.put("covMore", "+ {n} more", "+ {n} autres", "+ altri {n}");
 		RuntimeText.put("noRow", "No rows.", "Aucune ligne.", "Nessuna riga.");
 		RuntimeText.put("moreAtLeast", "Only the first {n} are shown: open the related table to see them all.",
 			"Seuls les {n} premiers sont affichés : ouvrez la table liée pour les voir tous.",

@@ -1,5 +1,17 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.22.0 (2026-10-19)
+
+- **Four new blocks over an association's rows** ([LAYOUT-FORMAT.md](docs/LAYOUT-FORMAT.md#blocks-added-in-1220)):
+  `heatmap` (a matrix of two ordered fields, e.g. probability × impact of a project's risks), `gantt` (planned and actual
+  bars with today's line, e.g. project phases), `compare` (planned against actual with the variance, overall and per
+  value, e.g. budget lines) and `coverage` (how many rows have a field filled and which do not, e.g. local accounts mapped
+  to the group chart). All four take `only` to keep some rows. They are in the designer's palette.
+- **Hero gauge label**: `meterLabel` names what the gauge measures (progress, score…); it said "completeness" whatever
+  the field.
+- **Org chart wording**: a record with nothing below no longer reads "1 direct subsidiary"; the counts say "entities
+  directly below", which fits any hierarchy (cost centres, organisation units), not only companies.
+
 ## 1.21.1 (2026-10-16)
 
 - **Typing no longer queues searches.** EBX answers a page's requests one after the other, so a request replaced by a newer

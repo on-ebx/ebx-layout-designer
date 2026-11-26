@@ -466,3 +466,6 @@
 .ld-app .bin.over .lid{transform:rotate(18deg) translateY(-1px)}
 @media (max-width:1280px){.ld-app .bench.has-sel .bin{right:calc(min(360px,100vw - 24px) + 28px)}}
 @media (prefers-reduced-motion: reduce){.ld-app .bin-ic,.ld-app .bin .lid{transition:none}}
+/* 1.22.0 heatmap preview */
+.ld-app .hmx{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;max-width:240px}.ld-app .hmx span{height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.ld-app .hmx .to{background:#E7F8EF;color:#0B7A4B}.ld-app .hmx .tw{background:#FFF7E6;color:#8A4B00}.ld-app .hmx .tb{background:#FDEDE7;color:#C73200}

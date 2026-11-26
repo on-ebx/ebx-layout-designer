@@ -12,7 +12,7 @@
     var total = function (k) { if (totals[k] != null) return totals[k]; var n = 0; (kids[k] || []).forEach(function (c) { n += 1 + total(c); }); return (totals[k] = n); };
     var path = function (k) { var p = [], seen = {}; while (k != null && byKey[k] && !seen[k]) { seen[k] = 1; p.unshift(k); k = byKey[k].p; } return p; };
     var depth = function (k) { var m = 0; (kids[k] || []).forEach(function (c) { m = Math.max(m, depth(c)); }); return 1 + m; };
-    var plural = function (n, one, many) { return (n > 1 ? many : one).replace('{n}', n); };
+    var plural = function (n, one, many, none) { return (n === 0 && none ? none : n > 1 ? many : one).replace('{n}', n); };
     var dot = function (d) { return '<span class="ldf-oc-dot" style="background:' + esc(d.col) + '"></span>'; };
     var link = function (d, cls, inner) { return '<a class="' + cls + '" data-k="' + esc(d.k) + '" href="' + esc(d.u || '#') + '"' + (D.newTab ? ' target="_blank" rel="noopener"' : '') + ' title="' + esc(T.open) + '">' + inner + '</a>'; };
     path(focus).forEach(function (k) { treeOpen[k] = 1; });
@@ -25,7 +25,7 @@
       });
       var t = total(focus);
       h += '</div><div class="ldf-oc-focus"><span class="ldf-oc-nm">' + esc(me.n) + '</span><span class="ldf-oc-facts">' + (me.cv ? '<span>' + dot(me) + ' ' + esc(me.cv) + '</span>' : '') + (me.s ? '<span>' + esc(me.s) + '</span>' : '')
-        + '<span>' + esc(plural(ch.length, T.oneChild, T.children)) + '</span>' + (t > ch.length ? '<span>' + esc(T.below.replace('{n}', t)) + '</span>' : '') + '<span>' + esc(T.level.replace('{n}', p.length).replace('{m}', depth(root))) + '</span></span></div>';
+        + '<span>' + esc(plural(ch.length, T.oneChild, T.children, T.noChild)) + '</span>' + (t > ch.length ? '<span>' + esc(T.below.replace('{n}', t)) + '</span>' : '') + '<span>' + esc(T.level.replace('{n}', p.length).replace('{m}', depth(root))) + '</span></span></div>';
       if (ch.length) {
         // a few subsidiaries sit centred under the record, each hung on the line; many fill a grid
         h += '<div class="ldf-oc-bus"><i></i></div><div class="ldf-oc-kids' + (ch.length <= 6 ? ' ldf-oc-few' : '') + '">';

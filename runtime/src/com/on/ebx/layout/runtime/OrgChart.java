@@ -139,7 +139,7 @@ final class OrgChart
 		data.put("newTab", "newTab".equals(openIn));
 		data.put("cut", cut);
 		final ObjectNode t = data.putObject("t");
-		for (final String k : new String[] { "open", "oneOther", "others", "oneChild", "children", "below", "level", "search", "expandAll", "collapseAll", "expand",
+		for (final String k : new String[] { "open", "oneOther", "others", "oneChild", "children", "noChild", "below", "level", "search", "expandAll", "collapseAll", "expand",
 			"collapse", "noMatch", "ringsAria", "ringsNote", "switched", "cut" })
 		{
 			t.put(k, RuntimeText.get("oc." + k, rc.locale));
