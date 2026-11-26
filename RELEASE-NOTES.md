@@ -1,5 +1,20 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.27.0 (2026-11-02)
+
+- **Breaking:** `asOfTree`, `stateTimeline` and `delta` leave the Layout Designer. They were written for one project
+  (ROSA) and are now registered components of its module `ebx-rosa`, unchanged: write `{"type": "custom", "cls":
+  "rosa.asOfTree", …}` (and `rosa.stateTimeline`, `rosa.delta`) with the same keys. A layout that still names the old
+  types shows unknown blocks until it is converted; `layout_validate` names the replacement. The explorer's "in force
+  on" date (`asOf`) and the computed value `stateAt` stay: they are generic, and the `ldfAsOf:<user>` key the explorer
+  writes is still read by `rosa.asOfTree`.
+- Registered components get what the built-in blocks use: `ComponentSupport.current()` (record, association rows,
+  linked record, displayed values, field and record permissions, links that open a record in EBX's modal pop-up,
+  once-per-display style sheets and scripts), `LayoutComponent.designerSpec()` (the component's settings in the
+  designer's inspector, same controls as the built-in blocks; carried by `layout_describe_table` and the model export)
+  and `LayoutComponent.title()` (a default panel title). A component that does not use them works as before.
+- Runtime jar changed: installing 1.27.0 needs a Tomcat restart, like every runtime change.
+
 ## 1.26.0 (2026-10-26)
 
 - `asOfTree`, `stateTimeline`, `delta`: a click on an entity, a state or a row of a report opens the record in EBX's own modal

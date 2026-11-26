@@ -137,12 +137,34 @@ final class LayoutMcpTools
 			new Param("expected_version", "integer", "The version read before editing. Omit to overwrite.", false),
 			new Param("dry_run", "boolean", "true: check only, write nothing.", false)));
 
-	/** Block types of ebx-form-layout/1 (LAYOUT-FORMAT.md, up to 1.24). An unknown one is a warning: a newer runtime may know it. */
+	/**
+	 * Block types of ebx-form-layout/1 (LAYOUT-FORMAT.md). An unknown one is a warning: a newer runtime may know it. The
+	 * blocks of effective-dated models (asOfTree, stateTimeline, delta, 1.24.0-1.26.0) are components of the ROSA module
+	 * since 1.27.0.
+	 */
 	static final Set<String> BLOCK_TYPES = new HashSet<String>(Arrays.asList("panel", "hero", "facts", "validation", "grid", "map", "tree", "hours",
 		"duplicates", "note", "custom", "timeline", "history", "completeness", "stepper", "checklist", "chart", "aggregates", "pivot", "linked",
 		"contacts", "gallery", "documents", "links", "validity", "address", "hierarchy", "recordInfo", "changes", "usedBy", "orgChart",
-		"valueHistory", "sitesMap", "sourceValues", "workflowTasks", "translations", "inheritance", "actions", "heatmap", "gantt", "compare", "coverage",
-		"asOfTree", "stateTimeline", "delta"));
+		"valueHistory", "sitesMap", "sourceValues", "workflowTasks", "translations", "inheritance", "actions", "heatmap", "gantt", "compare", "coverage"));
+
+	/** 1.27.0: what a component says of its settings ({@link LayoutComponent#designerSpec()}), null when it says nothing or not JSON. */
+	static JsonNode designerSpec(final LayoutComponent pComponent)
+	{
+		try
+		{
+			final String spec = pComponent.designerSpec();
+			if (spec == null || spec.trim().isEmpty())
+			{
+				return null;
+			}
+			final JsonNode n = LayoutStore.json().readTree(spec);
+			return n != null && n.isObject() ? n : null;
+		}
+		catch (final Exception | LinkageError ex)
+		{
+			return null;
+		}
+	}
 
 	/** Match and Merge's technical nodes: a layout should leave them out. */
 	private static final Pattern TECHNICAL = Pattern.compile("^/(Association_Reverse|Linked_Field_[A-Za-z]+)$");
@@ -318,7 +340,12 @@ final class LayoutMcpTools
 		final ArrayNode components = out.putArray("components");
 		for (final java.util.Map.Entry<String, LayoutComponent> e : LayoutComponents.all().entrySet())
 		{
-			components.addObject().put("name", e.getKey()).put("label", e.getValue().getLabel(this.locale));
+			final ObjectNode c = components.addObject().put("name", e.getKey()).put("label", e.getValue().getLabel(this.locale));
+			final JsonNode spec = LayoutMcpTools.designerSpec(e.getValue());
+			if (spec != null)
+			{
+				c.set("settings", spec);
+			}
 		}
 		final Set<String> published = this.published();
 		if (published != null)
@@ -624,7 +651,9 @@ final class LayoutMcpTools
 			}
 			if (!LayoutMcpTools.BLOCK_TYPES.contains(type))
 			{
-				pOut.add(new Finding(false, where, "Unknown block type \"" + type + "\" for this runtime: it would not be drawn."));
+				pOut.add(new Finding(false, where, "asOfTree".equals(type) || "stateTimeline".equals(type) || "delta".equals(type)
+					? "Block type \"" + type + "\" left the Layout Designer in 1.27.0: it is the component {\"type\": \"custom\", \"cls\": \"rosa." + type + "\"} of the ROSA module (same settings)."
+					: "Unknown block type \"" + type + "\" for this runtime: it would not be drawn."));
 			}
 			if ("panel".equals(type))
 			{

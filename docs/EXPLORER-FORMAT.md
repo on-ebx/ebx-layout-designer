@@ -124,8 +124,8 @@ records without a value ("(empty)" by default).
 For a table of effective-dated states (one row per version of an entity, from a date to a date). The page shows a date
 input (today by default) and a *Today* button; only the rows whose `from` ≤ date ≤ `to` (or empty `to`) count: the total,
 the page, the tiles and every facet's counts. The chosen date is kept per user in the browser tab (`sessionStorage`,
-key `ldfAsOf:<user>`) and shared: another explorer with a date, and the *Hierarchy at a date* block of a record form,
-open on the same date. The date filter is a SQL comparison (`from <= DATE 'yyyy-MM-dd'`), so the explorer's statements
+key `ldfAsOf:<user>`) and shared: another explorer with a date, and any record-form component that reads the same key (the ROSA module's
+`rosa.asOfTree`), open on the same date. The date filter is a SQL comparison (`from <= DATE 'yyyy-MM-dd'`), so the explorer's statements
 take the SQL route. When the user may not read one of the two fields, the page shows no date and nothing is filtered.
 Set in the designer: explorer settings, *“In force on” date*.
 

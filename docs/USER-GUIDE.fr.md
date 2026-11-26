@@ -278,6 +278,23 @@ Il apparaît alors dans la palette sous *Composants enregistrés* ; le runtime o
 du bloc, et le composant écrit à l'intérieur. Le module n'a besoin du jar runtime qu'à la compilation (il est dans
 celui du serveur à l'exécution).
 
+Depuis la 1.27.0 :
+
+- `ComponentSupport.current()`, dans `write`, donne ce qu'utilisent les blocs du designer : la fiche (`record()`, null
+  pendant une création), `rows(association, max)` (les lignes que l'utilisateur peut voir, lues une fois par affichage),
+  `linked(cléÉtrangère)`, les valeurs comme EBX les affiche (`display`, `raw`, `key`, `date`), les permissions de champ et
+  de fiche de l'utilisateur (`canRead`, `canSee`), `openAttributes(fiche)` (un lien qui ouvre une fiche dans la fenêtre
+  modale d'EBX, une sous-session du formulaire), `once(clé)` (une feuille de style ou un script écrits une fois par
+  affichage), `userId()`, `text(...)` et `label(...)`.
+- `designerSpec()` renvoie un JSON `{"def": {…clés par défaut…}, "spec": […contrôles…], "d": ["fr", "en"]}` : le
+  designer affiche alors les réglages du composant dans l'inspecteur, avec les mêmes contrôles que ses propres blocs
+  (`field`, `tfield`, `assoc`, `table`, `col`, `items`, `loc`, `tones`, `num`, `hint` ; `when` `{"filled": clé}` /
+  `{"empty": clé}`). `layout_describe_table` et l'export du modèle le portent (`settings` / `designer`).
+- `title(bloc, locale)` donne au panneau un titre par défaut quand la mise en page n'en pose pas.
+
+Exemple complet : le module ROSA (`ebx-rosa`), dont `rosa.asOfTree`, `rosa.stateTimeline` et `rosa.delta` étaient des
+blocs du designer jusqu'à la 1.26.0.
+
 ## 10. Limites
 
 - **Modèles DMA** : le designer ne sait pas écrire lui-même la déclaration (déclarez la classe dans l'écran du modèle

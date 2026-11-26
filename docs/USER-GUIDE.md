@@ -250,6 +250,22 @@ It then appears in the palette under *Registered components*; the runtime opens 
 note, and the component writes inside it. The module needs the runtime jar on its compile classpath only (it is on the
 server's at run time).
 
+Since 1.27.0:
+
+- `ComponentSupport.current()`, inside `write`, gives what the built-in blocks use: the record (`record()`, null while
+  one is created), `rows(association, max)` (the rows the user may see, read once per display), `linked(foreignKey)`,
+  values as EBX displays them (`display`, `raw`, `key`, `date`), the user's field and record permissions (`canRead`,
+  `canSee`), `openAttributes(record)` (a link that opens a record in EBX's modal pop-up, a sub-session of the form),
+  `once(key)` (a style sheet or a script written once per display), `userId()`, `text(...)` and `label(...)`.
+- `designerSpec()` returns a JSON `{"def": {…default keys…}, "spec": […controls…], "d": ["fr", "en"]}`: the designer
+  then shows the component's settings in the inspector, with the same controls as its own blocks (`field`, `tfield`,
+  `assoc`, `table`, `col`, `items`, `loc`, `tones`, `num`, `hint`; `when` `{"filled": key}` / `{"empty": key}`).
+  `layout_describe_table` and the model export carry it as `settings` / `designer`.
+- `title(block, locale)` gives the panel a default title when the layout sets none.
+
+Worked example: the ROSA module (`ebx-rosa`), whose `rosa.asOfTree`, `rosa.stateTimeline` and `rosa.delta` were the
+designer's own blocks until 1.26.0.
+
 ## 10. Limitations
 
 - **DMA models**: the designer cannot write the declaration itself (declare the class in the model screen or with

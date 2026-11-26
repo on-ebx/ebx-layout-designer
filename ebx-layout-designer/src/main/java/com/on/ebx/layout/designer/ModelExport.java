@@ -198,6 +198,12 @@ final class ModelExport
 			{
 				labels.put(l.toLanguageTag(), e.getValue().getLabel(l));
 			}
+			// 1.27.0: the component's settings, edited in the inspector like a built-in block's
+			final JsonNode spec = LayoutMcpTools.designerSpec(e.getValue());
+			if (spec != null)
+			{
+				c.set("designer", spec);
+			}
 		}
 		// 1.17.1: the published workflows, so that the designer flags a button or a condition naming one that is gone
 		try

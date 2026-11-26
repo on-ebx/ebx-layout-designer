@@ -245,8 +245,7 @@ final class LayoutPane implements UIFormPane
 			: "valueHistory".equals(type) ? ValueHistory.render(this.rc, b, bid) : "sitesMap".equals(type) ? SitesMap.render(this.rc, b, bid)
 			: "workflowTasks".equals(type) ? MdmBlocks.workflowTasks(this.rc, b, w) : "actions".equals(type) ? ActionsBlock.render(this.rc, b, w) : "sourceValues".equals(type) ? MdmBlocks.sourceValues(this.rc, b)
 			: "translations".equals(type) ? MdmBlocks.translations(this.rc, b) : "inheritance".equals(type) ? MdmBlocks.inheritance(this.rc, b)
-			: "asOfTree".equals(type) ? EffectiveBlocks.asOfTree(this.rc, b, w) : "stateTimeline".equals(type) ? EffectiveBlocks.stateTimeline(this.rc, b, w)
-			: "delta".equals(type) ? EffectiveBlocks.delta(this.rc, b, w) : this.more(type, b);
+			: this.more(type, b);
 		if (inner != null)
 		{
 			this.startPanel(w, b, id, this.rc.blockTitle(b), null, null);
@@ -1132,16 +1131,38 @@ final class LayoutPane implements UIFormPane
 	{
 		final String name = b.path("cls").asText("");
 		final LayoutComponent component = LayoutComponents.get(name);
-		this.startPanel(w, b, id, this.rc.text(b.get("title")), null, null);
 		if (component == null)
 		{
+			this.startPanel(w, b, id, this.rc.text(b.get("title")), null, null);
 			w.add("<div class=\"ldf-more\">").add(LayoutPane.esc(RuntimeText.get("componentMissing", this.rc.locale, name))).add("</div>");
+			w.add("</section>");
+			return;
 		}
-		else
+		// 1.27.0: the component reads the runtime through ComponentSupport.current(), its title included
+		ComponentSupport.enter(this.rc, w);
+		try
 		{
+			String title = this.rc.text(b.get("title"));
+			if (title.isEmpty())
+			{
+				try
+				{
+					final String own = component.title(b, this.rc.locale);
+					title = own == null ? "" : own;
+				}
+				catch (final RuntimeException ex)
+				{
+					title = "";
+				}
+			}
+			this.startPanel(w, b, id, title, null, null);
 			component.write(w, this.rc.context, b, this.rc.locale);
+			w.add("</section>");
 		}
-		w.add("</section>");
+		finally
+		{
+			ComponentSupport.leave();
+		}
 	}
 
 	static String esc(final String s)
