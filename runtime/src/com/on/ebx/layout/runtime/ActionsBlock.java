@@ -44,7 +44,7 @@ final class ActionsBlock
 		for (final JsonNode a : b.path("items"))
 		{
 			i++;
-			if (!LText.hasText(a.get("label")) || !rc.xpath(a.path("cond").asText(""), true))
+			if (!LText.hasText(a.get("label")) || !rc.xpath(a.path("cond").asText(""), true) || !WorkflowState.allows(rc, a.get("wf")))
 			{
 				continue;
 			}

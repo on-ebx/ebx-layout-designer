@@ -181,6 +181,15 @@ it).
 Administrators see everything (an option can turn that off). **This is not security**: a field left out of the form stays
 readable in the table view, an export or the APIs; EBX permissions protect the data.
 
+### Conditions tied to workflows (1.17.0)
+
+In the inspector of any block, and of each button of an *Actions* block, *Depending on workflows* hides it:
+
+- by **form context**: *Outside a workflow* (for example, no "Change bank details" button inside a task) or *In a workflow
+  task* (a help block for the person doing the task);
+- by **request running on the record**: *Hide while running* or *Only while running*, for one workflow publication or any,
+  given the variables that point to the record (`tiersXPath`…).
+
 ## 8. Save, declare, use
 
 - **Save** writes the layout (JSON) as a new version in `LayoutDesigner/FormLayout`. It shows at the next opening of a

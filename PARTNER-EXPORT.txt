@@ -1,3 +1,3 @@
-Exported from EBX-Layout-Designer commit ff9cdaffc381666a9c4016903f6ef8d4ecbb0c4c
-1.16.0: counts and lookups through an association read the linked record's own key path; enumeration labels of values no record holds; no Match and Merge technical association offered
+Exported from EBX-Layout-Designer commit f2821c6883b71db2606da7cad53c0707faaf5d3a
+User guides: the workflow conditions belong to "Who sees what", not to the limitations
 This repository is generated: every sync replaces its whole content. A change made here is lost at the next sync.

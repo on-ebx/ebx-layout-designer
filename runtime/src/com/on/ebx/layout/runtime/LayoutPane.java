@@ -137,6 +137,11 @@ final class LayoutPane implements UIFormPane
 		{
 			return;
 		}
+		// 1.17.0: only outside / only inside a workflow task, hidden or shown while a workflow runs for the record
+		if (!WorkflowState.allows(this.rc, b.get("wf")))
+		{
+			return;
+		}
 		if (!this.readable(b))
 		{
 			return;

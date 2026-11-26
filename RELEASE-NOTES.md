@@ -1,5 +1,14 @@
 # Layout Designer for ON EBX: release notes
 
+## 1.17.0 (2026-10-14)
+
+- **Conditions tied to workflows**, on any block and on each button of an *Actions* block (inspector, *Depending on
+  workflows*; layout key `"wf"`): show it only outside a workflow task or only inside one (`Session.isInWorkflowInteraction`),
+  and hide it, or show it only, while a workflow instance is running for the record (one publication or any, through the
+  variables that hold the record's XPath or key). Example: no "Change bank details" button inside a task, nor while a
+  bank-details change is already running for the supplier. The running instances are looked up once per display; the
+  *Workflows in progress* block now shares that lookup.
+
 ## 1.16.0 (2026-10-14)
 
 - **Explorers: a search page over any table, drawn like a form.** A new service, *Design the explorer* (Actions menu of

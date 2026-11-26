@@ -325,3 +325,18 @@ it opens the module service `LayoutAction` in EBX's pop-up, which asks for confi
 the first task, inside the perspective the form was opened in. The service reads the button again from the layout as the
 user sees it (never from the address). Nothing is shown while a record is created, and a block with no button the user
 may use is not drawn.
+
+### Conditions tied to workflows (since 1.17.0)
+
+Any block, and any button of an `actions` block, may carry `"wf"`:
+
+| Key | Values | Effect |
+|---|---|---|
+| `ctx` | `outside`, `inside` | shown only when the form is NOT opened from a workflow task, or only when it is (`Session.isInWorkflowInteraction(true)`) |
+| `running` | `hide`, `show` | hidden, or shown only, while an unfinished workflow instance holds the record's XPath or primary key in one of `vars` |
+| `pub` | a publication name | restricts `running` to that publication; empty: every publication |
+| `vars` | variable names, comma separated | the data context variables that point to the record (`tiersXPath`…) |
+
+Example: the "Change bank details" button hidden inside any workflow task and while a bank-details change is running for
+the supplier: `"wf": {"ctx": "outside", "running": "hide", "pub": "FournisseursChangementRIB", "vars": "tiersXPath"}`.
+The running instances are looked up once per display and shared with the *Workflows in progress* block.

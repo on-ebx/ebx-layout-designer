@@ -222,6 +222,16 @@ const cl = x => typeof x === 'string' ? c(x) : (x[UI] || x[1] || x[0]);
 const CATS = {structure:['Structure','Structure'], identity:['Identité','Identity'], kpi:['Indicateurs','Indicators'], quality:['Qualité','Quality'], relations:['Relations','Relations'],
   location:['Localisation','Location'], time:['Temps','Time'], media:['Médias','Media'], actions:['Actions','Actions'], ext:['Extension','Extension']};
 const TONES = [['ok',['Vert','Green']],['warn',['Orange','Orange']],['bad',['Rouge','Red']],['accent',['Violet','Purple']],['info',['Bleu','Blue']],['muted',['Gris','Grey']]];
+/* 1.17.0: conditions tied to workflows, for a block and for a button of an Actions block */
+const WFSPEC = [
+  {k:'choice', key:'wf.ctx', def:'', l:['Contexte de la fiche','Form context'], opts:[['',['Toujours','Always']],['outside',['Hors workflow','Outside a workflow']],['inside',['Dans une tâche de workflow','In a workflow task']]]},
+  {k:'choice', key:'wf.running', def:'', l:['Demande en cours sur la fiche','Request running on the record'], opts:[['',['Ignorer','Ignore']],['hide',['Masquer si en cours','Hide while running']],['show',['Seulement si en cours','Only while running']]]},
+  {k:'str', key:'wf.pub', when:o => !!(o.wf && o.wf.running), l:['Publication de workflow (vide : toutes)','Workflow publication (empty: any)'], ph:'FournisseursChangementRIB'},
+  {k:'str', key:'wf.vars', when:o => !!(o.wf && o.wf.running), l:['Variables qui désignent la fiche (séparées par des virgules)','Variables that point to the record (comma separated)'], ph:'tiersXPath'},
+  {k:'hint', when:o => !!(o.wf && (o.wf.ctx || o.wf.running)), l:['« Dans une tâche » : la fiche est ouverte depuis une tâche de workflow. « Demande en cours » : une instance non terminée porte l’XPath ou la clé de la fiche dans une des variables. Vérifié à chaque affichage.','"In a workflow task": the form is opened from a workflow task. "Request running": an unfinished instance holds the record’s XPath or key in one of the variables. Checked at each display.']}
+];
+const wfTag = w => [w.ctx === 'outside' ? cl(['hors workflow','outside workflow']) : w.ctx === 'inside' ? cl(['dans une tâche','in a task']) : '',
+  w.running === 'hide' ? cl(['masqué si demande en cours','hidden while a request runs']) : w.running === 'show' ? cl(['si demande en cours','while a request runs']) : ''].filter(Boolean).join(' · ');
 const NUMS = ['int','dec'];
 const getP = (o, path) => path.split('.').reduce((x, k) => x == null ? undefined : x[k], o);
 function setP(o, path, v){
@@ -331,7 +341,7 @@ const BL = {
      {k:'bool', key:'single', def:false, l:['Une demande à la fois par fiche (une demande en cours s’ouvre au lieu d’en lancer une autre)','One request at a time per record (a request in progress opens instead of launching another)']},
      {k:'str', key:'service', l:['Ou un service à ouvrir sur la fiche (module@Service)','Or a service to open on the record (module@Service)'], ph:'ebx-tiers@ChangementRib'},
      {k:'choice', key:'tone', def:'', l:['Couleur','Colour'], opts:[['',['Par défaut','Default']]].concat(TONES)},
-     {k:'str', key:'cond', l:['Afficher seulement si (XPath sur la fiche)','Show only if (XPath on the record)'], ph:"./statut='ACTIF'"}]},
+     {k:'str', key:'cond', l:['Afficher seulement si (XPath sur la fiche)','Show only if (XPath on the record)'], ph:"./statut='ACTIF'"}].concat(WFSPEC)},
      {k:'hint', l:['Un bouton de workflow n’apparaît qu’à qui peut lancer la publication ; il demande confirmation, lance le workflow au nom de l’utilisateur et ouvre la première tâche. Rien n’est affiché pendant une création.','A workflow button shows only to who may launch the publication; it asks for confirmation, launches the workflow as the user and opens the first task. Nothing is shown while a record is created.']}]},
  workflowTasks:{cat:'actions', l:['Workflows en cours','Workflows in progress'], d:['Les workflows ouverts sur la fiche : qui doit agir, depuis quand, avec la tâche à ouvrir.','The workflows open on the record: who must act, since when, with the task to open.'], tags:'workflow tâches validation demande approbation tasks approval inbox',
    def:{variables:''},
@@ -478,6 +488,7 @@ function specBase(){
 /* behaviours of a block (live "show if") and of a panel (fields driven by a configuration table) */
 function behaviourBlockHtml(b){
   let h = `<h3 class="sub">${esc(c('behaviours'))}</h3>` + condHtml('showIf', b.showIf, ['Afficher seulement si (en direct)','Show only if (live)']);
+  h += `<h3 class="sub">${esc(cl(['Selon les workflows','Depending on workflows']))}</h3>` + specHtml(WFSPEC, b, '');
   if (b.showIf && b.type === 'panel') h += ctlHtml({k:'choice', key:'onHide', def:'keep', l:['Valeurs des champs cachés','Values of hidden fields'], opts:[['keep',['Gardées','Kept']],['clear',['Vidées','Cleared']]]}, b, '');
   if (b.type === 'panel') h += ctlHtml({k:'choice', key:'tone', def:'', l:['Couleur du panneau','Panel colour'], opts:[['',['Aucune','None']],['ok',['Vert (ok)','Green (ok)']],['warn',['Orange (attention)','Orange (warning)']],['bad',['Rouge (anomalie)','Red (problem)']],['info',['Bleu (info)','Blue (info)']],['accent',['Violet','Purple']],['muted',['Gris','Grey']]]}, b, '');
   if (b.type === 'panel'){
@@ -812,7 +823,7 @@ function audTags(o, small){
   return h;
 }
 function renderBlock(b){
-  const tag = `<div class="btag"><span draggable="true" data-drag="block" data-id="${b.id}">${esc(bl(b.type))}${b.type === 'custom' ? ' · ' + esc(b.cls) : ''}</span>${audTags(b)}${b.showIf && b.showIf.field ? `<span class="cond">${esc(c('liveIf', lab(b.showIf.field)))}</span>` : ''}${b.attributesBy && b.attributesBy.table ? `<span class="cond">${esc(c('famTag'))}</span>` : ''}${b.cond ? `<span class="cond" title="${esc(b.cond)}">${esc(c('cond2', b.cond))}</span>` : ''}${b.hideCreate ? `<span class="cond">${esc(c('hiddenCreate'))}</span>` : ''}</div>`;
+  const tag = `<div class="btag"><span draggable="true" data-drag="block" data-id="${b.id}">${esc(bl(b.type))}${b.type === 'custom' ? ' · ' + esc(b.cls) : ''}</span>${audTags(b)}${b.showIf && b.showIf.field ? `<span class="cond">${esc(c('liveIf', lab(b.showIf.field)))}</span>` : ''}${b.attributesBy && b.attributesBy.table ? `<span class="cond">${esc(c('famTag'))}</span>` : ''}${b.cond ? `<span class="cond" title="${esc(b.cond)}">${esc(c('cond2', b.cond))}</span>` : ''}${b.wf && wfTag(b.wf) ? `<span class="cond">${esc(wfTag(b.wf))}</span>` : ''}${b.hideCreate ? `<span class="cond">${esc(c('hiddenCreate'))}</span>` : ''}</div>`;
   const selc = sel && sel.k === 'block' && sel.id === b.id ? ' sel' : '';
   if (creating && b.hideCreate && mode === 'preview') return '';
   const tabNow = curTab();

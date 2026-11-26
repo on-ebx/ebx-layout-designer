@@ -232,55 +232,7 @@ final class MdmBlocks
 			return MdmBlocks.note(MdmBlocks.t("setupBlock", rc));
 		}
 		final Adaptation me = rc.record;
-		final Set<String> values = new LinkedHashSet<String>();
-		// the variable holds the record's XPath (written with single or double quotes) or its primary key
-		final String xpath = me.toXPathExpression();
-		final String table = me.getContainerTable().getTablePath().format();
-		final String predicate = me.toXPathPredicateString();
-		for (final String x : new String[] { xpath, table + "[" + predicate + "]" })
-		{
-			values.add(x);
-			values.add(x.replace('"', '\''));
-			values.add(x.replace('\'', '"'));
-		}
-		values.add(me.getOccurrencePrimaryKey().format());
-		final WorkflowEngine engine;
-		try
-		{
-			engine = WorkflowEngine.getFromRepository(me.getHome().getRepository(), rc.context.getSession());
-		}
-		catch (final RuntimeException ex)
-		{
-			return MdmBlocks.note(MdmBlocks.t("wf.none", rc));
-		}
-		final Map<String, ProcessInstance> found = new LinkedHashMap<String, ProcessInstance>();
-		for (final PublishedProcessKey pk : engine.getPublishedKeys())
-		{
-			for (final String v : vars)
-			{
-				for (final String value : values)
-				{
-					try
-					{
-						for (final ProcessInstanceKey k : engine.getProcessInstanceKeysForDataContextVariableIncludingHistory(pk, v, value))
-						{
-							if (!found.containsKey(k.format()))
-							{
-								final ProcessInstance pi = engine.getProcessInstance(k);
-								if (pi != null && !pi.isCompleted())
-								{
-									found.put(k.format(), pi);
-								}
-							}
-						}
-					}
-					catch (final RuntimeException ex)
-					{
-						// the variable is not declared in this publication
-					}
-				}
-			}
-		}
+		final Map<String, ProcessInstance> found = WorkflowState.running(rc, vars, null);
 		if (found.isEmpty())
 		{
 			return MdmBlocks.note(MdmBlocks.t("wf.none", rc));

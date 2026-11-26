@@ -194,6 +194,15 @@ ligne la sélectionne).
 Les administrateurs voient tout (option décochable). **Ce n'est pas de la sécurité** : un champ absent de la fiche reste
 lisible dans la vue tableau, un export ou les API ; ce sont les permissions d'EBX qui protègent la donnée.
 
+### Conditions liées aux workflows (1.17.0)
+
+Dans l'inspecteur de chaque bloc, et de chaque bouton d'un bloc *Actions*, *Selon les workflows* le masque :
+
+- selon le **contexte de la fiche** : *Hors workflow* (par exemple, pas de bouton « Changer le RIB » dans une tâche) ou
+  *Dans une tâche de workflow* (un bloc d'aide pour la personne qui fait la tâche) ;
+- selon une **demande en cours sur la fiche** : *Masquer si en cours* ou *Seulement si en cours*, pour une publication de
+  workflow précise ou toutes, avec les variables qui désignent la fiche (`tiersXPath`…).
+
 ## 8. Enregistrer, déclarer, utiliser
 
 - **Enregistrer** écrit la mise en page (JSON) comme nouvelle version dans `LayoutDesigner/FormLayout`. Elle s'affiche à
